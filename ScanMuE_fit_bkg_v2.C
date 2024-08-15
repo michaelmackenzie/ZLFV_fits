@@ -13,7 +13,7 @@
 
 
 
-int ScanMuE_fit_bkg_v2(TString name="bin1_r2", 
+int ScanMuE_fit_bkg_v2(TString name="bin1_r2",
     TString data_file="/eos/cms/store/cmst3/user/gkaratha/ZmuE_forBDT_v7_tuples/BDT_outputs_v7/Scan_Zprime/Meas_full_bdt_v7_emu_scan_data_Run1*.root",
     TString xgbmin="0.7",TString xgbmax="1.01", double  min_fit_range=90,
     double  max_fit_range = 135, double blind_min=106, double blind_max=114,
@@ -22,7 +22,10 @@ int ScanMuE_fit_bkg_v2(TString name="bin1_r2",
 
    //////////////////////////////////// configuration /////////////////////////
    gROOT->SetBatch(true);
-
+   TString outdir = "WorkspaceScanBKG/";
+   gSystem->Exec(Form("[ ! -d %s ] && mkdir -p %s", outdir.Data(), outdir.Data()));
+   figdir_ = "figures/" + name + "/";
+   gSystem->Exec(Form("[ ! -d %s ] && mkdir -p %s", figdir_.Data(), figdir_.Data()));
 
    /// bkg functions
    bool Fit_cheb=true; 
@@ -103,9 +106,13 @@ int ScanMuE_fit_bkg_v2(TString name="bin1_r2",
    ///// ftest
    FtestStruct cheb_Ftest;
    cheb_Ftest.success=false;
+   const double min_p_value = 0.001;
+   const double ftest_step = 0.05; //information gain requirement
    if (Fit_cheb) {
        cout<<" ************************ Chebychev begin ************************ "<<endl;
-       cheb_Ftest =  HistFtest(bkg_cheb_pdfs, bkg_cheb_ampl,  dhist_bkg, dilep_mass, bkg_cheb_orders, bkg_cheb_names, bkg_cheb_legs, nbin_data,"scanbkg_v1_cheb_"+name, 0.05,0.01,printout_levels);
+       cheb_Ftest =  HistFtest(bkg_cheb_pdfs, bkg_cheb_ampl,  dhist_bkg, dilep_mass, bkg_cheb_orders,
+                               bkg_cheb_names, bkg_cheb_legs, nbin_data,"scanbkg_v2_cheb_"+name,
+                               ftest_step, min_p_value,printout_levels);
        cout<<" ************************ Chebychev end ************************ "<<endl;
     }
 
@@ -131,7 +138,7 @@ int ScanMuE_fit_bkg_v2(TString name="bin1_r2",
    if (Fit_sumexp) {
        ////// ftest
        cout<<" ************************ Ftest SumExp begin ************************ "<<endl;
-       sumexp_Ftest =  HistFtest(bkg_sumexp_pdfs, bkg_sumexp_ampl,  dhist_bkg, dilep_mass, bkg_sumexp_orders, bkg_sumexp_names, bkg_sumexp_legs, nbin_data, "scanbkg_v1_exp_"+name, 0.05,0.01,printout_levels);
+       sumexp_Ftest =  HistFtest(bkg_sumexp_pdfs, bkg_sumexp_ampl,  dhist_bkg, dilep_mass, bkg_sumexp_orders, bkg_sumexp_names, bkg_sumexp_legs, nbin_data, "scanbkg_v2_exp_"+name, ftest_step, min_p_value,printout_levels);
        cout<<" ************************ Ftest SumExp end ************************ "<<endl;
    }
 
@@ -156,7 +163,7 @@ int ScanMuE_fit_bkg_v2(TString name="bin1_r2",
    sumplaw_Ftest.success=false;
    if (Fit_sumplaw){
       cout<<" ************************ Ftest Sum Power Law begin ************************ "<<endl;
-      sumplaw_Ftest =  HistFtest(bkg_sumplaw_pdfs, bkg_sumplaw_ampl,  dhist_bkg, dilep_mass, bkg_sumplaw_orders, bkg_sumplaw_names, bkg_sumplaw_legs, nbin_data, "scanbkg_v1_sumplaw_"+name, 0.05,0.01,printout_levels);
+      sumplaw_Ftest =  HistFtest(bkg_sumplaw_pdfs, bkg_sumplaw_ampl,  dhist_bkg, dilep_mass, bkg_sumplaw_orders, bkg_sumplaw_names, bkg_sumplaw_legs, nbin_data, "scanbkg_v2_sumplaw_"+name, ftest_step, min_p_value,printout_levels);
       cout<<" ************************ Ftest Sum Power Law end ************************ "<<endl;
    }
 
@@ -204,7 +211,9 @@ int ScanMuE_fit_bkg_v2(TString name="bin1_r2",
 
    //////////// fit here
    cout<<" Fit of best variables "<<endl;
-   std::vector<std::vector<float>> final_results =  FitHistBkgFunctions(bkg_pdfs, bkg_ampl, dhist_bkg, dilep_mass, bkg_names, bkg_legs, nbin_data, unblind, "scanbkg_v1_best_"+name, true,"WorkspaceScanBKG/cfit",true,unblind);
+   std::vector<std::vector<float>> final_results =  FitHistBkgFunctions(bkg_pdfs, bkg_ampl, dhist_bkg, dilep_mass,
+                                                                        bkg_names, bkg_legs, nbin_data, unblind,
+                                                                        "scanbkg_v2_best_"+name, true,"cfit",true,unblind);
 
    if (!create_dc_input)
    return 0;
@@ -268,7 +277,11 @@ int ScanMuE_fit_bkg_v2(TString name="bin1_r2",
    wspace->import(cat);
    wspace->import(multipdf);
    wspace->import(norm_out);
-   wspace->writeToFile("WorkspaceScanBKG/workspace_scanbkg_v1_"+name+".root"); // write output
+   dhist_bkg->SetName("data_obs");
+   wspace->import(*dhist_bkg); //import data as well
+   wspace->writeToFile(outdir+"workspace_scanbkg_v2_"+name+".root"); // write output
+
+
 
  return 0;
 } 

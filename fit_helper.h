@@ -4,6 +4,8 @@
 #include <fstream>
 #include <random>
 
+TString figdir_ = "./"; //Figure directory
+
 /////// read ttree
 TTree * get_tree(TString tree_name, TString path, TString cuts="",Long64_t nmax=TTree::kMaxEntries){
     TChain * tree = new TChain(tree_name);
@@ -170,7 +172,7 @@ void save_plot( RooPlot * xframe, TString xaxis_title, TString name, TLegend* le
        leg->Draw("sames");
     if (pt!=NULL)
        pt->Draw("sames");
-    ctemp->SaveAs(name+".png");
+    ctemp->SaveAs(figdir_ + name+".png");
 }
 
 void save_plot_and_band( RooPlot * xframe,  RooRealVar var, std::vector<TString> functions, TString xaxis_title, TString name, TLegend* leg=new TLegend(),TPaveText * pt=NULL, bool IsData=true,bool Logy=false){
@@ -242,7 +244,7 @@ void save_plot_and_band( RooPlot * xframe,  RooRealVar var, std::vector<TString>
 //    TLine *line = new TLine(gPad->GetUxmin()+0.12, 0.665, gPad->GetUxmax()-0.04, 0.665); 
   //  line->SetNDC(kTRUE);  
    // line->Draw(); 
-    ctemp->SaveAs(name+".png");
+    ctemp->SaveAs(figdir_ + name+".png");
 }
 
 
@@ -255,7 +257,7 @@ void save_pull( RooPlot * xframe, RooRealVar var, TString xaxis_title, TString n
     xframe2->addPlotable(hresid,"P");
     xframe2->Draw();
     xframe2->SetTitle(xaxis_title);
-    cresid->SaveAs("cresid_"+name+".png");
+    cresid->SaveAs(figdir_+"cresid_"+name+".png");
     TCanvas * cpull= create_canvas("cpull_"+name);
     auto hpull = xframe->pullHist();
     auto xframe3 = var.frame();
@@ -264,7 +266,7 @@ void save_pull( RooPlot * xframe, RooRealVar var, TString xaxis_title, TString n
     xframe3->GetYaxis()->SetRangeUser(-5,5);
     xframe3->Draw();
     xframe3->GetXaxis()->SetTitle(xaxis_title);
-    cpull->SaveAs("cpull_"+name+".png");
+    cpull->SaveAs(figdir_+"cpull_"+name+".png");
 }
 
 void print_details(RooFitResult * result){
@@ -333,7 +335,7 @@ void save_th1(std::vector<TH1F*> histos, std::vector<TString> legs, TString xaxi
     if (histos.size()>1)
        leg->Draw("sames");
     
-     cnv->SaveAs(name+".png"); 
+     cnv->SaveAs(figdir_+name+".png"); 
 }
 
 #endif
