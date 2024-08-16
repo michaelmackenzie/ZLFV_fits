@@ -4,6 +4,9 @@ import argparse
 import ROOT as rt
 from array import array
 
+def file_sort(f):
+   return int(f.split('_mp')[1].replace('.txt',''))
+
 #----------------------------------------------------------------------------------------
 # Process a single mass point
 def process_datacard(card, directory, name, asimov = False, skip_fit = False, verbose = 0):
@@ -96,6 +99,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-o", dest="name",default="bdt_v01", type=str,help="datacard directory name")
 parser.add_argument("--skip-fit", dest="skip_fit",default=False, action='store_true',help="Skip fits, assume already processed")
 parser.add_argument("--unblind", dest="unblind",default=False, action='store_true',help="Perform fits to the data instead of Asimov fits")
+parser.add_argument("-v", dest="verbose",default=0, type=int,help="Add verbose printout")
 
 args, unknown = parser.parse_known_args()
 
@@ -124,7 +128,10 @@ rt.gROOT.SetBatch(True)
 # Perform the scan
 #----------------------------------------------
 
-list_of_files = os.listdir(carddir)
+list_of_files = [f for f in os.listdir(carddir) if '.txt' in f and '0d7' not in f]
+# Sort the list by mass point
+list_of_files.sort(key=file_sort)
+
 asimov = not args.unblind
 
 # List of results
@@ -150,7 +157,7 @@ for f in list_of_files:
    # only process the merged fits
    if '0d7' in f: continue
    mass_point = f.split('_mp')[1].split('.txt')[0]
-   [r_fit, r_lim, mass] = process_datacard(f, carddir, args.name + '_mp'+mass_point, asimov, args.skip_fit)
+   [r_fit, r_lim, mass] = process_datacard(f, carddir, args.name + '_mp'+mass_point, asimov, args.skip_fit, args.verbose)
 
    # store the results
    masses.append(mass)
