@@ -26,3 +26,10 @@ NAME=v01
 time ./make_scan_cards.sh --min-mass ${MINMASS} --max-mass ${MAXMASS} --tag ${NAME}
 ls -l datacards/bdt_${NAME}/combine_combine_zprime_${NAME}_mp*.txt | head -n 2
 ```
+
+### Scan the mass points, evaluating signal rates and upper limits
+```
+NAME=v01
+time python perform_scan.py -o bdt_${NAME} [--asimov] [--unblind]
+ls -l figures/scan_bdt_${NAME}[_asimov]/*.png
+```
