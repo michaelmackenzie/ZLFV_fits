@@ -48,7 +48,7 @@ def print_datacard(name, sig_file, bkg_file, param_name, mass):
    
 
 #----------------------------------------------------------------------------------------
-# Make a plot and save the figure
+# Make a plot and save the figure, fit a 2nd order polynomial to it
 def plot_graph(mpoint_array,signal_array,name,xaxis="",yaxis=""):
    signal_vs_mass = rt.TGraph(len(mpoint_array), mpoint_array, signal_array)
 
@@ -86,6 +86,7 @@ parser.add_argument("--skip-fit", dest="skip_fit",default=False, action='store_t
 parser.add_argument("--skip-sgn-syst", dest="skip_sgn_syst",default=False, action='store_true',help="shape experiment")
 parser.add_argument("--skip-bkg-altfits", dest="skip_bkg_altfits",default=False, action='store_true',help="shape experiment")
 parser.add_argument("--skip-dc", dest="skip_dc",default=False, action='store_true',help="Skip datacard creation")
+parser.add_argument("--mass-point", dest="mass_point",default=-1,type=int,help="Single mass point to process")
 
 args, unknown = parser.parse_known_args()
 
@@ -165,6 +166,7 @@ for mpoint in sgn_masspoints:
   htemp = rt.TH1F("htemp_"+mpoint,"",1,0,2)
   cc.Draw("1>>htemp_"+mpoint,sf+"*(Flag_met && Flag_muon && Flag_electron && "+args.xgb_min+"<=xgb && xgb<"+args.xgb_max+")")
   nnum = htemp.Integral()
+  cross_section = 1. #in units femto-barns * BR(Z'->emu)
   nsgn_array.append(lumis[args.year]*1*nnum/ndens[mpoint])
   mpoint_array.append(float(mpoint))
   toteff_array.append(nnum/(1.0*ndens[mpoint]))
@@ -223,23 +225,28 @@ while (NextPoint):
   max_mass = round(sr_center + region_buffer*sr_width,2)
   print "SR central",sr_center,"width",sr_width,"min",sr_min,"max",sr_max,"yield",sr_yld
 
-  # create pdfs for mass point
-  if not args.skip_fit:
-     if args.component == "sgn" or args.component == "all":
-        os.system('root -l -b -q ScanMuE_fit_sgn_v'+args.ver+'.C\'("'+args.name+"_mp"+str(cnt)+'",'+str(min_mass)+','+str(max_mass)+','+str(sr_center)+','+str(sr_width)+','+str(sr_yld)+','+shape_dc+',"'+args.outvar+'",'+do_sgn_syst+',"'+args.param_name+'")\'')
-     if args.component == "bkg" or args.component == "all":
-        os.system('root -l -b -q ScanMuE_fit_bkg_v'+args.ver+'.C\'("'+args.name+"_mp"+str(cnt)+'","'+args.data_file+'","'+args.xgb_min+'","'+args.xgb_max+'",'+str(min_mass)+','+str(max_mass)+','+str(sr_min)+','+str(sr_max)+','+unblind+','+shape_dc+',"'+args.outvar+'","'+args.param_name+'")\'')
+  if(args.mass_point < 0 or cnt == args.mass_point):
+    # create pdfs for mass point
+    if not args.skip_fit:
+      if args.component == "sgn" or args.component == "all":
+        os.system('root -l -b -q ScanMuE_fit_sgn_v'+args.ver+'.C\'("'
+                  +args.name+"_mp"+str(cnt)+'",'
+                  +str(min_mass)+','+str(max_mass)+','+str(sr_center)+','+str(sr_width)+','
+                  +str(sr_yld)+','+shape_dc+',"'+args.outvar+'",'+do_sgn_syst+',"'+args.param_name+'")\'')
+      if args.component == "bkg" or args.component == "all":
+         os.system('root -l -b -q ScanMuE_fit_bkg_v'+args.ver+'.C\'("'+args.name+"_mp"+str(cnt)+'","'+args.data_file+'","'+args.xgb_min+'","'+args.xgb_max+'",'+str(min_mass)+','+str(max_mass)+','+str(sr_min)+','+str(sr_max)+','+unblind+','+shape_dc+',"'+args.outvar+'","'+args.param_name+'")\'')
         
 
-  # Create a corresponding datacard
-  cardname = carddir + "combine_zprime_" + args.name + "_mp" + str(cnt) + ".txt"
-  sig_file = "WorkspaceScanSGN/workspace_scansgn_v" + args.ver + "_" + args.name + "_mp" + str(cnt) + ".root"
-  bkg_file = "WorkspaceScanBKG/workspace_scanbkg_v" + args.ver + "_" + args.name + "_mp" + str(cnt) + ".root"
-  print_datacard(cardname, sig_file, bkg_file, args.param_name, sr_center)
+    # Create a corresponding datacard
+    cardname = carddir + "combine_zprime_" + args.name + "_mp" + str(cnt) + ".txt"
+    sig_file = "WorkspaceScanSGN/workspace_scansgn_v" + args.ver + "_" + args.name + "_mp" + str(cnt) + ".root"
+    bkg_file = "WorkspaceScanBKG/workspace_scanbkg_v" + args.ver + "_" + args.name + "_mp" + str(cnt) + ".root"
+    print_datacard(cardname, sig_file, bkg_file, args.param_name, sr_center)
 
 
   # next iteration mass and exit conditions
-  sr_center = round(sr_center +args.scan_step*sr_width,2)
+  sr_approx_width = sr_center*(4./200.) # approximate as a linear function so it's stable between BDT categories where the width may vary
+  sr_center = round(sr_center +args.scan_step*sr_approx_width,2)
   if cnt>= MaxMasspoints and MaxMasspoints>0:
      print "Requested only",MaxMasspoints,"run"
      NextPoint=False
