@@ -106,7 +106,7 @@ int ScanMuE_fit_bkg_v2(TString name="bin1_r2",
    ///// ftest
    FtestStruct cheb_Ftest;
    cheb_Ftest.success=false;
-   const double min_p_value = 0.001;
+   const double min_p_value = 0.0001;
    const double ftest_step = 0.05; //information gain requirement
    if (Fit_cheb) {
        cout<<" ************************ Chebychev begin ************************ "<<endl;
