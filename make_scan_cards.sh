@@ -9,6 +9,7 @@ Help() {
     echo " --scan-arg       : Arguments to pass to scan python script"
     echo " --tag            : Tag for output results (default = v01)"
     echo " --skip-fits      : Skip fits and initial datacard creation"
+    echo " --dry-run        : Don't execute commands"
     echo " --help      (-h ): Print this information"
 }
 
@@ -18,6 +19,7 @@ ARG=""
 MINMASS="110"
 MAXMASS="500"
 SKIPFITS=""
+DRYRUN=""
 
 iarg=1
 while [ ${iarg} -le $# ]
@@ -44,6 +46,8 @@ do
         MAXMASS=${var}
     elif [[ "${var}" == "--skip-fits" ]]; then
         SKIPFITS="d"
+    elif [[ "${var}" == "--dry-run" ]]; then
+        DRYRUN="d"
     else
         echo "Arguments aren't configured correctly! (at ${var})"
         Help
@@ -52,6 +56,9 @@ do
     iarg=$((iarg + 1))
 done
 
+if [[ "${DRYRUN}" != "" ]]; then
+    ARG="${ARG} --dry-run"
+fi
 # Create the standard BDT score-defined regions
 if [[ "${SKIPFITS}" == "" ]]; then
     python ScanMuE_fit_wrapper_v1.py -o bdt_0d3_0d7_${TAG} --scan-min ${MINMASS} --scan-max ${MAXMASS} --xgb-min 0.3 --xgb-max 0.70 --param-name bin1 ${ARG}
@@ -61,6 +68,10 @@ fi
 # make a combined directory
 DIR="datacards/bdt_${TAG}/"
 [ ! -f ${DIR} ] && mkdir -p ${DIR}
+
+if [[ "${DRYRUN}" != "" ]]; then
+    exit
+fi
 
 # Create combined datacards
 for CARD in `ls -d datacards/bdt_0d3_0d7_${TAG}/*.txt`

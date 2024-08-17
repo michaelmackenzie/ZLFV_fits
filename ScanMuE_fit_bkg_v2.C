@@ -43,9 +43,11 @@ int ScanMuE_fit_bkg_v2(TString name="bin1_r2",
    /// generic
    TString cuts = xgbmin+"<xgb && xgb<"+xgbmax+" && Flag_met && Flag_muon && Flag_electron"; // not add mass_ll here when run systematics
    TString tree_name="mytreefit";
-   int nbin_data = int(max_fit_range-min_fit_range);
+   //bin data such that a single bin is ~1/2 of the signal width --> +-1 sigma = 4 bins
+   int nbin_data = (max_fit_range-min_fit_range)/(0.5*(blind_max-blind_min)/2.); //(blind_max - blind_min) = 2*width
+   // int nbin_data = int(max_fit_range-min_fit_range); //~1 GeV binning
    bool Verbose=false; // RooFit verbosity
-   int printout_levels=0; // 0: Print only final fits parameters, 1: Print all fits from F test tests
+   int printout_levels=1; // 0: Print only final fits parameters, 1: Print all fits from F test tests
 
 
    ///////////////////////////////////////////////////////////////////////////
@@ -66,7 +68,7 @@ int ScanMuE_fit_bkg_v2(TString name="bin1_r2",
    RooRealVar dilep_mass_out(outvar,"m(e,#mu)", min_fit_range, min_fit_range , max_fit_range, "GeV/c^{2}");
 
    dilep_mass.setRange("left",min_fit_range, blind_min);
-   dilep_mass.setRange("right",blind_max, max_fit_range); 
+   dilep_mass.setRange("right",blind_max, max_fit_range);
    dilep_mass.setRange("sr",blind_min,blind_max);
    dilep_mass.setRange("full",min_fit_range, max_fit_range);
 
@@ -106,13 +108,14 @@ int ScanMuE_fit_bkg_v2(TString name="bin1_r2",
    ///// ftest
    FtestStruct cheb_Ftest;
    cheb_Ftest.success=false;
-   const double min_p_value = 0.0001;
+   const double min_p_value = 0.001;
    const double ftest_step = 0.05; //information gain requirement
+   const bool   force_inclusion = true; //force at least one order of each family to be included in the envelope, independent of p-value
    if (Fit_cheb) {
        cout<<" ************************ Chebychev begin ************************ "<<endl;
        cheb_Ftest =  HistFtest(bkg_cheb_pdfs, bkg_cheb_ampl,  dhist_bkg, dilep_mass, bkg_cheb_orders,
                                bkg_cheb_names, bkg_cheb_legs, nbin_data,"scanbkg_v2_cheb_"+name,
-                               ftest_step, min_p_value,printout_levels);
+                               ftest_step, min_p_value,printout_levels, force_inclusion);
        cout<<" ************************ Chebychev end ************************ "<<endl;
     }
 
@@ -138,7 +141,7 @@ int ScanMuE_fit_bkg_v2(TString name="bin1_r2",
    if (Fit_sumexp) {
        ////// ftest
        cout<<" ************************ Ftest SumExp begin ************************ "<<endl;
-       sumexp_Ftest =  HistFtest(bkg_sumexp_pdfs, bkg_sumexp_ampl,  dhist_bkg, dilep_mass, bkg_sumexp_orders, bkg_sumexp_names, bkg_sumexp_legs, nbin_data, "scanbkg_v2_exp_"+name, ftest_step, min_p_value,printout_levels);
+       sumexp_Ftest =  HistFtest(bkg_sumexp_pdfs, bkg_sumexp_ampl,  dhist_bkg, dilep_mass, bkg_sumexp_orders, bkg_sumexp_names, bkg_sumexp_legs, nbin_data, "scanbkg_v2_exp_"+name, ftest_step, min_p_value,printout_levels, force_inclusion);
        cout<<" ************************ Ftest SumExp end ************************ "<<endl;
    }
 
@@ -163,7 +166,7 @@ int ScanMuE_fit_bkg_v2(TString name="bin1_r2",
    sumplaw_Ftest.success=false;
    if (Fit_sumplaw){
       cout<<" ************************ Ftest Sum Power Law begin ************************ "<<endl;
-      sumplaw_Ftest =  HistFtest(bkg_sumplaw_pdfs, bkg_sumplaw_ampl,  dhist_bkg, dilep_mass, bkg_sumplaw_orders, bkg_sumplaw_names, bkg_sumplaw_legs, nbin_data, "scanbkg_v2_sumplaw_"+name, ftest_step, min_p_value,printout_levels);
+      sumplaw_Ftest =  HistFtest(bkg_sumplaw_pdfs, bkg_sumplaw_ampl,  dhist_bkg, dilep_mass, bkg_sumplaw_orders, bkg_sumplaw_names, bkg_sumplaw_legs, nbin_data, "scanbkg_v2_sumplaw_"+name, ftest_step, min_p_value,printout_levels, force_inclusion);
       cout<<" ************************ Ftest Sum Power Law end ************************ "<<endl;
    }
 

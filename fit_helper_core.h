@@ -677,7 +677,11 @@ std::pair<int,float> Ftest(std::vector<RooAbsPdf*> pdfs, std::vector<RooRealVar*
 
 /////////////////////////////////// Repeat the sames for RooHist
 ////////// Fit bkg only functions
-std::vector<std::vector<float>> FitHistBkgFunctions(std::vector<RooAbsPdf*> pdfs, std::vector<RooRealVar*> ampls, RooDataHist *dataset, RooRealVar &dilep_mass, vector<TString> names, std::vector<TString> legs, int nbin_data, bool Bkg_only_fit_whole_region, TString extra_name, bool Print_details=true, TString cfg_name="cfit",bool Logy=false,bool Unblind_data_sr=false){
+std::vector<std::vector<float>> FitHistBkgFunctions(std::vector<RooAbsPdf*> pdfs, std::vector<RooRealVar*> ampls,
+                                                    RooDataHist *dataset, RooRealVar &dilep_mass, vector<TString> names,
+                                                    std::vector<TString> legs, int nbin_data, bool Bkg_only_fit_whole_region,
+                                                    TString extra_name, bool Print_details=true,
+                                                    TString cfg_name="cfit",bool Logy=false,bool Unblind_data_sr=false){
 
 
  std::vector<std::vector<float>> output;
@@ -703,7 +707,7 @@ std::vector<std::vector<float>> FitHistBkgFunctions(std::vector<RooAbsPdf*> pdfs
 
   cout<<"\n *********** Bkg-only fit in "+fit_range<<" range *********"<<endl;  
   for (int i=0; i<pdfs.size(); i++){ 
-    std::vector<float> temp;
+    std::vector<float> temp; //list of (chi^2, N(DOF), params) values
     cout<<" Fit: "+names[i]<<endl;
     RooAddPdf epdf("epdf_"+names[i],"", RooArgList(*pdfs[i]),  RooArgList(*ampls[i]));
    
@@ -712,10 +716,11 @@ std::vector<std::vector<float>> FitHistBkgFunctions(std::vector<RooAbsPdf*> pdfs
     int n_param = fit_result->floatParsFinal().getSize();
     auto chi2_frame = dilep_mass.frame();
     dataset->plotOn(chi2_frame,RooFit::Name("data"));
-    pdfs[i]->plotOn(chi2_frame,RooFit::Range("full")); 
+    pdfs[i]->plotOn(chi2_frame,RooFit::Range("full"));
     RooChi2Var chi("chi", "chi", *pdfs[i], *dataset, RooFit::Range("full"));
     float chi2 = chi.getVal();//chi2_frame->chiSquare(nbin_data-1);
     float pvalue = ROOT::Math::chisquared_cdf_c(chi2,nbin_data-n_param);
+    if(Print_details) printf(">>> Chi^2/dof = %.4f (frame chi^2/dof = %.4f)\n", chi2/(nbin_data-1), chi2_frame->chiSquare(n_param));
     ROOT::Math::chisquared_cdf_c(chi2,nbin_data-n_param);
     if (chi2<0) chi2=1000000000;
     temp.push_back(chi2);
@@ -751,14 +756,21 @@ std::vector<std::vector<float>> FitHistBkgFunctions(std::vector<RooAbsPdf*> pdfs
 
 
 
-FtestStruct HistFtest(std::vector<RooAbsPdf*> pdfs, std::vector<RooRealVar*> ampls, RooDataHist *dataset, RooRealVar &dilep_mass, vector<int> orders, vector<TString> names, std::vector<TString> legs, int nbin_data, TString extra_name, float ftest_step,  float min_pvalue=-1, int print_level=0 ){
+FtestStruct HistFtest(std::vector<RooAbsPdf*> pdfs, std::vector<RooRealVar*> ampls,
+		      RooDataHist *dataset, RooRealVar &dilep_mass, vector<int> orders,
+		      vector<TString> names, std::vector<TString> legs,
+		      int nbin_data, TString extra_name, float ftest_step,
+		      float min_pvalue=-1, int print_level=0,
+                      bool force_inclusion = false){
   
   bool Print_details = 0;
   if (print_level) Print_details=true;
 
   FtestStruct resultF;
 
-  std::vector<std::vector<float>> chi2_dof = FitHistBkgFunctions(pdfs, ampls, dataset, dilep_mass, names, legs, nbin_data, true , extra_name,Print_details,"ftest");
+  std::vector<std::vector<float>> chi2_dof = FitHistBkgFunctions(pdfs, ampls, dataset, dilep_mass, names, legs, nbin_data,
+                                                                 false, //use or don't use the signal region in the fit
+                                                                 extra_name,Print_details,"ftest");
 
   std::vector<float> pvalues; 
   std::vector<float> ftests;
@@ -782,6 +794,21 @@ FtestStruct HistFtest(std::vector<RooAbsPdf*> pdfs, std::vector<RooRealVar*> amp
     orders_pass_cut.push_back(orders[i]);
     chis_pass_cut.push_back(chi2_dof[i][0]);
     dofs_pass_cut.push_back(chi2_dof[i][1]);
+  }
+  //if the list is empty and force inclusion is set, add the highest p-value function to the list
+  if(orders_pass_cut.size() == 0 && force_inclusion && chi2_dof.size() > 0) {
+    unsigned max_p_index = 0;
+    double max_p_value = pvalues[0];
+    for(unsigned index = 1; index < chi2_dof.size(); ++index) {
+      if(max_p_value < pvalues[index]) {
+        max_p_value = pvalues[index];
+        max_p_index = index;
+      }
+    }
+    cout << __func__ << " --> Forcing the inclusion of the best p-value fit due to all functions failing!\n";
+    orders_pass_cut.push_back(orders[max_p_index]);
+    chis_pass_cut.push_back(chi2_dof[max_p_index][0]);
+    dofs_pass_cut.push_back(chi2_dof[max_p_index][1]);
   }
 
   vector<float> ftests_pass_cut;

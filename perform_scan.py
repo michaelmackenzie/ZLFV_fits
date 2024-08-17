@@ -14,7 +14,7 @@ def file_sort(f):
 def process_datacard(card, directory, name, asimov = False, skip_fit = False, verbose = 0):
    if not os.path.isfile(directory + card):
       print "Card %s not found" % (card)
-   if verbose > -1: print 'Processing mass point', name, ' (card =', card, ')'
+   if verbose > -1: print 'Processing mass point', name, '(card =', card+')'
 
    #----------------------------------------------------------------------------
    # Perform a signal rate fit
