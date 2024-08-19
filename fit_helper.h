@@ -21,7 +21,7 @@ TLatex * CMS_lumi(bool IsData){
     TLatex *mark = new TLatex();
 
     mark->SetNDC();
-    TString lumistamp = "Run2 (13 TeV)";
+    TString lumistamp = "Run 2 (13 TeV)";
     float cmsTextSize = 0.042 * 1.25;
     float extraOverCmsTextSize  = 0.76;
     float extraTextSize = extraOverCmsTextSize*cmsTextSize;

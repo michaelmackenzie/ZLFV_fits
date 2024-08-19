@@ -8,7 +8,7 @@
 /////////////////////////// Core helper functions ////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 //////// used from v15
-//////////////////// 
+////////////////////
 //////////// update 1/4/24: GetDataSet -> reads also th1 and generate toy
 //////////// update 9/5/24: More combination vars
 
@@ -31,10 +31,10 @@ struct FtestStruct {
 ///////// get dataset from data/MC and rescales the latter with weight
 RooDataSet GetDataSet(TString data_file, TString cuts, RooRealVar &dilep_mass, bool Is_pseudodata, RooRealVar &wgt, RooFormulaVar &wgtFunc, float norm_factor, bool Is_histo){
 //RooAbsData GetDataSet(TString data_file, TString cuts, RooRealVar &dilep_mass, bool Is_pseudodata, RooRealVar &wgt, RooFormulaVar &wgtFunc, float norm_factor, bool Is_histo){
-  
+
   if (Is_pseudodata){
     TTree * data_tree = get_tree("mytreefit",data_file,cuts);
-    TH1F* nbkg = new TH1F("nbkg","",1,0,2); 
+    TH1F* nbkg = new TH1F("nbkg","",1,0,2);
     TH1F* nsgn = new TH1F("nsgn","",1,0,2);
     TH1F* ntot = new TH1F("ntot","",1,0,2);
     data_tree->Draw("1>>ntot","NormGen_wt");
@@ -70,7 +70,7 @@ RooDataSet GetDataSet(TString data_file, TString cuts, RooRealVar &dilep_mass, b
      TTree * data_tree = get_tree("mytreefit",data_file,cuts);
      cout<<" Real data entries "<<data_tree->GetEntries()<<endl;
      return RooDataSet("dataset","dataset",RooArgSet(dilep_mass),RooFit::Import(*data_tree));
-  } 
+  }
 }
 
 
@@ -78,7 +78,7 @@ RooDataSet GetDataSet(TString data_file, TString cuts, RooRealVar &dilep_mass, b
 RooDataSet GetDataSet(TTree *data_tree, RooRealVar &dilep_mass){
   cout<<" Real data entries "<<data_tree->GetEntries()<<endl;
   return RooDataSet("dataset","dataset",RooArgSet(dilep_mass),RooFit::Import(*data_tree));
-   
+
 }
 
 
@@ -95,7 +95,7 @@ std::pair<double,double> yield_calc( float nYld_total, RooRealVar dilep_mass, Ro
    return make_pair(nYld_total,nYld_inSR);
 }
 
-//////// generic plot function 
+//////// generic plot function
 void PlotFunctions(std::vector<RooAbsPdf*> pdfs, RooPlot * xframe, RooRealVar dilep_mass, std::vector<TString> names, std::vector<TString> legs, TLegend *leg, RooDataSet dataset, TString name, int nbin_data, bool unblind, TString ver="v15"){
    TString norm_range="left,right";
    if (unblind)
@@ -123,8 +123,8 @@ void PlotFunctions(std::vector<RooAbsPdf*> pdfs, RooPlot * xframe, RooRealVar di
 
 ///////// systematic functions parameters : returns maximum deviation of mean/width
 std::pair<double,double> SignalSystematicsMaxMeanWidth(TString syst_file, TString cuts, TString syst_name, float min_fit_range, float max_fit_range, int nbin_data,TString outname, TString ver ="v15"){
-  
-    TTree * syst_tree = get_tree("mytreefit",syst_file,cuts); 
+
+    TTree * syst_tree = get_tree("mytreefit",syst_file,cuts);
     RooRealVar dilep_mass_syst("mass_ll_"+syst_name,"m(e,#mu)", (min_fit_range-max_fit_range)/2., min_fit_range , max_fit_range, "GeV/c^{2}");
     RooDataSet syst_dataset("syst_"+syst_name+"_dataset","",RooArgSet(dilep_mass_syst),RooFit::Import(*syst_tree));
     RooRealVar syst_cb_mean("sgn_cb_mean_"+syst_name,"",91.0e+00, 84.0e+00, 100.0e+00);
@@ -145,7 +145,7 @@ std::pair<double,double> SignalSystematicsMaxMeanWidth(TString syst_file, TStrin
     print_details (syst_result);
     int n_param_syst = syst_result->floatParsFinal().getSize();
     dilep_mass_syst.setBins(nbin_data);
-    float chi2_syst = get_chi_squared(dilep_mass_syst, &syst_esgn_PDF, syst_dataset, true, nbin_data, n_param_syst); 
+    float chi2_syst = get_chi_squared(dilep_mass_syst, &syst_esgn_PDF, syst_dataset, true, nbin_data, n_param_syst);
     syst_dataset.plotOn(syst_frame,RooFit::Binning(nbin_data));
     syst_esgn_PDF.plotOn(syst_frame,RooFit::LineColor(kBlue));
     save_plot(syst_frame,"m(#mu,e)",ver+"_prmtv_syst_"+syst_name+"_"+outname);
@@ -176,7 +176,7 @@ std::vector<RooRealVar> ChebParams(int order, TString varname){
    return  bkg_chebs;
 }
 
-////////// create bernstein function parameters 
+////////// create bernstein function parameters
 std::vector<RooRealVar> BstParams(int order, TString varname){
    std::vector<RooRealVar> bkg_bsts;
    for (int i =0; i<order; i++){
@@ -189,12 +189,12 @@ std::vector<RooRealVar> BstParams(int order, TString varname){
 
 /////////// chebychev
 RooChebychev * CreateChebychev( TString name, int order, RooRealVar& dilep_mass, std::vector<float> parameters={}){
-   float def=0,min=-1.0,max=1.0;
    RooArgList param_list;
    std::vector<RooRealVar*> bkg_params;
    for (int i=0; i<order; i++){
+     float def=0,min=-3.0,max=3.0;
      if (i==0)
-        def=-1,min=-5.0,max=5.0;
+       def=-1,min=-5.0,max=5.0;
      else if (i==1) def=0.6;
      else if (i==2) def=-0.2;
      if (parameters.size()>0)
@@ -245,7 +245,7 @@ RooAddPdf * CreateSumGaussChebychevTemplate( TString name, int order, RooRealVar
   RooRealVar * gauss_fraction = new RooRealVar("gauss_frac_"+name, "gauss_frac_"+name,0.2,0,10);
 
   RooAddPdf * templ_gauss_cheb = new RooAddPdf(name, name, RooArgList(*gauss,*zmm_pdf,*cheby),RooArgList(*gauss_fraction,* zmm_fraction));
-  
+
   return templ_gauss_cheb;
 }
 
@@ -255,7 +255,7 @@ RooAddPdf * CreateSumGaussChebychevTemplate( TString name, int order, RooRealVar
 //////////// sum of expo
 RooAddPdf * CreateSumExpo(TString name, int order, RooRealVar& dilep_mass, bool recursive_coef=true, std::vector<float> parameters={})
 {
-   std::vector<RooRealVar*> bkg_params;  
+   std::vector<RooRealVar*> bkg_params;
    std::vector<RooExponential*> exps;
    std::vector<RooRealVar*> coefs;
    RooArgList exp_list;
@@ -282,14 +282,14 @@ RooAddPdf * CreateSumExpo(TString name, int order, RooRealVar& dilep_mass, bool 
         RooRealVar * bkg_sumexp_c = new RooRealVar(name+"_c"+TString(to_string(i)), name+"_c"+TString(to_string(i)),c_def, 0, 1.);
         coefs.push_back(bkg_sumexp_c);
         coef_list.add(*coefs[i-1]);
-     } 
+     }
     if (!recursive_coef){
         float c_def = 1./order;
         if (parameters.size()>0) c_def= parameters[i];
         RooRealVar * bkg_sumexp_c = new RooRealVar(name+"_c"+TString(to_string(i)), name+"_c"+TString(to_string(i)),c_def, 0., 100.);
         coefs.push_back(bkg_sumexp_c);
         coef_list.add(*coefs[i]);
-     } 
+     }
    }
 
    return new RooAddPdf(name, name,exp_list,coef_list,recursive_coef);
@@ -315,22 +315,22 @@ RooAddPdf * CreateSumPower(TString name, int order, RooRealVar& dilep_mass,  boo
      if (order>2 && i==1) def=-8,min=-100,max=0;
      if (order>2 && i==2) def=20,min=-100,max=100;
 
-     if (parameters.size()>0) def= parameters[i]; 
+     if (parameters.size()>0) def= parameters[i];
      RooRealVar * bkg_sumplaw_a = new RooRealVar(name+"_a"+TString(to_string(i)), name+"_a"+TString(to_string(i)),def,min,max);
      bkg_params.push_back(bkg_sumplaw_a);
-     
+
      RooPower * sumplaw_bkgPDF = new RooPower(name+"_bkgPDF"+TString(to_string(i)), name+"_bkgPDF"+TString(to_string(i)), dilep_mass, *bkg_sumplaw_a);
      powers.push_back(sumplaw_bkgPDF);
      power_list.add(*powers[i]);
-    
+
      if ( i<order-1 && recursive_coef){
         float c_def = 1./order;
         if (parameters.size()>0) c_def= parameters[i+order];
-        RooRealVar * bkg_sumplaw_c = new RooRealVar(name+"_c"+TString(to_string(i)), name+"_c"+TString(to_string(i)),c_def, 0, 1.); 
+        RooRealVar * bkg_sumplaw_c = new RooRealVar(name+"_c"+TString(to_string(i)), name+"_c"+TString(to_string(i)),c_def, 0, 1.);
         coefs.push_back(bkg_sumplaw_c);
         coef_list.add(*coefs[i]);
      }
-     
+
      if ( !recursive_coef){
         float c_def = 1./order;
         if (parameters.size()>0) c_def= parameters[i+order];
@@ -338,9 +338,9 @@ RooAddPdf * CreateSumPower(TString name, int order, RooRealVar& dilep_mass,  boo
         coefs.push_back(bkg_sumplaw_c);
         coef_list.add(*coefs[i]);
      }
- 
+
    }
-    
+
    return new RooAddPdf(name, name,power_list,coef_list);
 }
 
@@ -360,7 +360,7 @@ RooAddPdf * CreateGaussPolynomial( TString name, int order, RooRealVar& dilep_ma
    }
   auto pol = new RooPolynomial(name+"_pol", name+"_pol",dilep_mass,param_list);
   RooRealVar * gs_mu= new RooRealVar(name+"_mu",name+"_mu",gauss_mu->getVal(),50,69);
-  RooRealVar * gs_wd = new RooRealVar(name+"_wd",name+"_wd",gauss_wd->getVal(),5,20);  
+  RooRealVar * gs_wd = new RooRealVar(name+"_wd",name+"_wd",gauss_wd->getVal(),5,20);
   RooGaussian * gauss = new RooGaussian(name+"_gauss", name+"_gauss",dilep_mass,*gs_mu,*gs_wd);
   RooRealVar * ratio = new RooRealVar("ratio_"+name, "ratio_"+name,0.1,0,1);
 
@@ -378,12 +378,12 @@ RooAddPdf * CreateGaussPolynomial( TString name, int order, RooRealVar& dilep_ma
 /////////// gauss + Expo
 RooAddPdf * CreateGaussExpo( TString name, int order, RooRealVar& dilep_mass, RooRealVar * gauss_mu, RooRealVar * gauss_wd, std::vector<float> parameters={}){
 
-   std::vector<RooRealVar*> bkg_params;  
+   std::vector<RooRealVar*> bkg_params;
    std::vector<RooExponential*> exps;
    std::vector<RooRealVar*> coefs;
    RooArgList exp_list;
    RooArgList coef_list;
-   
+
    float def=-0.1,min=-10,max=10;
    for (int i=0; i<order; i++){
      if (order ==1 ) def=-0.07;
@@ -397,11 +397,11 @@ RooAddPdf * CreateGaussExpo( TString name, int order, RooRealVar& dilep_mass, Ro
      bkg_params.push_back(bkg_sumexp_x);
      RooExponential * sumexp_pdf = new RooExponential(name+"_pdf"+TString(to_string(i)), name+"_pdf"+TString(to_string(i)), dilep_mass, *bkg_sumexp_x );
      exps.push_back(sumexp_pdf);
-     exp_list.add(*exps[i]); 
+     exp_list.add(*exps[i]);
      if ( i<order-1 ){
         float c_def = 1./order;
         if (parameters.size())
-	  c_def = parameters[i-1];
+          c_def = parameters[i-1];
         RooRealVar * bkg_sumplaw_c = new RooRealVar(name+"_c"+TString(to_string(i)), name+"_c"+TString(to_string(i)),c_def, 0, 1.);
         coefs.push_back(bkg_sumplaw_c);
         coef_list.add(*coefs[i]);
@@ -428,12 +428,12 @@ RooAddPdf * CreateGaussExpo( TString name, int order, RooRealVar& dilep_mass, Ro
 /////////// gauss + Power
 RooAddPdf * CreateGaussPower( TString name, int order, RooRealVar& dilep_mass, RooRealVar * gauss_mu, RooRealVar * gauss_wd, std::vector<float> parameters={}){
 
-   std::vector<RooRealVar*> bkg_params;  
+   std::vector<RooRealVar*> bkg_params;
    std::vector<RooPower*> plaws;
    std::vector<RooRealVar*> coefs;
    RooArgList plaw_list;
    RooArgList coef_list;
-   
+
    float def=0,min=-200,max=200;
    for (int i=0; i<order; i++){
      if (order==1) def=-10;
@@ -472,7 +472,7 @@ RooAddPdf * CreateGaussPower( TString name, int order, RooRealVar& dilep_mass, R
     ratio->setVal(parameters[2*order+1]);
   }
 
- 
+
   return new RooAddPdf(name, name, RooArgList(*gauss,*sum_plaw),RooArgList(*ratio));
 }
 
@@ -488,17 +488,20 @@ RooAddPdf * CreateGaussPower( TString name, int order, RooRealVar& dilep_mass, R
 ///////////////////////////////////////////////////////////////////////////////
 
 ////////// Fit bkg only functions sideband or total fit and blind/unblind plot
-std::vector<std::vector<float>> FitBkgFunctions(std::vector<RooAbsPdf*> pdfs, std::vector<RooRealVar*> ampls, RooDataSet &dataset, RooRealVar &dilep_mass, vector<TString> names, std::vector<TString> legs, bool Bkg_only_fit_whole_region, bool unblind, int nbin_data, int nbin_blind, bool is_pseudodata , TString extra_name, bool Print_details=true, TString ver="v15"){
+std::vector<std::vector<float>> FitBkgFunctions(std::vector<RooAbsPdf*> pdfs, std::vector<RooRealVar*> ampls, RooDataSet &dataset, RooRealVar &dilep_mass,
+                                                vector<TString> names, std::vector<TString> legs, bool Bkg_only_fit_whole_region, bool unblind,
+                                                int nbin_data, int nbin_blind, bool is_pseudodata , TString extra_name,
+                                                bool Print_details=true, TString ver="v15"){
 
 
  std::vector<std::vector<float>> output;
  TString fit_range="left,right";
-  if (Bkg_only_fit_whole_region) 
+  if (Bkg_only_fit_whole_region)
      fit_range="full";
   TString plot_range="left,right";
   if (unblind)
      plot_range="full";
-  
+
   TLegend * leg = new TLegend(0.4,0.9-names.size()*0.1,0.9,0.9);
   auto plot_frame =  dilep_mass.frame();
   TPaveText * pt = new TPaveText(0.4,0.9-names.size()*0.1,0.9,0.9,"tlNDC");
@@ -512,27 +515,27 @@ std::vector<std::vector<float>> FitBkgFunctions(std::vector<RooAbsPdf*> pdfs, st
 
   dataset.plotOn(plot_frame,RooFit::Binning(nbin_data),RooFit::Name("data"),RooFit::AsymptoticError(is_pseudodata),RooFit::LineColor(0),RooFit::MarkerColor(0));
 
-  cout<<"\n *********** Bkg-only fit in "+fit_range<<" range *********"<<endl;  
-  for (int i=0; i<pdfs.size(); i++){ 
+  cout<<"\n *********** Bkg-only fit in "+fit_range<<" range *********"<<endl;
+  for (int i=0; i<pdfs.size(); i++){
     std::vector<float> temp;
     cout<<" Fit: "+names[i]<<endl;
     RooAddPdf epdf("epdf_"+names[i],"", RooArgList(*pdfs[i]),  RooArgList(*ampls[i]));
-   
+
     RooFitResult * fit_result = epdf.fitTo(dataset,RooFit::Extended(1),RooFit::Save(),RooFit::PrintLevel(-1),RooFit::Range(fit_range),RooFit::AsymptoticError(is_pseudodata));
     if (Print_details) print_details (fit_result);
     int n_param = fit_result->floatParsFinal().getSize();
     dilep_mass.setBins(nbin_data);
-    
+
     float chi2 = get_chi_squared(dilep_mass, pdfs[i], dataset, unblind, nbin_data-nbin_blind, n_param, false,is_pseudodata);
     float pvalue = ROOT::Math::chisquared_cdf_c(chi2,nbin_data-nbin_blind-n_param);
     if (chi2<0) chi2=1000000000;
     temp.push_back(chi2);
 //    temp.push_back(fit_result->minNll());
     temp.push_back(nbin_data-nbin_blind-n_param);
-    
+
     for (unsigned int ik=0; ik<fit_result->floatParsFinal().getSize(); ik++){
       if (TString(static_cast<RooRealVar*>(fit_result->floatParsFinal().at(ik))->getTitle()).Contains("norm")) continue;
-      temp.push_back(static_cast<RooAbsReal*>(fit_result->floatParsFinal().at(ik))->getVal());      
+      temp.push_back(static_cast<RooAbsReal*>(fit_result->floatParsFinal().at(ik))->getVal());
     }
     output.push_back(temp);
     cout<<">>>>> p-value "<<pvalue<<endl;
@@ -546,12 +549,12 @@ std::vector<std::vector<float>> FitBkgFunctions(std::vector<RooAbsPdf*> pdfs, st
    }
     std::pair<double,double> nBkg = yield_calc( ampls[i]->getVal(), dilep_mass, pdfs[i]);
    if (Print_details)
-      cout<<" - nBkg("+names[i]+") "<<nBkg.first<<"  |  "<<nBkg.second<<endl;    
+      cout<<" - nBkg("+names[i]+") "<<nBkg.first<<"  |  "<<nBkg.second<<endl;
   }
-  
+
   dataset.plotOn(plot_frame,RooFit::Binning(nbin_data),RooFit::CutRange(plot_range),RooFit::Name("data"),RooFit::SumW2Error(is_pseudodata) );
   save_plot(plot_frame,"m(e,#mu)",ver+"_bkgfit_"+extra_name,leg);
-  save_plot_and_band(plot_frame,dilep_mass,names,"m(e,#mu)",ver+"_bkgfit_band_"+extra_name,leg); 
+  save_plot_and_band(plot_frame,dilep_mass,names,"m(e,#mu)",ver+"_bkgfit_band_"+extra_name,leg);
   cout<<" ***************************************"<<endl;
   return output;
 }
@@ -601,7 +604,7 @@ std::vector<std::pair<float,int>> FitTotalFunctions(std::vector<RooAbsPdf*> bkg_
     pt->SetTextAlign(12);
     pt->AddText("SGN yield: "+TString(std::to_string( int(nSgn_tmp.getVal()) ))+" #pm"+TString(std::to_string( int(nSgn_tmp.getError()) )));
     pt->AddText("BKG yield: "+TString(std::to_string( int(nBkg_tmp.getVal()) ))+" #pm"+TString(std::to_string( int(nBkg_tmp.getError()) )));
-    
+
     pt->AddText("p-value: "+TString(std::to_string( pvalue )));
     pt->AddText(Form("#chi^{2}: %1.2f",chi2/(nbin_data-n_param)));
     save_plot(tmpframe,"m(e,#mu)",ver+"_totalfit_"+names[i],leg,pt);
@@ -613,12 +616,12 @@ std::vector<std::pair<float,int>> FitTotalFunctions(std::vector<RooAbsPdf*> bkg_
 
 /////////////////////////////// finds the best orders
 std::pair<int,float> Ftest(std::vector<RooAbsPdf*> pdfs, std::vector<RooRealVar*> ampls, RooDataSet &dataset, RooRealVar &dilep_mass, vector<int> orders, vector<TString> names, std::vector<TString> legs, int nbin_data, int nbin_blind, bool unblind_data_or_ispseudo, bool is_pseudodata , TString extra_name, float ftest_step, float min_pvalue=-1, int print_level=0 ){
-  
+
   bool Print_details = 0;
   if (print_level) Print_details=true;
   std::vector<std::vector<float>> chi2_dof = FitBkgFunctions(pdfs, ampls, dataset, dilep_mass, names, legs, unblind_data_or_ispseudo, unblind_data_or_ispseudo, nbin_data,nbin_blind, is_pseudodata , "ftest_"+extra_name,Print_details);
 
-  std::vector<float> pvalues; 
+  std::vector<float> pvalues;
   std::vector<float> ftests;
   int temp_max_order=0;
   float temp_max_pval=0;
@@ -627,14 +630,14 @@ std::pair<int,float> Ftest(std::vector<RooAbsPdf*> pdfs, std::vector<RooRealVar*
     if (ROOT::Math::chisquared_cdf_c(chi2_dof[i][0],chi2_dof[i][1])>temp_max_pval){
       temp_max_order=orders[i];
       temp_max_pval=ROOT::Math::chisquared_cdf_c(chi2_dof[i][0],chi2_dof[i][1]);
-    }  
+    }
     if (i>0)
        ftests.push_back( ROOT::Math::chisquared_cdf_c(chi2_dof[i-1][0] - chi2_dof[i][0], chi2_dof[i-1][1]-chi2_dof[i][1]) );
-  }  
+  }
 
   vector<int> orders_pass_cut;
   vector<float> chis_pass_cut;
-  vector<int> dofs_pass_cut;  
+  vector<int> dofs_pass_cut;
   for (int i =0; i<chi2_dof.size(); i++){
     if (pvalues[i]<min_pvalue) continue;
     orders_pass_cut.push_back(orders[i]);
@@ -645,7 +648,7 @@ std::pair<int,float> Ftest(std::vector<RooAbsPdf*> pdfs, std::vector<RooRealVar*
   vector<float> ftests_pass_cut;
   for (int i =1; i<orders_pass_cut.size(); i++)
      ftests_pass_cut.push_back( ROOT::Math::chisquared_cdf_c( chis_pass_cut[i-1] - chis_pass_cut[i], dofs_pass_cut[i-1]-dofs_pass_cut[i]) );
-     
+
   int min_order=temp_max_order,best_ftest=0;
   if (chis_pass_cut.size()>0)
      min_order=orders_pass_cut[0];
@@ -653,9 +656,9 @@ std::pair<int,float> Ftest(std::vector<RooAbsPdf*> pdfs, std::vector<RooRealVar*
   for (int i =0; i<ftests_pass_cut.size(); i++){
     if (ftests_pass_cut[i]>ftest_step || orders_pass_cut[i]+1<orders_pass_cut[i+1]) break;
     min_order=orders_pass_cut[i+1];
-    best_ftest=ftests_pass_cut[i]; 
+    best_ftest=ftests_pass_cut[i];
   }
-  
+
   TString summary="\n Ftest result";
   for (int i =0; i<pvalues.size(); i++)
     summary+=Form(" order_%1d_chi2_%2.4lf_pvalue_%2.4lf",orders[i],chi2_dof[i][0],pvalues[i]);
@@ -671,12 +674,16 @@ std::pair<int,float> Ftest(std::vector<RooAbsPdf*> pdfs, std::vector<RooRealVar*
     summary+=Form(" order_%1d_to_%1d_ftest_%2.4lf",orders_pass_cut[i],orders_pass_cut[i+1],ftests_pass_cut[i]);
 
   cout<<summary<<"; BEST: "<<min_order<<" with "<<best_ftest<<endl;
-  
-  return std::pair<int,float> (min_order,best_ftest);  
+
+  return std::pair<int,float> (min_order,best_ftest);
 }
 
 /////////////////////////////////// Repeat the sames for RooHist
 ////////// Fit bkg only functions
+/**
+   Return: vector<fit results>
+   fit results: [chi^2, N(DOF), param_1, param_2, ...]
+ **/
 std::vector<std::vector<float>> FitHistBkgFunctions(std::vector<RooAbsPdf*> pdfs, std::vector<RooRealVar*> ampls,
                                                     RooDataHist *dataset, RooRealVar &dilep_mass, vector<TString> names,
                                                     std::vector<TString> legs, int nbin_data, bool Bkg_only_fit_whole_region,
@@ -686,12 +693,12 @@ std::vector<std::vector<float>> FitHistBkgFunctions(std::vector<RooAbsPdf*> pdfs
 
  std::vector<std::vector<float>> output;
  TString fit_range="left,right";
-  if (Bkg_only_fit_whole_region) 
+  if (Bkg_only_fit_whole_region)
      fit_range="full";
   TString plot_range="full";
   if (!Unblind_data_sr)
       plot_range="left,right";
-  
+
   TLegend * leg = new TLegend(0.4,0.9-names.size()*0.1,0.9,0.9);
   auto plot_frame =  dilep_mass.frame();
   TPaveText * pt = new TPaveText(0.4,0.9-names.size()*0.1,0.9,0.9,"tlNDC");
@@ -705,18 +712,19 @@ std::vector<std::vector<float>> FitHistBkgFunctions(std::vector<RooAbsPdf*> pdfs
 
   dataset->plotOn(plot_frame,RooFit::Name("data"),RooFit::LineColor(0),RooFit::MarkerColor(0));
 
-  cout<<"\n *********** Bkg-only fit in "+fit_range<<" range *********"<<endl;  
-  for (int i=0; i<pdfs.size(); i++){ 
+  cout<<"\n *********** Bkg-only fit in "+fit_range<<" range *********"<<endl;
+  for (int i=0; i<pdfs.size(); i++){
     std::vector<float> temp; //list of (chi^2, N(DOF), params) values
     cout<<" Fit: "+names[i]<<endl;
     RooAddPdf epdf("epdf_"+names[i],"", RooArgList(*pdfs[i]),  RooArgList(*ampls[i]));
-   
+
     RooFitResult * fit_result = epdf.fitTo(*dataset,RooFit::Extended(1),RooFit::Save(),RooFit::PrintLevel(-1),RooFit::Range(fit_range));
     if (Print_details) print_details (fit_result);
     int n_param = fit_result->floatParsFinal().getSize();
     auto chi2_frame = dilep_mass.frame();
     dataset->plotOn(chi2_frame,RooFit::Name("data"));
     pdfs[i]->plotOn(chi2_frame,RooFit::Range("full"));
+    //FIXME: Should the chi^2 and N(DOF) only consider the sidebands, not the full range?
     RooChi2Var chi("chi", "chi", *pdfs[i], *dataset, RooFit::Range("full"));
     float chi2 = chi.getVal();//chi2_frame->chiSquare(nbin_data-1);
     float pvalue = ROOT::Math::chisquared_cdf_c(chi2,nbin_data-n_param);
@@ -726,10 +734,10 @@ std::vector<std::vector<float>> FitHistBkgFunctions(std::vector<RooAbsPdf*> pdfs
     temp.push_back(chi2);
  //   temp.push_back(fit_result->minNll());
     temp.push_back(nbin_data-n_param);
-    
+
     for (unsigned int ik=0; ik<fit_result->floatParsFinal().getSize(); ik++){
       if (TString(static_cast<RooRealVar*>(fit_result->floatParsFinal().at(ik))->getTitle()).Contains("norm")) continue;
-      temp.push_back(static_cast<RooAbsReal*>(fit_result->floatParsFinal().at(ik))->getVal());      
+      temp.push_back(static_cast<RooAbsReal*>(fit_result->floatParsFinal().at(ik))->getVal());
     }
     output.push_back(temp);
     cout<<">>>>> p-value "<<pvalue<<endl;
@@ -743,12 +751,12 @@ std::vector<std::vector<float>> FitHistBkgFunctions(std::vector<RooAbsPdf*> pdfs
    }
     std::pair<double,double> nBkg = yield_calc( ampls[i]->getVal(), dilep_mass, pdfs[i]);
    if (Print_details)
-      cout<<" - nBkg("+names[i]+") "<<nBkg.first<<"  |  "<<nBkg.second<<endl;    
+      cout<<" - nBkg("+names[i]+") "<<nBkg.first<<"  |  "<<nBkg.second<<endl;
   }
-  
+
   dataset->plotOn(plot_frame,RooFit::Binning(nbin_data),RooFit::CutRange(plot_range),RooFit::Name("data") );
   save_plot(plot_frame,"m(e,#mu)",cfg_name+"_"+extra_name,leg,NULL,true,Logy);
-  save_plot_and_band(plot_frame,dilep_mass,names,"m(e,#mu)",cfg_name+"_band_"+extra_name,leg,NULL,true,Logy); 
+  save_plot_and_band(plot_frame,dilep_mass,names,"m(e,#mu)",cfg_name+"_band_"+extra_name,leg,NULL,true,Logy);
   cout<<" ***************************************"<<endl;
   return output;
 }
@@ -757,44 +765,48 @@ std::vector<std::vector<float>> FitHistBkgFunctions(std::vector<RooAbsPdf*> pdfs
 
 
 FtestStruct HistFtest(std::vector<RooAbsPdf*> pdfs, std::vector<RooRealVar*> ampls,
-		      RooDataHist *dataset, RooRealVar &dilep_mass, vector<int> orders,
-		      vector<TString> names, std::vector<TString> legs,
-		      int nbin_data, TString extra_name, float ftest_step,
-		      float min_pvalue=-1, int print_level=0,
+                      RooDataHist *dataset, RooRealVar &dilep_mass, vector<int> orders,
+                      vector<TString> names, std::vector<TString> legs,
+                      int nbin_data, TString extra_name, float ftest_step,
+                      float min_pvalue=-1, int print_level=0,
                       bool force_inclusion = false){
-  
+
   bool Print_details = 0;
   if (print_level) Print_details=true;
 
   FtestStruct resultF;
 
+  //Fit each function to the sidebands and evalueate the chi^2 and N(dof)
   std::vector<std::vector<float>> chi2_dof = FitHistBkgFunctions(pdfs, ampls, dataset, dilep_mass, names, legs, nbin_data,
                                                                  false, //use or don't use the signal region in the fit
                                                                  extra_name,Print_details,"ftest");
 
-  std::vector<float> pvalues; 
-  std::vector<float> ftests;
+  //Evaluate the p-values for each function as well as the F-test p-value for increasing the function order
+  std::vector<float> pvalues;
+  std::vector<float> ftests; //p-value for information gain (only used in debugging, real test is restricted to functions passing fit quality selection)
   int temp_max_order=0;
   float temp_max_pval=0;
   for (int i =0; i<chi2_dof.size(); i++){
-    pvalues.push_back(ROOT::Math::chisquared_cdf_c(chi2_dof[i][0],chi2_dof[i][1]) );
-    if (ROOT::Math::chisquared_cdf_c(chi2_dof[i][0],chi2_dof[i][1])>temp_max_pval){
+    pvalues.push_back(ROOT::Math::chisquared_cdf_c(chi2_dof[i][0],chi2_dof[i][1]) ); //fit quality p-value
+    if (ROOT::Math::chisquared_cdf_c(chi2_dof[i][0],chi2_dof[i][1])>temp_max_pval){ //find the function with the best p-value
       temp_max_order=orders[i];
       temp_max_pval=ROOT::Math::chisquared_cdf_c(chi2_dof[i][0],chi2_dof[i][1]);
-    }  
-    if (i>0)
+    }
+    if (i>0) //F-test p-value for information gain by increasing the function order
        ftests.push_back( ROOT::Math::chisquared_cdf_c(chi2_dof[i-1][0] - chi2_dof[i][0], chi2_dof[i-1][1]-chi2_dof[i][1]) );
-  }  
+  }
 
+  //Store the functions that pass the p-value threshold to be accepted into the model
   vector<int> orders_pass_cut;
   vector<float> chis_pass_cut;
-  vector<int> dofs_pass_cut;  
+  vector<int> dofs_pass_cut;
   for (int i =0; i<chi2_dof.size(); i++){
     if (pvalues[i]<min_pvalue) continue;
     orders_pass_cut.push_back(orders[i]);
     chis_pass_cut.push_back(chi2_dof[i][0]);
     dofs_pass_cut.push_back(chi2_dof[i][1]);
   }
+
   //if the list is empty and force inclusion is set, add the highest p-value function to the list
   if(orders_pass_cut.size() == 0 && force_inclusion && chi2_dof.size() > 0) {
     unsigned max_p_index = 0;
@@ -811,28 +823,30 @@ FtestStruct HistFtest(std::vector<RooAbsPdf*> pdfs, std::vector<RooRealVar*> amp
     dofs_pass_cut.push_back(chi2_dof[max_p_index][1]);
   }
 
+  //Repeat the F-test p-value for information gain on the functions passing the fit quality p-value requirement
   vector<float> ftests_pass_cut;
   for (int i =1; i<orders_pass_cut.size(); i++)
      ftests_pass_cut.push_back( ROOT::Math::chisquared_cdf_c( chis_pass_cut[i-1] - chis_pass_cut[i], dofs_pass_cut[i-1]-dofs_pass_cut[i]) );
-     
-  int min_order=temp_max_order,best_ftest=0;
 
+  //Store lowest order function that passes the fit quality selection
+  int min_order=temp_max_order,best_ftest=0;
   resultF.success=false;
   if (chis_pass_cut.size()>0){
      min_order=orders_pass_cut[0];
      resultF.getAllOrder.push_back(orders_pass_cut[0]);
      resultF.success=true;
   }
-  
 
+  //For each function with acceptable fit quality, check if it passes the F-test for information gain by increased function order
   for (int i =0; i<ftests_pass_cut.size(); i++){
-    if (ftests_pass_cut[i]>ftest_step ) break;
-    min_order=orders_pass_cut[i+1];
-    best_ftest=ftests_pass_cut[i]; 
+    if (ftests_pass_cut[i] > ftest_step) break;
+    min_order=orders_pass_cut[i+1]; //store the best function (if higher order and passes the F-test, must be better)
+    best_ftest=ftests_pass_cut[i];
     resultF.getAllOrder.push_back(orders_pass_cut[i+1]);
   }
-  
 
+
+  //Print information about the function fits and F-test results
   TString summary="\n Ftest result";
   for (int i =0; i<pvalues.size(); i++)
     summary+=Form(" order_%1d_chi2_%2.4lf_pvalue_%2.4lf",orders[i],chi2_dof[i][0],pvalues[i]);
@@ -845,9 +859,9 @@ FtestStruct HistFtest(std::vector<RooAbsPdf*> pdfs, std::vector<RooRealVar*> amp
   cout<<summary<<"; BEST: "<<min_order<<" with "<<best_ftest<<endl;
 
   resultF.getBestOrder = min_order;
-  resultF.getBestChi = best_ftest ;
-  
-  return resultF;  
+  resultF.getBestChi   = best_ftest; //store the p-value for information gained (FIXME: Should this be fit quality p-value?)
+
+  return resultF;
 }
 
 
@@ -859,7 +873,7 @@ FtestStruct HistFtest(std::vector<RooAbsPdf*> pdfs, std::vector<RooRealVar*> amp
 ///////////////////////////////////////////////////////////////////////////////
 
 
-///////////// create data obs from toys 
+///////////// create data obs from toys
 RooDataSet * GetDataObs(RooRealVar & dilep_mass_out, bool pseudodata_fit_combine, bool data_blinded_combine, bool histo_template_combine, bool pseudodata_template_combine, TString data_combine_file, TString cuts, TString data_histo_file, TString histo_name_combine, float min_fit_range, float max_fit_range, float blind_min, float blind_max,float sumEntries, TString ver, TString name){
 
 
@@ -898,7 +912,7 @@ RooDataSet * GetDataObs(RooRealVar & dilep_mass_out, bool pseudodata_fit_combine
     save_plot(psd_frame,"m(e,#mu)",ver+"_fit_for_data_obs_"+name);
 
     for (int i=0; i<3; i++)
-      psd_cheb3_params[i].setConstant(true); //set constant to generate toy 
+      psd_cheb3_params[i].setConstant(true); //set constant to generate toy
 
     data_obs = epsdPDF.generate(RooArgSet(dilep_mass_out),sumEntries); //actual generation
 
@@ -930,14 +944,14 @@ TH1F* GetHistoTemplate(TString data_combine_file, TString cuts, float min_fit_ra
 
    if (read_th1){
      TFile * ftemplate = new TFile(data_histo_file,"READ");
-     hmc_fnc = (TH1F*) ftemplate->Get(histo_name_combine);    
-   } else{   
+     hmc_fnc = (TH1F*) ftemplate->Get(histo_name_combine);
+   } else{
      TTree * dc_tree = get_tree("mytreefit",data_combine_file,cuts);
      dc_tree->Draw("mass_ll>>hmc_fnc_"+name,"NormGen_wt");
 
    }
    hmc_fnc->Scale(1./hmc_fnc->Integral());
-   
+
     return hmc_fnc;
 }
 
@@ -948,7 +962,7 @@ std::vector<RooDataSet *> GenerateTemplateToys( RooAbsPdf * bkg_pdf, RooAbsPdf *
 
   vector<RooDataSet *> datasets;
   for ( int itoy=0; itoy<ntoys; itoy++){
-      if (itoy%(int(0.1*ntoys))==0) 
+      if (itoy%(int(0.1*ntoys))==0)
          cout<<" generate toy "<<itoy<<" / "<<ntoys<<endl;
      RooDataSet * bkg_toy = bkg_pdf->generate(RooArgSet(dilep_mass_out), bkgEntries);
      RooDataSet * sgn_toy = sgn_pdf->generate(RooArgSet(dilep_mass_out),sgnEntries);
@@ -956,7 +970,7 @@ std::vector<RooDataSet *> GenerateTemplateToys( RooAbsPdf * bkg_pdf, RooAbsPdf *
         bkg_toy->append( *sgn_toy);
      datasets.push_back(bkg_toy);
   }
-  return datasets;  
+  return datasets;
 }
 
 
@@ -964,7 +978,7 @@ std::vector<RooDataSet *> GenerateTemplateToys( RooAbsPdf * bkg_pdf, RooAbsPdf *
 ////// test toys
 TH1F *  ChebychevPullFromToys( int order, RooAbsPdf * sgn_pdf, RooRealVar & dilep_mass_out, std::vector<RooDataSet *> toys, float nExpected, float sumEntries, TString name,bool PrintPulls=false){
   float range_nSgn = nExpected*100;
-  if (nExpected==0) 
+  if (nExpected==0)
      range_nSgn =100;
   TH1F * hpull_cheb = new TH1F("hpull_cheb_"+name,"",100,-5,5);
   for (int itoy=0; itoy<toys.size(); itoy++){
@@ -973,14 +987,14 @@ TH1F *  ChebychevPullFromToys( int order, RooAbsPdf * sgn_pdf, RooRealVar & dile
      TString stoy(to_string(itoy));
      RooRealVar nBkg_cheb_toy("nbkg_toy_"+stoy+name,"",sumEntries,0,2*sumEntries);
      RooRealVar nSgn_cheb_toy("nsgn_toy_"+stoy+name,"",0,-1*range_nSgn,range_nSgn);
-     RooChebychev * cheb_pdf_toy = CreateChebychev( "cheb_toy_"+stoy+name, order, dilep_mass_out);    
+     RooChebychev * cheb_pdf_toy = CreateChebychev( "cheb_toy_"+stoy+name, order, dilep_mass_out);
      RooAddPdf total_pdf_cheb_toy("total_pdf_cheb_"+stoy,"", RooArgList(* cheb_pdf_toy, * sgn_pdf),  RooArgList(nBkg_cheb_toy,nSgn_cheb_toy));
      RooFitResult* toy_cheb_result = total_pdf_cheb_toy.fitTo(*toys[itoy],RooFit::Extended(1),RooFit::Save(),RooFit::Range(70 , 110),RooFit::PrintLevel(-1));
      hpull_cheb->Fill((nSgn_cheb_toy.getVal()-nExpected)/nSgn_cheb_toy.getError());
-     if ( PrintPulls) 
+     if ( PrintPulls)
         cout<<" Cheb3: #toy "<<itoy<<" pull: "<<(nSgn_cheb_toy.getVal()-nExpected)/nSgn_cheb_toy.getError()<<" Fit: nSgn "<<nSgn_cheb_toy.getVal()<<" +/- "<<nSgn_cheb_toy.getError()<<" nBkg "<<nBkg_cheb_toy.getVal()<<" +/- "<<nBkg_cheb_toy.getError()<<" entries "<<"; Gen Sgn "<<nExpected<<endl;
   }
   return hpull_cheb;
-} 
+}
 
 #endif

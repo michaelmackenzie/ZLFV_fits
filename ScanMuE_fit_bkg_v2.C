@@ -173,10 +173,12 @@ int ScanMuE_fit_bkg_v2(TString name="bin1_r2",
 
    
    //////////////////// fit all candidate functions ////////////////
-   std::vector<RooAbsPdf*> bkg_pdfs;
-   std::vector<RooRealVar*> bkg_ampl;
-   std::vector<TString> bkg_names;
-   std::vector<TString> bkg_legs;
+
+   // For each accepted function, create a new PDF and fit this to the data sidebands
+   std::vector<RooAbsPdf*> bkg_pdfs; //background PDF
+   std::vector<RooRealVar*> bkg_ampl; //normalization for each PDF
+   std::vector<TString> bkg_names; //name to write to the workspace
+   std::vector<TString> bkg_legs; //title for the legend
 
    if (cheb_Ftest.success) {
      for (int i=0; i<cheb_Ftest.getAllOrder.size(); i++){
@@ -226,12 +228,13 @@ int ScanMuE_fit_bkg_v2(TString name="bin1_r2",
    RooArgList models_out; //container for multpdf
    RooWorkspace *wspace = new RooWorkspace("ws_bkg","ws_bkg"); //background & data workspace
 
+   // Create new PDFs initialized the fit parameter results returned by FitHistBkgFunctions
    int nstartFNC1=0;
    if (cheb_Ftest.success) {
      for (int i=0; i<cheb_Ftest.getAllOrder.size(); i++){
        std::vector<float> param;
        TString sord (std::to_string(cheb_Ftest.getAllOrder[i]));
-       for(int j=2; j<final_results[i].size(); j++)
+       for(int j=2; j<final_results[i].size(); j++) //skip indices 0 and 1 which contain chi^2 and N(DOF), respectively
           param.push_back(final_results[i][j]);
        models_out.add( *( CreateChebychev( "bkg_cheb"+sord+"_pdf_"+varname, cheb_Ftest.getAllOrder[i], dilep_mass_out) ) );
        nstartFNC1+=1;
@@ -274,6 +277,7 @@ int ScanMuE_fit_bkg_v2(TString name="bin1_r2",
      }
    }
 
+   //Create a RooMultiPdf envelope with all of the accepted functions and the associated function index
    RooMultiPdf multipdf("multipdf_"+varname, "", cat, models_out);
    RooRealVar norm_out("multipdf_"+varname+"_norm","",dhist_bkg->sumEntries(),0.5*dhist_bkg->sumEntries(),10*dhist_bkg->sumEntries());
 
