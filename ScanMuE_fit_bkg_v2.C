@@ -29,7 +29,7 @@ int ScanMuE_fit_bkg_v2(TString name="bin1_r2",
 
    /// bkg functions
    bool Fit_cheb=true; 
-      int min_cheb_order=1,max_cheb_order=4;
+      int min_cheb_order=1,max_cheb_order=(max_fit_range > 500. && min_fit_range < 150.) ? 6 : 4;
       int add_orders_cheb=0;
    bool Fit_sumexp=true;
       int min_sumexp_order=1,max_sumexp_order=4;
@@ -227,8 +227,11 @@ int ScanMuE_fit_bkg_v2(TString name="bin1_r2",
    RooCategory cat("pdfindex_"+varname, "");
    RooArgList models_out; //container for multpdf
    RooWorkspace *wspace = new RooWorkspace("ws_bkg","ws_bkg"); //background & data workspace
+   int best_index = 0; //track the best fit result, set this as the default
+   float best_pvalue = 0.;
 
-   // Create new PDFs initialized the fit parameter results returned by FitHistBkgFunctions
+   // Create new PDFs initialized to the fit parameter results returned by FitHistBkgFunctions
+   // FIXME: Why re-create the PDFs?
    int nstartFNC1=0;
    if (cheb_Ftest.success) {
      for (int i=0; i<cheb_Ftest.getAllOrder.size(); i++){
@@ -236,7 +239,18 @@ int ScanMuE_fit_bkg_v2(TString name="bin1_r2",
        TString sord (std::to_string(cheb_Ftest.getAllOrder[i]));
        for(int j=2; j<final_results[i].size(); j++) //skip indices 0 and 1 which contain chi^2 and N(DOF), respectively
           param.push_back(final_results[i][j]);
-       models_out.add( *( CreateChebychev( "bkg_cheb"+sord+"_pdf_"+varname, cheb_Ftest.getAllOrder[i], dilep_mass_out) ) );
+       auto pdf = CreateChebychev( "bkg_cheb"+sord+"_pdf_"+varname, cheb_Ftest.getAllOrder[i], dilep_mass_out);
+       RooArgList param_list(*(pdf->getVariables()));
+       for(int index = 0; index < param_list.getSize()-1; ++index) {
+         ((RooRealVar*) param_list.at(index))->setVal(param[index]);
+       }
+       models_out.add(*pdf);
+       pdf->Print();
+       const float pvalue = ROOT::Math::chisquared_cdf_c(final_results[nstartFNC1][0],final_results[nstartFNC1][1]);
+       if(pvalue > best_pvalue) {
+         best_index  = nstartFNC1;
+         best_pvalue = pvalue;
+       }
        nstartFNC1+=1;
      }
      for( int iord =cheb_Ftest.getBestOrder+1; iord<cheb_Ftest.getBestOrder+add_orders_cheb+1; iord++){
@@ -252,7 +266,17 @@ int ScanMuE_fit_bkg_v2(TString name="bin1_r2",
        for(int j=2; j<final_results[i+nstartFNC1].size(); j++)
           param.push_back(final_results[i+nstartFNC1][j]);
        TString sord (std::to_string(sumexp_Ftest.getAllOrder[i]));
-       models_out.add( *CreateSumExpo( "bkg_sumexp"+sord+"_pdf_"+varname,  sumexp_Ftest.getAllOrder[i], dilep_mass_out, sumexp_recurse_coef) );
+       auto pdf = CreateSumExpo( "bkg_sumexp"+sord+"_pdf_"+varname,  sumexp_Ftest.getAllOrder[i], dilep_mass_out, sumexp_recurse_coef);
+       RooArgList param_list(*(pdf->getVariables()));
+       for(int index = 0; index < param_list.getSize()-1; ++index) {
+         ((RooRealVar*) param_list.at(index))->setVal(param[index]);
+       }
+       models_out.add(*pdf);
+       const float pvalue = ROOT::Math::chisquared_cdf_c(final_results[nstartFNC2][0],final_results[nstartFNC2][1]);
+       if(pvalue > best_pvalue) {
+         best_index = nstartFNC2;
+         best_pvalue = pvalue;
+       }
        nstartFNC2+=1;
      }
      for( int iord =sumexp_Ftest.getBestOrder+1; iord<sumexp_Ftest.getBestOrder+add_orders_sumexp+1; iord++){
@@ -268,7 +292,17 @@ int ScanMuE_fit_bkg_v2(TString name="bin1_r2",
        for(int j=2; j<final_results[i+nstartFNC2].size(); j++)
           param.push_back(final_results[i+nstartFNC2][j]);
        TString sord (std::to_string(sumplaw_Ftest.getAllOrder[i]));
-       models_out.add( *(CreateSumPower( "bkg_sumplaw"+sord+"_pdf_"+varname, sumplaw_Ftest.getAllOrder[i], dilep_mass_out,sumplaw_recurse_coef)) );
+       auto pdf = (CreateSumPower( "bkg_sumplaw"+sord+"_pdf_"+varname, sumplaw_Ftest.getAllOrder[i], dilep_mass_out,sumplaw_recurse_coef));
+       RooArgList param_list(*(pdf->getVariables()));
+       for(int index = 0; index < param_list.getSize()-1; ++index) {
+         ((RooRealVar*) param_list.at(index))->setVal(param[index]);
+       }
+       models_out.add(*pdf);
+       const float pvalue = ROOT::Math::chisquared_cdf_c(final_results[nstartFNC3][0],final_results[nstartFNC3][1]);
+       if(pvalue > best_pvalue) {
+         best_index = nstartFNC3;
+         best_pvalue = pvalue;
+       }
        nstartFNC3+=1;
      }
     for( int iord =sumplaw_Ftest.getBestOrder+1; iord<sumplaw_Ftest.getBestOrder+add_orders_sumplaw+1; iord++){
@@ -280,7 +314,10 @@ int ScanMuE_fit_bkg_v2(TString name="bin1_r2",
    //Create a RooMultiPdf envelope with all of the accepted functions and the associated function index
    RooMultiPdf multipdf("multipdf_"+varname, "", cat, models_out);
    RooRealVar norm_out("multipdf_"+varname+"_norm","",dhist_bkg->sumEntries(),0.5*dhist_bkg->sumEntries(),10*dhist_bkg->sumEntries());
+   cat.setIndex(best_index); //initialize to the best fit result
+   cout << "Using best index " << best_index << " with p-value " << best_pvalue << " (" << models_out.at(best_index)->GetName() << ")\n";
 
+   models_out.Print();
    wspace->import(cat);
    wspace->import(multipdf);
    wspace->import(norm_out);

@@ -96,6 +96,7 @@ parser.add_argument("--skip-sgn-syst", dest="skip_sgn_syst",default=False, actio
 parser.add_argument("--skip-bkg-altfits", dest="skip_bkg_altfits",default=False, action='store_true',help="shape experiment")
 parser.add_argument("--skip-dc", dest="skip_dc",default=False, action='store_true',help="Skip datacard creation")
 parser.add_argument("--mass-point", dest="mass_point",default=-1,type=int,help="Single mass point to process")
+parser.add_argument("--full-mass", dest="full_mass",default=False,action='store_true',help="Fit the entire mass distribution")
 parser.add_argument("--log-files", dest="log_files",default=False,action='store_true',help="Write individual mass point fits to log files")
 parser.add_argument("--dry-run", dest="dry_run",default=False,action='store_true',help="Don't execute script calls")
 
@@ -234,8 +235,8 @@ while (NextPoint):
   sr_min = round(sr_center - sr_buffer*sr_width,2)
   sr_max = round(sr_center + sr_buffer*sr_width,2)
   sr_yld = round(par_yield[0] + par_yield[1]*sr_center + par_yield[2]*sr_center*sr_center,2)
-  min_mass = round(sr_center - region_buffer*sr_width,2)
-  max_mass = round(sr_center + region_buffer*sr_width,2)
+  min_mass = round(sr_center - region_buffer*sr_width,2) if not args.full_mass else  90.
+  max_mass = round(sr_center + region_buffer*sr_width,2) if not args.full_mass else 700.
   print "SR central",sr_center,"width",sr_width,"min",sr_min,"max",sr_max,"yield",sr_yld
 
   if(args.mass_point < 0 or cnt == args.mass_point):
@@ -249,7 +250,9 @@ while (NextPoint):
                   +str(sr_yld)+','+shape_dc+',"'+args.outvar+'",'+do_sgn_syst+',"'+args.param_name+'")\'' + tail)
       if args.component == "bkg" or args.component == "all":
          tail = (' >| log/fit_bkg_%s_mp%i.log' % (args.name, cnt)) if args.log_files else ''
-         os.system(script_head + 'root -l -b -q ScanMuE_fit_bkg_v'+args.ver+'.C\'("'+args.name+"_mp"+str(cnt)+'","'+args.data_file+'","'+args.xgb_min+'","'+args.xgb_max+'",'+str(min_mass)+','+str(max_mass)+','+str(sr_min)+','+str(sr_max)+','+unblind+','+shape_dc+',"'+args.outvar+'","'+args.param_name+'")\'' + tail)
+         os.system(script_head + 'root -l -b -q ScanMuE_fit_bkg_v'+args.ver+'.C\'("'+args.name+"_mp"+str(cnt)+'","'+args.data_file
+                   +'","'+args.xgb_min+'","'+args.xgb_max+'",'+str(min_mass)+','+str(max_mass)+','+str(sr_min)+','+str(sr_max)
+                   +','+unblind+','+shape_dc+',"'+args.outvar+'","'+args.param_name+'")\'' + tail)
         
 
     # Create a corresponding datacard

@@ -57,6 +57,8 @@ def process_datacard(card, directory, name, asimov = False, skip_fit = False, ve
    ws_name = name
    ws_name = name.replace('bdt_', 'bdt_0d7_1d0_')
    ws_file = 'WorkspaceScanSGN/workspace_scansgn_v2_%s.root' % (ws_name)
+   if 'toy' in ws_file:
+      ws_file = ws_file.split('_toy')[0] + '_mp' + ws_file.split('_mp')[1]
    f = rt.TFile.Open(ws_file, 'READ')
    ws = f.Get('workspace_signal')
    mass_var = ws.var('mean_bin2')
@@ -99,9 +101,10 @@ def process_datacard(card, directory, name, asimov = False, skip_fit = False, ve
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-o", dest="name",default="bdt_v01", type=str,help="datacard directory name")
-parser.add_argument("--skip-fit", dest="skip_fit",default=False, action='store_true',help="Skip fits, assume already processed")
+parser.add_argument("--skip-fits", dest="skip_fits",default=False, action='store_true',help="Skip fits, assume already processed")
 parser.add_argument("--asimov", dest="asimov",default=False, action='store_true',help="Perform fits Asimov dataset")
 parser.add_argument("--unblind", dest="unblind",default=False, action='store_true',help="Plot the observed limits")
+parser.add_argument("--max-steps", dest="max_steps",default=-1, type=int, help="Maximum steps to take in the scan")
 parser.add_argument("-v", dest="verbose",default=0, type=int,help="Add verbose printout")
 
 args, unknown = parser.parse_known_args()
@@ -134,6 +137,8 @@ rt.gROOT.SetBatch(True)
 list_of_files = [f for f in os.listdir(carddir) if '.txt' in f and '0d7' not in f]
 # Sort the list by mass point
 list_of_files.sort(key=file_sort)
+if args.max_steps > 0:
+   list_of_files = list_of_files[:args.max_steps]
 
 asimov = args.asimov
 
@@ -160,7 +165,7 @@ for f in list_of_files:
    # only process the merged fits
    if '0d7' in f: continue
    mass_point = f.split('_mp')[1].split('.txt')[0]
-   [r_fit, r_lim, mass] = process_datacard(f, carddir, args.name + '_mp'+mass_point, asimov, args.skip_fit, args.verbose)
+   [r_fit, r_lim, mass] = process_datacard(f, carddir, args.name + '_mp'+mass_point, asimov, args.skip_fits, args.verbose)
 
    # store the results
    masses.append(mass)
@@ -268,7 +273,11 @@ sig_half = array('d')
 sig_err  = array('d')
 m_errs = array('d') #create buffers between mass points
 for index in range(len(r_fits)):
-   significances.append((r_fits[index]) / (r_lo_errs[index] if r_fits[index] > 0. else r_hi_errs[index]))
+   r_err = (r_lo_errs[index] if r_fits[index] > 0. else r_hi_errs[index])
+   if r_err <= 0.:
+      print "Fit errors for mass point %.1f are 0" % (masses[index])
+      r_err = max([0.1, r_lo_errs[index], r_hi_errs[index]])
+   significances.append((r_fits[index]) / r_err)
    sig_half.append(significances[-1]/2.)
    sig_err.append(significances[-1]/2.)
    if index < len(masses) - 1:
