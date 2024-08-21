@@ -56,3 +56,9 @@ TOYFILE2="WorkspaceScanTOY/toy_file_toy_0d7_1d0_2.root"
 # Run the scan over the toy datacards
 time python perform_scan.py -o bdt_v03_step_1d0_toy_2 --unblind
 ```
+
+### Additional useful tools/studies
+
+- [plot_signal_model.py](plot_signal_model.py): Plot the signal model interpolation, including the line shape and the overall efficiency.
+- [plot_zprime_bdt.py](plot_zprime_bdt.py): Plot the Z prime BDT score distribution and CDF as a function of mass.
+- [eval_zprime_unc.py](eval_zprime_unc.py): Evaluate standard uncertainties on the Z prime signal efficiency.
