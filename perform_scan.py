@@ -3,6 +3,8 @@ import os
 import argparse
 import ROOT as rt
 from array import array
+from math import exp
+from math import log10
 
 #----------------------------------------------------------------------------------------
 # Define the sorting of the datacards
@@ -30,6 +32,23 @@ def process_datacard(card, directory, name, asimov = False, skip_fit = False, ve
       command += ' --X-rtd MINIMIZER_freezeDisassociatedParams --X-rtd REMOVE_CONSTANT_ZERO_POINT=1 --X-rtd MINIMIZER_multiMin_hideConstants'
       command += ' --cminRunAllDiscreteCombinations'
       output = 'fit_rate_%s.log' % (name)
+      if verbose > 1: print command
+      os.system('cd %s; %s >| %s; cd ..' % (directory, command, output))
+
+   #----------------------------------------------------------------------------
+   # Evaluate the signal rate significance
+   #----------------------------------------------------------------------------
+
+   if not skip_fit:
+      command = 'combine -d %s -n .%s%s -M Significance --uncapped 1' % (card, name, "asimov" if asimov else "")
+      if asimov: command += ' -t -1'
+      #Allow negative measured signal rates
+      command += ' --rMin -50 --rMax 50'
+      #Additional commands to help fit converge properly
+      command += ' --cminDefaultMinimizerStrategy 0'
+      command += ' --X-rtd MINIMIZER_freezeDisassociatedParams --X-rtd REMOVE_CONSTANT_ZERO_POINT=1 --X-rtd MINIMIZER_multiMin_hideConstants'
+      command += ' --cminRunAllDiscreteCombinations'
+      output = 'fit_sig_%s.log' % (name)
       if verbose > 1: print command
       os.system('cd %s; %s >| %s; cd ..' % (directory, command, output))
 
@@ -78,6 +97,14 @@ def process_datacard(card, directory, name, asimov = False, skip_fit = False, ve
    if verbose > 0: print 'r fit results:', r_fit
    f.Close()
 
+   sig_file = '%shiggsCombine.%s%s.Significance.mH120.root' % (directory, name, "asimov" if asimov else "")
+   f = rt.TFile.Open(sig_file, 'READ')
+   t = f.Get('limit')
+   t.GetEntry(0)
+   r_sig = t.limit
+   if verbose > 0: print 'r significance results:', r_sig
+   f.Close()
+   
    lim_file = '%shiggsCombine.%s%s.AsymptoticLimits.mH120.root' % (directory, name, "asimov" if asimov else "")
    f = rt.TFile.Open(lim_file, 'READ')
    t = f.Get('limit')
@@ -92,7 +119,7 @@ def process_datacard(card, directory, name, asimov = False, skip_fit = False, ve
    # Return the results
    #----------------------------------------------------------------------------
 
-   return [r_fit, r_lim, mass]
+   return [r_fit, r_lim, r_sig, mass]
 
 
 #----------------------------------------------
@@ -105,6 +132,8 @@ parser.add_argument("--skip-fits", dest="skip_fits",default=False, action='store
 parser.add_argument("--asimov", dest="asimov",default=False, action='store_true',help="Perform fits Asimov dataset")
 parser.add_argument("--unblind", dest="unblind",default=False, action='store_true',help="Plot the observed limits")
 parser.add_argument("--max-steps", dest="max_steps",default=-1, type=int, help="Maximum steps to take in the scan")
+parser.add_argument("--first-step", dest="first_step",default=0, type=int, help="First mass step to process")
+parser.add_argument("--tag", dest="tag",default="", type=str, help="Output directory tag")
 parser.add_argument("-v", dest="verbose",default=0, type=int,help="Add verbose printout")
 
 args, unknown = parser.parse_known_args()
@@ -123,7 +152,7 @@ if len(unknown)>0:
 
 ### default path
 path="/eos/cms/store/cmst3/user/gkaratha/ZmuE_forBDT_v7_tuples/BDT_outputs_v7/Scan_Zprime/"
-figdir = "./figures/scan_%s%s/" % (args.name, "_asimov" if args.asimov else "")
+figdir = "./figures/scan_%s%s%s/" % (args.name, "_asimov" if args.asimov else "", args.tag)
 carddir = "./datacards/%s/" % (args.name)
 os.system("[ ! -d %s ] && mkdir -p %s" % (figdir , figdir ))
 os.system("[ ! -d %s ] && mkdir -p %s" % (carddir, carddir))
@@ -137,6 +166,8 @@ rt.gROOT.SetBatch(True)
 list_of_files = [f for f in os.listdir(carddir) if '.txt' in f and '0d7' not in f]
 # Sort the list by mass point
 list_of_files.sort(key=file_sort)
+if args.first_step > 0:
+   list_of_files = list_of_files[args.first_step:]
 if args.max_steps > 0:
    list_of_files = list_of_files[:args.max_steps]
 
@@ -154,6 +185,8 @@ r_exps_lo = array('d') #1 sigma band
 r_exps_hi = array('d')
 r_exps_lo_2 = array('d') #2 sigma band
 r_exps_hi_2 = array('d')
+r_sigs = array('d')
+
 
 prev_mass = -1.
 min_lim =  1.e10
@@ -165,7 +198,7 @@ for f in list_of_files:
    # only process the merged fits
    if '0d7' in f: continue
    mass_point = f.split('_mp')[1].split('.txt')[0]
-   [r_fit, r_lim, mass] = process_datacard(f, carddir, args.name + '_mp'+mass_point, asimov, args.skip_fits, args.verbose)
+   [r_fit, r_lim, r_sig, mass] = process_datacard(f, carddir, args.name + '_mp'+mass_point, asimov, args.skip_fits, args.verbose)
 
    # store the results
    masses.append(mass)
@@ -179,6 +212,7 @@ for f in list_of_files:
    r_exps_hi.append(r_lim[3] - r_lim[2])
    r_exps_lo_2.append(r_lim[2] - r_lim[0])
    r_exps_hi_2.append(r_lim[4]- r_lim[2])
+   r_sigs.append(r_sig)
 
    prev_mass = mass
    min_lim = min(r_lim[0], r_lim[-1], min_lim)
@@ -191,6 +225,8 @@ if len(masses) > 1: masses_errs[0] = (masses[1] - masses[0])/2.
 #----------------------------------------------
 # Plot the results
 #----------------------------------------------
+
+rt.gStyle.SetOptStat(0)
 
 #----------------------------------------------
 # Limit plot
@@ -266,7 +302,7 @@ g_r.GetXaxis().SetRangeUser(masses[0], masses[-1])
 g_r.GetYaxis().SetRangeUser(min_r - 0.05*(max_r - min_r), max_r + 0.1*(max_r - min_r))
 g_r.GetXaxis().SetLabelSize(0.)
 
-# Add a significance distribution below the fit results
+# Add an approximate significance distribution below the fit results
 pad2.cd()
 significances = array('d')
 sig_half = array('d')
@@ -306,3 +342,99 @@ line.SetLineColor(rt.kBlack)
 line.Draw('same')
 
 c.SaveAs(figdir+'fits.png')
+
+
+#----------------------------------------------
+# Significance plot
+#----------------------------------------------
+
+g_sig   = rt.TGraph(len(masses), masses, r_sigs)
+
+c = rt.TCanvas('c_sig', 'c_sig', 800, 600)
+g_sig.SetTitle("Measurement significance vs. Z' mass; Z' mass (GeV/c^{2}); #sigma(BR(Z'->e#mu))")
+g_sig.SetMarkerStyle(20)
+g_sig.SetMarkerSize(0.8)
+g_sig.SetLineWidth(2)
+g_sig.SetMarkerColor(rt.kBlack)
+g_sig.SetLineColor(rt.kBlack)
+g_sig.Draw("APL")
+
+min_sig = min(r_sigs)
+max_sig = max(r_sigs)
+g_sig.GetXaxis().SetRangeUser(masses[0], masses[-1])
+g_sig.GetYaxis().SetRangeUser(min_sig - 0.1*(max_sig-min_sig), max_sig + 0.1*(max_sig-min_sig))
+
+c.SaveAs(figdir+'sig.png')
+
+
+#----------------------------------------------
+# p-value plot
+#----------------------------------------------
+
+pvals = array('d')
+for sig in r_sigs: pvals.append(rt.RooStats.SignificanceToPValue(sig))
+
+# Calculate the global significance by evaluating N(up crossings)
+ref_u = 0.
+n_ref_u = 0
+
+for index in range(1,len(r_sigs)):
+   if r_sigs[index-1] < ref_u and r_sigs[index] > ref_u: n_ref_u += 1
+
+global_pvals = array('d')
+for pval in pvals:
+   sig = rt.RooStats.PValueToSignificance(pval)
+   global_pval = min(1., pval + n_ref_u*exp(-(sig**2-ref_u**2)/2.))
+   global_pvals.append(global_pval)
+   print "p = %.4f, sig = %.2f, n_ref = %i, p_global = %.4f" % (pval, sig, n_ref_u, global_pvals[-1])
+
+g_pval   = rt.TGraph(len(masses), masses, pvals)
+g_global = rt.TGraph(len(masses), masses, global_pvals)
+
+c = rt.TCanvas('c_pval', 'c_pval', 800, 600)
+g_pval.SetTitle("Measurement p-value vs. Z' mass; Z' mass (GeV/c^{2}); p")
+g_pval.SetMarkerStyle(20)
+g_pval.SetMarkerSize(0.8)
+g_pval.SetLineWidth(2)
+g_pval.SetMarkerColor(rt.kRed)
+g_pval.SetLineColor(rt.kRed)
+g_pval.Draw("AL")
+# g_pval.Draw("APL")
+
+g_global.SetMarkerStyle(20)
+g_global.SetMarkerSize(0.8)
+g_global.SetLineWidth(2)
+g_global.SetMarkerColor(rt.kRed)
+g_global.SetLineColor(rt.kRed)
+g_global.SetLineStyle(rt.kDashed)
+g_global.Draw("L")
+
+min_pval = min(pvals)
+max_pval = max(pvals)
+g_pval.GetXaxis().SetRangeUser(masses[0], masses[-1])
+g_pval.GetYaxis().SetRangeUser(0.2*min_pval, 2.)
+c.SetLogy()
+
+# Add sigma lines to the p-value plot
+sig_p_min = rt.RooStats.PValueToSignificance(0.2*min_pval)
+lines = []
+for sig in range(int(sig_p_min)):
+   p_sig = rt.RooStats.SignificanceToPValue(sig)
+   line = rt.TLine(masses[0], p_sig, masses[-1], p_sig)
+   line.SetLineStyle(rt.kDashed)
+   line.SetLineWidth(2)
+   line.SetLineColor(rt.kBlack)
+   line.Draw("same")
+   lines.append(line)
+
+c.SaveAs(figdir+'pval.png')
+
+# Make just a histogram of log(p-value)
+h = rt.TH1D('h_pval', '-log_{10}(p-value) distribution', 40, 0, 8)
+for pval in pvals: h.Fill(-log10(abs(pval)))
+h.SetLineColor(rt.kBlue)
+h.SetFillColor(rt.kAtlantic)
+h.SetLineWidth(2)
+h.Draw("hist")
+h.SetXTitle('-log_{10}(p)')
+c.SaveAs(figdir+'pval_hist.png')

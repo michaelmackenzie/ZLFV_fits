@@ -9,12 +9,14 @@ from array import array
 #----------------------------------------------
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-o"        , dest="name"    , default="toy" , type=str, help="Name for output")
-parser.add_argument("--fit-file", dest="fit_file", default=""    , type=str, help="File with input fit for toy generation")
-parser.add_argument("--param"   , dest="param"   , default="bin1", type=str, help="Parameter base name")
-parser.add_argument("--seed"    , dest="seed"    , default=90    , type=int, help="Toy generation seed")
-parser.add_argument("--toy"     , dest="toy"     , default=1     , type=int, help="Toy number")
-parser.add_argument("--index"   , dest="index"   , default=-1    , type=int, help="RooMultPdf index, -1 to use the default")
+parser.add_argument("-o"           , dest="name"       , default="toy" , type=str  , help="Name for output")
+parser.add_argument("--fit-file"   , dest="fit_file"   , default=""    , type=str  , help="File with input fit for toy generation")
+parser.add_argument("--param"      , dest="param"      , default="bin1", type=str  , help="Parameter base name")
+parser.add_argument("--seed"       , dest="seed"       , default=90    , type=int  , help="Toy generation seed")
+parser.add_argument("--toy"        , dest="toy"        , default=1     , type=int  , help="Toy number")
+parser.add_argument("--index"      , dest="index"      , default=-1    , type=int  , help="RooMultPdf index, -1 to use the default")
+parser.add_argument("--signal-rate", dest="signal_rate", default=0.    , type=float, help="Signal rate to inject")
+parser.add_argument("--signal-mass", dest="signal_mass", default=150.  , type=float, help="Signal mass to inject")
 
 args, unknown = parser.parse_known_args()
 
@@ -55,6 +57,22 @@ print "Nominal background rate = %.1f" % (n_bkg)
 rt.RooRandom.randomGenerator().SetSeed(args.seed)
 dataset = pdf.generate(mass, rt.RooFit.NumEvents(rt.RooRandom.randomGenerator().Poisson(n_bkg)))
 dataset.SetName("data_obs")
+
+# Inject a signal if requested
+if args.signal_rate > 0.:
+   mean  = rt.RooRealVar("mean" , "Gaussian mean" , args.signal_mass)
+   width = rt.RooRealVar("width", "Gaussian width", args.signal_mass/200.*4.)
+   mean.setConstant(True)
+   width.setConstant(True)
+   sig_pdf = rt.RooGaussian("sig_pdf", "Signal PDF", mass, mean, width)
+   if args.param == 'bin1':
+      eff = max(0.1, 0.25 + 0.04*(args.signal_mass - 200.)/(800.))
+   else:
+      eff = max(0.1, 0.44 - 0.08*(args.signal_mass - 200.)/(800.))
+   n_ref = 138. #N(signal) before efficiency cuts
+   n_sig = args.signal_rate * n_ref * eff
+   sig_data = sig_pdf.generate(mass, int(n_sig))
+   dataset.append(sig_data)
 
 frame = mass.frame(rt.RooFit.Title("Toy dataset %i" % (args.toy)))
 dataset.plotOn(frame)
