@@ -1,9 +1,54 @@
+# Perform a scan of the emu data, fitting for a potential signal resonance
 import os
 import argparse
 import ROOT as rt
 from array import array
 rt.gInterpreter.Declare('#include "SFBDT_weight_combined.h"')
 
+#----------------------------------------------------------------------------------------
+# Write a combine data card for a single bin
+def print_datacard(name, sig_file, bkg_file, param_name, mass):
+   # Re-create the card
+   f = open(name, "w")
+
+   # Standard preamble
+   f.write("# -*- mode: tcl -*-\n")
+   f.write("#Auto generated Z prime search COMBINE datacard\n")
+   f.write("#Using Z prime mass = %.2f\n\n" % (mass))
+   f.write("imax 1 number of channels\njmax * number of backgrounds\nkmax * number of nuisance parameters\n\n")
+
+   # Define the background and signal PDFs
+   f.write("-----------------------------------------------------------------------------------------------------------\n")
+   f.write("shapes signal * %s workspace_signal:signal_pdf_%s\n" % (sig_file, param_name))
+   f.write("shapes background * %s ws_bkg:multipdf_%s\n" % (bkg_file, param_name))
+   f.write("shapes data_obs * %s ws_bkg:data_obs\n" % (bkg_file))
+   f.write("-----------------------------------------------------------------------------------------------------------\n\n")
+
+   # Define the channel
+   f.write("bin         bin\n")
+   f.write("observation  -1\n\n")
+   f.write("bin         bin       bin\n")
+   f.write("process    signal   background\n\n")
+   f.write("process       0         1\n\n")
+   f.write("rate          1         1\n") #Rate is taken from the _norm variables
+
+   # Define the uncertainties
+   f.write("-----------------------------------------------------------------------------------------------------------\n")
+   #FIXME: Implement mass-dependent uncertainties
+   f.write("ElectronID lnN 1.02     -\n")
+   f.write("MuonID     lnN 1.02     -\n")
+   f.write("Lumi       lnN 1.02     -\n")
+   f.write("-----------------------------------------------------------------------------------------------------------\n\n")
+
+   # Define the envelope discrete index to be scanned
+   f.write("pdfindex_%s discrete\n" % (param_name))
+
+   # Close the file
+   f.close()
+   
+
+#----------------------------------------------------------------------------------------
+# Make a plot and save the figure, fit a 2nd order polynomial to it
 def plot_graph(mpoint_array,signal_array,name,xaxis="",yaxis=""):
    signal_vs_mass = rt.TGraph(len(mpoint_array), mpoint_array, signal_array)
 
@@ -17,6 +62,10 @@ def plot_graph(mpoint_array,signal_array,name,xaxis="",yaxis=""):
    fnc.GetParameters(par_yld)
    return par_yld
 
+
+#----------------------------------------------
+# Read in the input parameters
+#----------------------------------------------
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-o", dest="name",default="test", type=str,help="output root name")
@@ -36,6 +85,8 @@ parser.add_argument("--param-name", dest="param_name",default="bin",type=str,hel
 parser.add_argument("--skip-fit", dest="skip_fit",default=False, action='store_true',help="fit skip")
 parser.add_argument("--skip-sgn-syst", dest="skip_sgn_syst",default=False, action='store_true',help="shape experiment")
 parser.add_argument("--skip-bkg-altfits", dest="skip_bkg_altfits",default=False, action='store_true',help="shape experiment")
+parser.add_argument("--skip-dc", dest="skip_dc",default=False, action='store_true',help="Skip datacard creation")
+parser.add_argument("--mass-point", dest="mass_point",default=-1,type=int,help="Single mass point to process")
 
 args, unknown = parser.parse_known_args()
 
@@ -51,6 +102,15 @@ MaxMasspoints=-1 #X for debug; -1 for run
 
 ### default path
 path="/eos/cms/store/cmst3/user/gkaratha/ZmuE_forBDT_v7_tuples/BDT_outputs_v7/Scan_Zprime/"
+figdir = "./figures/%s/" % (args.name)
+carddir = "./datacards/%s/" % (args.name)
+os.system("[ ! -d %s ] && mkdir -p %s" % (figdir , figdir ))
+os.system("[ ! -d %s ] && mkdir -p %s" % (carddir, carddir))
+if not os.path.exists(carddir+"WorkspaceScanBKG"):
+   os.symlink("../../WorkspaceScanBKG", carddir+"WorkspaceScanBKG")
+if not os.path.exists(carddir+"WorkspaceScanSGN"):
+   os.symlink("../../WorkspaceScanSGN", carddir+"WorkspaceScanSGN")
+   
 
 ### MC signal mass points
 sgn_masspoints=["200","400","600","800","1000"]
@@ -90,6 +150,9 @@ if args.data_file=="":
 rt.gROOT.SetBatch(True)
 
 
+#----------------------------------------------
+# Get the signal parameterization vs. mass
+#----------------------------------------------
 
 ##### mass points analysis ######
 ### efficiency and yield vs mass
@@ -103,15 +166,16 @@ for mpoint in sgn_masspoints:
   htemp = rt.TH1F("htemp_"+mpoint,"",1,0,2)
   cc.Draw("1>>htemp_"+mpoint,sf+"*(Flag_met && Flag_muon && Flag_electron && "+args.xgb_min+"<=xgb && xgb<"+args.xgb_max+")")
   nnum = htemp.Integral()
+  cross_section = 1. #in units femto-barns * BR(Z'->emu)
   nsgn_array.append(lumis[args.year]*1*nnum/ndens[mpoint])
   mpoint_array.append(float(mpoint))
   toteff_array.append(nnum/(1.0*ndens[mpoint]))
   bdteff_array.append(nnum/(1.0*cc.GetEntries()))
   print "total pass ("+mpoint+") =",nnum,"eff",nnum/(1.0*ndens[mpoint]),"yield",nsgn_array[-1]
 
-par_yield = plot_graph(mpoint_array,nsgn_array,"yld_vs_mass","m(e,#mu)","Yield")
-par_bdt_eff = plot_graph(mpoint_array,bdteff_array,"bdteff_vs_mass","m(e,#mu)","BDT eff.")
-par_total_eff = plot_graph(mpoint_array,toteff_array,"totaleff_vs_mass","m(e,#mu)","Total eff.")
+par_yield = plot_graph(mpoint_array,nsgn_array,figdir+"yld_vs_mass","m(e,#mu)","Yield")
+par_bdt_eff = plot_graph(mpoint_array,bdteff_array,figdir+"bdteff_vs_mass","m(e,#mu)","BDT eff.")
+par_total_eff = plot_graph(mpoint_array,toteff_array,figdir+"totaleff_vs_mass","m(e,#mu)","Total eff.")
 
 ### get widths
 width_array = array('d',[])
@@ -128,11 +192,15 @@ for mpoint in sgn_masspoints:
   htemp.Fit(gauss,"LR")
   htemp.SetTitle("#bf{CMS} #it{Preliminary};m(e,#mu);")
   gauss.Draw("sames")
-  cnv.SaveAs("mass_fit_"+mpoint+".png")
+  cnv.SaveAs(figdir+"mass_fit_"+mpoint+".png")
   gauss.GetParameters(par_gs)
   width_array.append(par_gs[2])
   
-par_width = plot_graph(mpoint_array,width_array,"width_vs_mass","m(e,#mu)","Width")
+par_width = plot_graph(mpoint_array,width_array,figdir+"width_vs_mass","m(e,#mu)","Width")
+
+#----------------------------------------------
+# Perform the signal scan at all mass points
+#----------------------------------------------
 
 ###### main code ######
 if MaxMasspoints>0:
@@ -147,23 +215,38 @@ while (NextPoint):
   cnt+=1
 
   # calculate blind range and expected widths/yields for a mass
+  sr_buffer = 1 #in signal width units
+  region_buffer = 10 #in signal width units
   sr_width = round(par_width[0]+par_width[1]*sr_center+par_width[2]*sr_center*sr_center,2)
-  sr_min = round(sr_center - 1*sr_width,2)
-  sr_max = round(sr_center + 1*sr_width,2)
+  sr_min = round(sr_center - sr_buffer*sr_width,2)
+  sr_max = round(sr_center + sr_buffer*sr_width,2)
   sr_yld = round(par_yield[0] + par_yield[1]*sr_center + par_yield[2]*sr_center*sr_center,2)
-  min_mass = round(sr_center - 5*sr_width,2)
-  max_mass = round(sr_center + 5*sr_width,2)
+  min_mass = round(sr_center - region_buffer*sr_width,2)
+  max_mass = round(sr_center + region_buffer*sr_width,2)
   print "SR central",sr_center,"width",sr_width,"min",sr_min,"max",sr_max,"yield",sr_yld
 
-  # create pdfs for mass point
-  if not args.skip_fit:
-     if args.component == "sgn" or args.component == "all":
-        os.system('root -l -b -q ScanMuE_fit_sgn_v'+args.ver+'.C\'("'+args.name+"_mp"+str(cnt)+'",'+str(min_mass)+','+str(max_mass)+','+str(sr_center)+','+str(sr_width)+','+str(sr_yld)+','+shape_dc+',"'+args.outvar+'",'+do_sgn_syst+',"'+args.param_name+'")\'')
-     if args.component == "bkg" or args.component == "all":
-        os.system('root -l -b -q ScanMuE_fit_bkg_v'+args.ver+'.C\'("'+args.name+"_mp"+str(cnt)+'","'+args.data_file+'","'+args.xgb_min+'","'+args.xgb_max+'",'+str(min_mass)+','+str(max_mass)+','+str(sr_min)+','+str(sr_max)+','+unblind+','+shape_dc+',"'+args.outvar+'","'+args.param_name+'")\'')
+  if(args.mass_point < 0 or cnt == args.mass_point):
+    # create pdfs for mass point
+    if not args.skip_fit:
+      if args.component == "sgn" or args.component == "all":
+        os.system('root -l -b -q ScanMuE_fit_sgn_v'+args.ver+'.C\'("'
+                  +args.name+"_mp"+str(cnt)+'",'
+                  +str(min_mass)+','+str(max_mass)+','+str(sr_center)+','+str(sr_width)+','
+                  +str(sr_yld)+','+shape_dc+',"'+args.outvar+'",'+do_sgn_syst+',"'+args.param_name+'")\'')
+      if args.component == "bkg" or args.component == "all":
+         os.system('root -l -b -q ScanMuE_fit_bkg_v'+args.ver+'.C\'("'+args.name+"_mp"+str(cnt)+'","'+args.data_file+'","'+args.xgb_min+'","'+args.xgb_max+'",'+str(min_mass)+','+str(max_mass)+','+str(sr_min)+','+str(sr_max)+','+unblind+','+shape_dc+',"'+args.outvar+'","'+args.param_name+'")\'')
+        
+
+    # Create a corresponding datacard
+    cardname = carddir + "combine_zprime_" + args.name + "_mp" + str(cnt) + ".txt"
+    sig_file = "WorkspaceScanSGN/workspace_scansgn_v" + args.ver + "_" + args.name + "_mp" + str(cnt) + ".root"
+    bkg_file = "WorkspaceScanBKG/workspace_scanbkg_v" + args.ver + "_" + args.name + "_mp" + str(cnt) + ".root"
+    print_datacard(cardname, sig_file, bkg_file, args.param_name, sr_center)
+
 
   # next iteration mass and exit conditions
-  sr_center = round(sr_center +args.scan_step*sr_width,2)
+  sr_approx_width = sr_center*(4./200.) # approximate as a linear function so it's stable between BDT categories where the width may vary
+  sr_center = round(sr_center +args.scan_step*sr_approx_width,2)
   if cnt>= MaxMasspoints and MaxMasspoints>0:
      print "Requested only",MaxMasspoints,"run"
      NextPoint=False

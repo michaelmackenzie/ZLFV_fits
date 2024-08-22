@@ -13,13 +13,17 @@
 
 
 
-int ScanMuE_fit_sgn_v2(TString name="bin1_r2", float min_mass=100, 
+int ScanMuE_fit_sgn_v2(TString name="bin1_r2", float min_mass=100,
     float max_mass=500, float sgn_central=110, float sgn_width=2.08,
     float expected_Nsgn=65, bool create_dc_input=true, TString outvar="mass_ll",
     bool syst_sgn=false, TString varname="bin"){
 
    //////////////////////////////////// configuration /////////////////////////
    gROOT->SetBatch(true);
+   TString outdir = "WorkspaceScanSGN/";
+   gSystem->Exec(Form("[ ! -d %s ] && mkdir -p %s", outdir.Data(), outdir.Data()));
+   figdir_ = "figures/" + name + "/";
+   gSystem->Exec(Form("[ ! -d %s ] && mkdir -p %s", figdir_.Data(), figdir_.Data()));
 
    bool GaussFnc=true;
 
@@ -35,7 +39,7 @@ int ScanMuE_fit_sgn_v2(TString name="bin1_r2", float min_mass=100,
    RooRealVar width("width_"+varname,"",sgn_width);
    mean.setConstant(true);
    width.setConstant(true);
-   
+
    RooAbsPdf * signal_pdf;
 
    if (GaussFnc)
@@ -48,14 +52,14 @@ int ScanMuE_fit_sgn_v2(TString name="bin1_r2", float min_mass=100,
 
    auto sgn_frame = dilep_mass_out.frame();
    signal_epdf.plotOn(sgn_frame,RooFit::LineColor(kBlue),RooFit::Name("sgn_epdf"),RooFit::Normalization(n_sgn.getVal(), RooAbsReal::NumEvent));
-   save_plot(sgn_frame,"m(#mu,e)","WorkspaceScanSGN/scansgn_v2_gauss_"+name);
-   
+   save_plot(sgn_frame,"m(#mu,e)","scansgn_v2_gauss_"+name);
+
    if (create_dc_input){
        RooWorkspace *wspace_sgn = new RooWorkspace("workspace_signal","workspace_signal");
        wspace_sgn->import(*signal_pdf);
        wspace_sgn->import(n_sgn);
-       wspace_sgn->writeToFile("WorkspaceScanSGN//workspace_scansgn_v2_"+name+".root");
-    }   
-		    
+       wspace_sgn->writeToFile(outdir+"workspace_scansgn_v2_"+name+".root");
+    }
+
  return 0;
-} 
+}
