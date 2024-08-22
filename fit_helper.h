@@ -21,7 +21,7 @@ TLatex * CMS_lumi(bool IsData){
     TLatex *mark = new TLatex();
 
     mark->SetNDC();
-    TString lumistamp = "Run2 (13 TeV)";
+    TString lumistamp = "Run 2 (13 TeV)";
     float cmsTextSize = 0.042 * 1.25;
     float extraOverCmsTextSize  = 0.76;
     float extraTextSize = extraOverCmsTextSize*cmsTextSize;
@@ -45,7 +45,9 @@ TLatex * CMS_lumi(bool IsData){
 
 
 
-double get_manual_subrange_chisquare(RooRealVar& obs, RooAbsPdf* pdf, RooDataSet& data, const char* range = nullptr, const char* norm_range = nullptr, bool norm_skip = true, int* nbins = nullptr, bool IsPseudodata=false) {
+double get_manual_subrange_chisquare(RooRealVar& obs, RooAbsPdf* pdf, RooDataSet& data,
+				     const char* range = nullptr, const char* norm_range = nullptr,
+				     bool norm_skip = true, int* nbins = nullptr, bool IsPseudodata=false) {
   TH1* htmp_pdf  = pdf->createHistogram("htmp_chisq_pdf" , obs);
   TH1* htmp_data = data.createHistogram("htmp_chisq_data", obs);
   if(htmp_pdf->GetNbinsX() != htmp_data->GetNbinsX()) {
@@ -114,16 +116,116 @@ double get_manual_subrange_chisquare(RooRealVar& obs, RooAbsPdf* pdf, RooDataSet
   return chisq;
 }
 
+double get_manual_subrange_chisquare(RooRealVar& obs, RooAbsPdf* pdf, RooDataHist& data,
+				     const char* range = nullptr, const char* norm_range = nullptr,
+				     bool norm_skip = true, int* nbins = nullptr, bool IsPseudodata=false) {
+  TH1* htmp_pdf  = pdf->createHistogram("htmp_chisq_pdf" , obs);
+  TH1* htmp_data = data.createHistogram("htmp_chisq_data", obs);
+  if(htmp_pdf->GetNbinsX() != htmp_data->GetNbinsX()) {
+    cout << __func__ << ": PDF and data don't have the same number of bins ("
+         << htmp_pdf->GetNbinsX() << " vs " << htmp_data->GetNbinsX() << ")!\n";
+    delete htmp_pdf;
+    delete htmp_data;
+    return -1.;
+  }
+    
+  //Create the PDF normalization by matching it to the data, skipping the region requested
+  const double xmin_norm = (norm_range) ? obs.getMin(norm_range) : (norm_skip) ?  1. : obs.getMin();
+  const double xmax_norm = (norm_range) ? obs.getMax(norm_range) : (norm_skip) ? -1. : obs.getMax();
+  const int bin_norm_lo = (xmin_norm < xmax_norm) ? htmp_data->GetXaxis()->FindBin(xmin_norm) : (norm_skip) ? -1 : 1;
+  const int bin_norm_hi = (xmin_norm < xmax_norm) ? htmp_data->GetXaxis()->FindBin(xmax_norm) : (norm_skip) ? -1 : htmp_data->GetNbinsX();
+  double pdf_norm = 0.;
+  double data_norm = 0.;
+  for(int ibin = 1; ibin <= htmp_data->GetNbinsX(); ++ibin) {
+    bool in_norm = ibin >= bin_norm_lo && ibin <= bin_norm_hi;
+    if(norm_skip && in_norm) continue; //if given a range to skip
+    if(!norm_skip && !in_norm) continue; //if given a range for normalizing
+    const double npdf = htmp_pdf->GetBinContent(ibin)*htmp_pdf->GetBinWidth(ibin); //expected N(events)
+    const double ndata = htmp_data->GetBinContent(ibin); //observed N(events)
+    pdf_norm  += npdf;
+    data_norm += ndata;
+   // cout << "Norm Bin " << ibin << " (" << htmp_data->GetBinLowEdge(ibin) << " - " << htmp_data->GetBinLowEdge(ibin) + htmp_data->GetBinWidth(ibin) << "): Data = " << ndata << " PDF = " << npdf  << endl; 
+  }
+  if(pdf_norm <= 0.) {
+    cout << __func__ << ": PDF normalization is non-positive!\n";
+    delete htmp_pdf;
+    delete htmp_data;
+    return -1.;
+  }
+  htmp_pdf->Scale(data_norm / pdf_norm);
+// cout << __func__ << ": Scaling PDF:\n" << "#### Data norm = " << data_norm << endl << "#### PDF norm = " << pdf_norm << endl << "#### Scaling the PDF histogram by " << data_norm / pdf_norm << endl;
 
-double get_chi_squared(RooRealVar& obs, RooAbsPdf* pdf, RooDataSet& data, bool unblind, int nbins_data, int n_param, bool ReturnNorm=true, bool IsPseudodata=false){
+  const double xmin = obs.getMin(range);
+  const double xmax = obs.getMax(range);
+  // cout << __func__ << ": Using observable range " << xmin << " - " << xmax << endl;
+
+  double chisq = 0.;
+  const int bin_lo = max(1, htmp_data->GetXaxis()->FindBin(xmin));
+  const int bin_hi = min(htmp_data->GetNbinsX(), htmp_data->GetXaxis()->FindBin(xmax));
+  // cout << __func__ << ": Hist binning corresponds to " << htmp_data->GetBinLowEdge(bin_lo)
+  //      << " - " << htmp_data->GetXaxis()->GetBinUpEdge(bin_hi) << " (widths = " << htmp_data->GetBinWidth(1) << ")" << endl;
+  for(int ibin = bin_lo; ibin <= bin_hi; ++ibin) {
+    const double x_data = htmp_data->GetBinCenter(ibin);
+    const double x_pdf  = htmp_pdf ->GetBinCenter(ibin);
+    if(x_data != x_pdf) {
+      cout << __func__ << ": Warning! Data center = " << x_data << " but PDF center = " << x_pdf << endl;
+    }
+    const double npdf = htmp_pdf->GetBinContent(ibin)*htmp_pdf->GetBinWidth(ibin);
+    const double error = htmp_data->GetBinError  (ibin);
+    
+    const double ndata = htmp_data->GetBinContent(ibin);
+    const double val  = ndata - npdf;
+    //cout<<"val "<<val<<" error "<<error<<" npdf "<<npdf<<endl;
+    const double sigma = val*val / ((IsPseudodata) ? error*error : (npdf <= 0. ? 1.e-5 : npdf));
+   // const double sigma = val*val/(error*error);
+    chisq += sigma;
+   
+ //     cout << "Bin " << ibin << " (" << htmp_data->GetBinLowEdge(ibin) << " - "<< htmp_data->GetBinLowEdge(ibin) + htmp_data->GetBinWidth(ibin) << "): Data = " << ndata << " PDF = " << npdf<< " --> sigma = " << sigma << endl;
+    }
+  
+//  cout << __func__ << ": Total chi^2 = " << chisq << " / " << bin_hi - bin_lo+1 << " bins\n";
+  if(nbins) *nbins = bin_hi - bin_lo+1;
+  delete htmp_pdf;
+  delete htmp_data;
+  return chisq;
+}
+
+
+double get_chi_squared(RooRealVar& obs, RooAbsPdf* pdf, RooDataSet& data, bool unblind,
+		       int nbins_data, int n_param, bool ReturnNorm=true, bool IsPseudodata=false){
     
     if(!unblind) {
-      int nbin_running = 0;
-      double chi_sq = get_manual_subrange_chisquare(obs, pdf, data, "left", "sr", true, &nbin_running, IsPseudodata);
+      int nbins = 0; //count of total bins used
+      int nbin_running = 0; //bins used in a single subrange
+      double chi_sq = get_manual_subrange_chisquare(obs, pdf, data, "left", "full", false, &nbin_running, IsPseudodata);
+      nbins += nbin_running;
  //     cout<<">>>> chi2 (1): "<<chi_sq<<" bins "<<nbins_data<<" n_param "<<n_param<<" chi2/ndof "<<chi_sq/(nbins_data - (n_param))<<endl;
-      chi_sq += get_manual_subrange_chisquare(obs, pdf, data, "right","sr", true, &nbin_running, IsPseudodata);
+      chi_sq += get_manual_subrange_chisquare(obs, pdf, data, "right","full", false, &nbin_running, IsPseudodata);
+      nbins += nbin_running;
+      cout<<__func__<<">>>> chi2: "<<chi_sq<<" bins "<<nbins<<" n_param "<<n_param<<" chi2/ndof "<<chi_sq/(nbins - (n_param))<<endl;
+      if (ReturnNorm) chi_sq/=(nbins - n_param);
+      return chi_sq;
+    } else {
+      double chi_sq= get_manual_subrange_chisquare(obs, pdf, data, "full",nullptr, true, nullptr, IsPseudodata);
       cout<<">>>> chi2: "<<chi_sq<<" bins "<<nbins_data<<" n_param "<<n_param<<" chi2/ndof "<<chi_sq/(nbins_data - (n_param))<<endl;
-      if (ReturnNorm) chi_sq/=( nbins_data - n_param);
+      if (ReturnNorm) chi_sq/=(nbins_data - n_param);
+      return chi_sq;
+    }
+  
+}
+
+double get_chi_squared(RooRealVar& obs, RooAbsPdf* pdf, RooDataHist& data, bool unblind,
+		       int nbins_data, int n_param, bool ReturnNorm=true, bool IsPseudodata=false){
+    
+    if(!unblind) {
+      int nbins = 0; //count of total bins used
+      int nbin_running = 0; //bins used in a single subrange
+      double chi_sq = get_manual_subrange_chisquare(obs, pdf, data, "left", "sr", true, &nbin_running, IsPseudodata);
+      nbins += nbin_running;
+      chi_sq += get_manual_subrange_chisquare(obs, pdf, data, "right","sr", true, &nbin_running, IsPseudodata);
+      nbins += nbin_running;
+      cout<<">>>> chi2: "<<chi_sq<<" bins "<<nbins<<" n_param "<<n_param<<" chi2/ndof "<<chi_sq/(nbins - (n_param))<<endl;
+      if (ReturnNorm) chi_sq/=( nbins - n_param);
       return chi_sq;
     } else {
       double chi_sq= get_manual_subrange_chisquare(obs, pdf, data, "full",nullptr, true, nullptr, IsPseudodata);
@@ -179,17 +281,21 @@ void save_plot_and_band( RooPlot * xframe,  RooRealVar var, std::vector<TString>
 
     TCanvas * ctemp = create_canvas("c"+name);
     TPad * pad1 = new TPad("pad1","pad1",0,0.24,1,1.0);
+    pad1->SetLeftMargin(0.12);
+    pad1->SetRightMargin(0.05);
+    pad1->SetBottomMargin(0.11);
     pad1 ->SetFillColor(0);
     pad1->Draw();
     pad1->cd();
     pad1->SetTickx(0);
     pad1->SetTicky(0);
     xframe->SetMinimum(0);
-    xframe->GetYaxis()->SetTitle("Events / ( 0.5 GeV/c^{2} )");
+    xframe->SetTitle("");
+    xframe->GetYaxis()->SetTitle(Form("Events / ( %.2f GeV/c^{2} )", xframe->GetXaxis()->GetBinWidth(1)));
     xframe->GetYaxis()->SetLabelSize(0.05);
     xframe->GetYaxis()->SetLabelOffset(0.01);
     xframe->GetYaxis()->SetTitleSize(0.06);
-    xframe->GetYaxis()->SetTitleOffset(0.90);
+    xframe->GetYaxis()->SetTitleOffset(0.95);
     xframe->GetYaxis()->SetMaxDigits(3);
     xframe->GetXaxis()->SetLabelSize(0);
     xframe->GetXaxis()->SetLabelOffset(0.007);
@@ -208,7 +314,9 @@ void save_plot_and_band( RooPlot * xframe,  RooRealVar var, std::vector<TString>
        pt->Draw("sames");
     ctemp->cd();
     TPad * pad2 = new TPad("pad2","pad2",0,0.0,1,0.32);
-    pad2->SetTopMargin(0.02);
+    pad2->SetTopMargin(0.03);
+    pad2->SetLeftMargin(pad1->GetLeftMargin());
+    pad2->SetRightMargin(pad1->GetRightMargin());
     pad2->SetBottomMargin(0.35);
     pad2 ->SetFillColor(0);
     pad2->SetTickx(0);
@@ -223,6 +331,7 @@ void save_plot_and_band( RooPlot * xframe,  RooRealVar var, std::vector<TString>
       auto hpull = xframe->pullHist("data",functions[i]);
       hpull->SetName("ratio_fnc");
       hpull->SetLineColor(i+1);
+      hpull->SetLineWidth(2);
       hpull->SetMarkerSize(0);
       xframe3->addPlotable(hpull,"PE1");
     }
@@ -238,9 +347,14 @@ void save_plot_and_band( RooPlot * xframe,  RooRealVar var, std::vector<TString>
     xframe3->GetXaxis()->SetTitleOffset(0.72);
 
     xframe3->SetTitle("");
-    xframe3->GetYaxis()->SetTitle("#frac{N_{fit} - N_{data}}{error_{fit}}");
+    xframe3->GetYaxis()->SetTitle("#frac{N_{data} - N_{fit}}{#sigma_{data}}");
     xframe3->GetXaxis()->SetTitle(xaxis_title);
     xframe3->Draw();
+    TLine line(xframe3->GetXaxis()->GetXmin(), 0., xframe3->GetXaxis()->GetXmax(), 0.);
+    line.SetLineWidth(2);
+    line.SetLineStyle(kDashed);
+    line.SetLineColor(kBlack);
+    line.Draw("same");
 //    TLine *line = new TLine(gPad->GetUxmin()+0.12, 0.665, gPad->GetUxmax()-0.04, 0.665); 
   //  line->SetNDC(kTRUE);  
    // line->Draw(); 
