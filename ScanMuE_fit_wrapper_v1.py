@@ -38,6 +38,15 @@ def print_datacard(name, sig_file, bkg_file, param_name, mass):
    f.write("ElectronID lnN 1.02     -\n")
    f.write("MuonID     lnN 1.02     -\n")
    f.write("Lumi       lnN 1.02     -\n")
+   f.write("BTag       lnN 1.005    -\n")
+   f.write("Theory     lnN 1.01     -\n")
+   f.write("BDT        lnN 1.02     -\n")
+   f.write("-----------------------------------------------------------------------------------------------------------\n\n")
+
+   # Scale uncertainties
+   f.write("-----------------------------------------------------------------------------------------------------------\n")
+   f.write("elec_ES_shift_%s param 0 1 [-7, 7]\n" % (param_name))
+   f.write("muon_ES_shift_%s param 0 1 [-7, 7]\n" % (param_name))
    f.write("-----------------------------------------------------------------------------------------------------------\n\n")
 
    # Define the envelope discrete index to be scanned
@@ -87,6 +96,9 @@ parser.add_argument("--skip-sgn-syst", dest="skip_sgn_syst",default=False, actio
 parser.add_argument("--skip-bkg-altfits", dest="skip_bkg_altfits",default=False, action='store_true',help="shape experiment")
 parser.add_argument("--skip-dc", dest="skip_dc",default=False, action='store_true',help="Skip datacard creation")
 parser.add_argument("--mass-point", dest="mass_point",default=-1,type=int,help="Single mass point to process")
+parser.add_argument("--full-mass", dest="full_mass",default=False,action='store_true',help="Fit the entire mass distribution")
+parser.add_argument("--log-files", dest="log_files",default=False,action='store_true',help="Write individual mass point fits to log files")
+parser.add_argument("--dry-run", dest="dry_run",default=False,action='store_true',help="Don't execute script calls")
 
 args, unknown = parser.parse_known_args()
 
@@ -106,6 +118,7 @@ figdir = "./figures/%s/" % (args.name)
 carddir = "./datacards/%s/" % (args.name)
 os.system("[ ! -d %s ] && mkdir -p %s" % (figdir , figdir ))
 os.system("[ ! -d %s ] && mkdir -p %s" % (carddir, carddir))
+os.system("[ ! -d log ] && mkdir log")
 if not os.path.exists(carddir+"WorkspaceScanBKG"):
    os.symlink("../../WorkspaceScanBKG", carddir+"WorkspaceScanBKG")
 if not os.path.exists(carddir+"WorkspaceScanSGN"):
@@ -211,6 +224,7 @@ NextPoint=True
 sr_center=args.scan_min
 
 cnt=-1
+script_head = 'echo ' if args.dry_run else ''
 while (NextPoint):
   cnt+=1
 
@@ -221,27 +235,31 @@ while (NextPoint):
   sr_min = round(sr_center - sr_buffer*sr_width,2)
   sr_max = round(sr_center + sr_buffer*sr_width,2)
   sr_yld = round(par_yield[0] + par_yield[1]*sr_center + par_yield[2]*sr_center*sr_center,2)
-  min_mass = round(sr_center - region_buffer*sr_width,2)
-  max_mass = round(sr_center + region_buffer*sr_width,2)
+  min_mass = round(sr_center - region_buffer*sr_width,2) if not args.full_mass else  90.
+  max_mass = round(sr_center + region_buffer*sr_width,2) if not args.full_mass else 700.
   print "SR central",sr_center,"width",sr_width,"min",sr_min,"max",sr_max,"yield",sr_yld
 
   if(args.mass_point < 0 or cnt == args.mass_point):
     # create pdfs for mass point
     if not args.skip_fit:
       if args.component == "sgn" or args.component == "all":
-        os.system('root -l -b -q ScanMuE_fit_sgn_v'+args.ver+'.C\'("'
+        tail = (' >| log/fit_sgn_%s_mp%i.log' % (args.name, cnt)) if args.log_files else ''
+        os.system(script_head + 'root -l -b -q ScanMuE_fit_sgn_v'+args.ver+'.C\'("'
                   +args.name+"_mp"+str(cnt)+'",'
                   +str(min_mass)+','+str(max_mass)+','+str(sr_center)+','+str(sr_width)+','
-                  +str(sr_yld)+','+shape_dc+',"'+args.outvar+'",'+do_sgn_syst+',"'+args.param_name+'")\'')
+                  +str(sr_yld)+','+shape_dc+',"'+args.outvar+'",'+do_sgn_syst+',"'+args.param_name+'")\'' + tail)
       if args.component == "bkg" or args.component == "all":
-         os.system('root -l -b -q ScanMuE_fit_bkg_v'+args.ver+'.C\'("'+args.name+"_mp"+str(cnt)+'","'+args.data_file+'","'+args.xgb_min+'","'+args.xgb_max+'",'+str(min_mass)+','+str(max_mass)+','+str(sr_min)+','+str(sr_max)+','+unblind+','+shape_dc+',"'+args.outvar+'","'+args.param_name+'")\'')
+         tail = (' >| log/fit_bkg_%s_mp%i.log' % (args.name, cnt)) if args.log_files else ''
+         os.system(script_head + 'root -l -b -q ScanMuE_fit_bkg_v'+args.ver+'.C\'("'+args.name+"_mp"+str(cnt)+'","'+args.data_file
+                   +'","'+args.xgb_min+'","'+args.xgb_max+'",'+str(min_mass)+','+str(max_mass)+','+str(sr_min)+','+str(sr_max)
+                   +','+unblind+','+shape_dc+',"'+args.outvar+'","'+args.param_name+'")\'' + tail)
         
 
     # Create a corresponding datacard
     cardname = carddir + "combine_zprime_" + args.name + "_mp" + str(cnt) + ".txt"
     sig_file = "WorkspaceScanSGN/workspace_scansgn_v" + args.ver + "_" + args.name + "_mp" + str(cnt) + ".root"
     bkg_file = "WorkspaceScanBKG/workspace_scanbkg_v" + args.ver + "_" + args.name + "_mp" + str(cnt) + ".root"
-    print_datacard(cardname, sig_file, bkg_file, args.param_name, sr_center)
+    if not args.dry_run: print_datacard(cardname, sig_file, bkg_file, args.param_name, sr_center)
 
 
   # next iteration mass and exit conditions
