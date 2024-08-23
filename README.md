@@ -26,3 +26,39 @@ NAME=v01
 time ./make_scan_cards.sh --min-mass ${MINMASS} --max-mass ${MAXMASS} --tag ${NAME}
 ls -l datacards/bdt_${NAME}/combine_combine_zprime_${NAME}_mp*.txt | head -n 2
 ```
+
+### Scan the mass points, evaluating signal rates and upper limits
+```
+NAME=v01
+time python perform_scan.py -o bdt_${NAME} [--asimov] [--unblind]
+ls -l figures/scan_bdt_${NAME}[_asimov]/*.png
+```
+
+### Generate a toy dataset and run a scan over the toy dataset
+This assumes the nominal scan is already processed on data with corresponding COMBINE cards available.
+
+```
+# Fit the data in the entire mass range for toy generation (only needed once, all toys can be generated from this initial fit)
+python ScanMuE_fit_wrapper_v1.py -o bdt_0d3_0d7_LEE --full-mass --scan-min 300 --scan-max 300.1 --scan-step 1 --xgb-min 0.30 --xgb-max 0.70 --param-name bin1 --component bkg
+python ScanMuE_fit_wrapper_v1.py -o bdt_0d7_1d0_LEE --full-mass --scan-min 300 --scan-max 300.1 --scan-step 1 --xgb-min 0.70 --xgb-max 1.01 --param-name bin2 --component bkg
+
+# Generate a single toy dataset for each BDT region
+python create_toy.py --fit-file WorkspaceScanBKG/workspace_scanbkg_v2_bdt_0d3_0d7_LEE_mp0.root -o toy_0d3_0d7 --toy 2 --param bin1 --seed 90
+python create_toy.py --fit-file WorkspaceScanBKG/workspace_scanbkg_v2_bdt_0d7_1d0_LEE_mp0.root -o toy_0d7_1d0 --toy 2 --param bin2 --seed 90
+
+# Create toy scan COMBINE cards from an existing scan dataset
+CARDDIR="datacards/bdt_v03_step_1d0/" #Existing datacards
+TOYDIR="datacards/bdt_v03_step_1d0_toy_2/" #Output toy datacard directory
+TOYFILE1="WorkspaceScanTOY/toy_file_toy_0d3_0d7_2.root" #Low score toy file
+TOYFILE2="WorkspaceScanTOY/toy_file_toy_0d7_1d0_2.root"
+./clone_cards_for_toy.sh ${CARDDIR} ${TOYDIR} ${TOYFILE1} ${TOYFILE2}
+
+# Run the scan over the toy datacards
+time python perform_scan.py -o bdt_v03_step_1d0_toy_2 --unblind
+```
+
+### Additional useful tools/studies
+
+- [plot_signal_model.py](plot_signal_model.py): Plot the signal model interpolation, including the line shape and the overall efficiency.
+- [plot_zprime_bdt.py](plot_zprime_bdt.py): Plot the Z prime BDT score distribution and CDF as a function of mass.
+- [eval_zprime_unc.py](eval_zprime_unc.py): Evaluate standard uncertainties on the Z prime signal efficiency.
