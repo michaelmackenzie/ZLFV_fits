@@ -308,8 +308,10 @@ void save_plot_and_band( RooPlot * xframe,  RooRealVar var, std::vector<TString>
        ctemp->SetLogy(true);
        xframe->SetMinimum(1);
     }
-    if (leg->GetNRows()>0)
+    if (leg->GetNRows()>0) {
+       xframe->SetMaximum(1.3*xframe->GetMaximum()); //create more room for the legend
        leg->Draw("sames");
+    }
     if (pt!=NULL)
        pt->Draw("sames");
     ctemp->cd();
