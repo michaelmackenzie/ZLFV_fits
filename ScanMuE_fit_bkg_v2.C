@@ -64,7 +64,7 @@ int ScanMuE_fit_bkg_v2(TString name="bin1_r2",
       nbin_blind = (blind_max-blind_min) /( max_fit_range - min_fit_range )*nbin_data;
 
    // read trees
-   RooRealVar dilep_mass("mass_ll","m(e,#mu)", min_fit_range, min_fit_range , max_fit_range, "GeV/c^{2}");
+   RooRealVar dilep_mass ("mass_ll","m(e,#mu)", min_fit_range, min_fit_range , max_fit_range, "GeV/c^{2}");
    RooRealVar dilep_mass_out(outvar,"m(e,#mu)", min_fit_range, min_fit_range , max_fit_range, "GeV/c^{2}");
 
    dilep_mass.setRange("left",min_fit_range, blind_min);

@@ -3,6 +3,7 @@ import os
 import argparse
 import ROOT as rt
 from array import array
+from signal_model import *
 rt.gInterpreter.Declare('#include "SFBDT_weight_combined.h"')
 
 #----------------------------------------------------------------------------------------
@@ -97,6 +98,7 @@ parser.add_argument("--skip-bkg-altfits", dest="skip_bkg_altfits",default=False,
 parser.add_argument("--skip-dc", dest="skip_dc",default=False, action='store_true',help="Skip datacard creation")
 parser.add_argument("--mass-point", dest="mass_point",default=-1,type=int,help="Single mass point to process")
 parser.add_argument("--full-mass", dest="full_mass",default=False,action='store_true',help="Fit the entire mass distribution")
+parser.add_argument("--use-gaus", dest="use_gaus",default=False,action='store_true',help="Model the signal with a Gaussian instead of a Crystal Ball")
 parser.add_argument("--log-files", dest="log_files",default=False,action='store_true',help="Write individual mass point fits to log files")
 parser.add_argument("--dry-run", dest="dry_run",default=False,action='store_true',help="Don't execute script calls")
 
@@ -133,7 +135,7 @@ sgn_masspoint_files={
                "600":"Meas_fullAndSF_bdt_v7_emu_scan_sgnM600_mcRun18.root",\
                "800":"Meas_fullAndSF_bdt_v7_emu_scan_sgnM800_mcRun18.root",\
                "1000":"Meas_fullAndSF_bdt_v7_emu_scan_sgnM1000_mcRun18.root"}
-ndens={"200":44844.,"400":55294.,"600":60192.,"800":64756.,"1000":67263.}
+ndens={"200":96300.,"400":97600.,"600":97600.,"800":97600.,"1000":97600.}
 
 ### Data
 data_files={"2016":"Meas_full_bdt_v7_emu_scan_data_Run16.root","2017":"Meas_full_bdt_v7_emu_scan_data_Run17.root","2018":"Meas_full_bdt_v7_emu_scan_data_Run18.root","Run2":"Meas_full_bdt_v7_emu_scan_data_Run1*.root"}
@@ -167,49 +169,25 @@ rt.gROOT.SetBatch(True)
 # Get the signal parameterization vs. mass
 #----------------------------------------------
 
-##### mass points analysis ######
-### efficiency and yield vs mass
-nsgn_array = array('d',[])
-toteff_array=  array('d',[])
-bdteff_array=  array('d',[])
-mpoint_array = array('d',[])
+# Get the signal mass distribution for each Z prime MC sample
+signal_distributions = []
+cuts = sf+"*(Flag_met && Flag_muon && Flag_electron && "+args.xgb_min+"<=xgb && xgb<"+args.xgb_max+")"
 for mpoint in sgn_masspoints:
   cc=rt.TChain("mytreefit")
   cc.Add(path+"/"+sgn_masspoint_files[mpoint])
-  htemp = rt.TH1F("htemp_"+mpoint,"",1,0,2)
-  cc.Draw("1>>htemp_"+mpoint,sf+"*(Flag_met && Flag_muon && Flag_electron && "+args.xgb_min+"<=xgb && xgb<"+args.xgb_max+")")
-  nnum = htemp.Integral()
-  cross_section = 1. #in units femto-barns * BR(Z'->emu)
-  nsgn_array.append(lumis[args.year]*1*nnum/ndens[mpoint])
-  mpoint_array.append(float(mpoint))
-  toteff_array.append(nnum/(1.0*ndens[mpoint]))
-  bdteff_array.append(nnum/(1.0*cc.GetEntries()))
-  print "total pass ("+mpoint+") =",nnum,"eff",nnum/(1.0*ndens[mpoint]),"yield",nsgn_array[-1]
+  hname = "hmass_"+mpoint
+  h = rt.TH1F(hname,"Signal mass distribution",1100,0,1100)
+  cc.Draw("mass_ll>>"+hname,cuts)
+  # Scale the signal by lumi*cross section / N(gen)
+  cross_section = 1. # in fb
+  lumi = lumis[args.year]
+  h.Scale(lumi*cross_section/ndens[mpoint])
+  signal_distributions.append(h)
 
-par_yield = plot_graph(mpoint_array,nsgn_array,figdir+"yld_vs_mass","m(e,#mu)","Yield")
-par_bdt_eff = plot_graph(mpoint_array,bdteff_array,figdir+"bdteff_vs_mass","m(e,#mu)","BDT eff.")
-par_total_eff = plot_graph(mpoint_array,toteff_array,figdir+"totaleff_vs_mass","m(e,#mu)","Total eff.")
-
-### get widths
-width_array = array('d',[])
-for mpoint in sgn_masspoints:
-  cc=rt.TChain("mytreefit")
-  cc.Add(path+"/"+sgn_masspoint_files[mpoint])
-  htemp = rt.TH1F("htemp_"+mpoint,"",50,float(mpoint)*0.8,float(mpoint)*1.2)
-  cc.Draw("mass_ll>>htemp_"+mpoint,sf+"*(Flag_met && Flag_muon && Flag_electron && "+args.xgb_min+"<=xgb && xgb<"+args.xgb_max+")")
-
-  gauss = rt.TF1("gauss", "gaus", float(mpoint)*0.95,float(mpoint)*1.05)
-  par_gs = array('d',[0, 0, 0])
-  cnv = rt.TCanvas("cnv_"+mpoint,"",800,600)
-  htemp.Draw("HIST")
-  htemp.Fit(gauss,"LR")
-  htemp.SetTitle("#bf{CMS} #it{Preliminary};m(e,#mu);")
-  gauss.Draw("sames")
-  cnv.SaveAs(figdir+"mass_fit_"+mpoint+".png")
-  gauss.GetParameters(par_gs)
-  width_array.append(par_gs[2])
-  
-par_width = plot_graph(mpoint_array,width_array,figdir+"width_vs_mass","m(e,#mu)","Width")
+# Create a signal interpolation model
+masses = array('d')
+for mass in sgn_masspoints: masses.append(float(mass))
+signal_model = create_signal_interpolation(masses, signal_distributions, args.use_gaus, figdir)
 
 #----------------------------------------------
 # Perform the signal scan at all mass points
@@ -231,12 +209,26 @@ while (NextPoint):
   # calculate blind range and expected widths/yields for a mass
   sr_buffer = 1 #in signal width units
   region_buffer = 10 #in signal width units
-  sr_width = round(par_width[0]+par_width[1]*sr_center+par_width[2]*sr_center*sr_center,2)
-  sr_min = round(sr_center - sr_buffer*sr_width,2)
-  sr_max = round(sr_center + sr_buffer*sr_width,2)
-  sr_yld = round(par_yield[0] + par_yield[1]*sr_center + par_yield[2]*sr_center*sr_center,2)
-  min_mass = round(sr_center - region_buffer*sr_width,2) if not args.full_mass else  90.
-  max_mass = round(sr_center + region_buffer*sr_width,2) if not args.full_mass else 700.
+  sr_approx_width = sr_center*(4./200.) # approximate as a linear function so it's stable between BDT categories where the width may vary
+
+  # Get the signal model parameters
+  sig_mass = sr_center
+  sig_params = interpolate(signal_model, sig_mass)
+  sig_yield  = sig_params[0]
+  sig_mean   = sig_params[1]
+  sig_width  = sig_params[2]
+  sig_alpha1 = sig_params[3] if not args.use_gaus else 0.
+  sig_alpha2 = sig_params[4] if not args.use_gaus else 0.
+  sig_enne1  = sig_params[5] if not args.use_gaus else 0.
+  sig_enne2  = sig_params[6] if not args.use_gaus else 0.
+
+  # Define the search region using the signal width
+  sr_width = round(sig_width,2)
+  sr_min = round(sr_center - sr_buffer*sr_approx_width,2)
+  sr_max = round(sr_center + sr_buffer*sr_approx_width,2)
+  sr_yld = round(sig_yield,2)
+  min_mass = round(sr_center - region_buffer*sr_approx_width,2) if not args.full_mass else  90.
+  max_mass = round(sr_center + region_buffer*sr_approx_width,2) if not args.full_mass else 700.
   print "SR central",sr_center,"width",sr_width,"min",sr_min,"max",sr_max,"yield",sr_yld
 
   if(args.mass_point < 0 or cnt == args.mass_point):
@@ -244,9 +236,13 @@ while (NextPoint):
     if not args.skip_fit:
       if args.component == "sgn" or args.component == "all":
         tail = (' >| log/fit_sgn_%s_mp%i.log' % (args.name, cnt)) if args.log_files else ''
+        if args.use_gaus: #Define the signal shape parameters (Gaussian or Crystal Ball)
+           sig_line = '{'+str(sr_center)+','+str(sr_width)+'}'
+        else:
+           sig_line = '{%.4f, %.4f, %.4f, %.4f, %.4f, %.4f}' % (sig_mean, sig_width, sig_alpha1, sig_alpha2, sig_enne1, sig_enne2)
         os.system(script_head + 'root -l -b -q ScanMuE_fit_sgn_v'+args.ver+'.C\'("'
                   +args.name+"_mp"+str(cnt)+'",'
-                  +str(min_mass)+','+str(max_mass)+','+str(sr_center)+','+str(sr_width)+','
+                  +str(min_mass)+','+str(max_mass)+','+sig_line+','
                   +str(sr_yld)+','+shape_dc+',"'+args.outvar+'",'+do_sgn_syst+',"'+args.param_name+'")\'' + tail)
       if args.component == "bkg" or args.component == "all":
          tail = (' >| log/fit_bkg_%s_mp%i.log' % (args.name, cnt)) if args.log_files else ''
@@ -263,7 +259,6 @@ while (NextPoint):
 
 
   # next iteration mass and exit conditions
-  sr_approx_width = sr_center*(4./200.) # approximate as a linear function so it's stable between BDT categories where the width may vary
   sr_center = round(sr_center +args.scan_step*sr_approx_width,2)
   if cnt>= MaxMasspoints and MaxMasspoints>0:
      print "Requested only",MaxMasspoints,"run"

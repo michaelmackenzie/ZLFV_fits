@@ -272,6 +272,9 @@ leg.Draw()
 
 
 c.SaveAs(figdir+'limits.png')
+g_exp_2.GetYaxis().SetRangeUser(0.5*min_lim, 5*max_lim)
+c.SetLogy()
+c.SaveAs(figdir+'limits_log.png')
 
 #----------------------------------------------
 # Signal rate plot
