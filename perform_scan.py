@@ -13,7 +13,7 @@ def file_sort(f):
 
 #----------------------------------------------------------------------------------------
 # Process a single mass point
-def process_datacard(card, directory, name, asimov = False, skip_fit = False, verbose = 0):
+def process_datacard(card, directory, name, asimov = False, skip_fit = False, tag = '', verbose = 0):
    if not os.path.isfile(directory + card):
       print "Card %s not found" % (card)
    if verbose > -1: print 'Processing mass point', name, '(card =', card+')'
@@ -22,8 +22,9 @@ def process_datacard(card, directory, name, asimov = False, skip_fit = False, ve
    # Perform a signal rate fit
    #----------------------------------------------------------------------------
 
+   if asimov: tag += '_asimov'
    if not skip_fit:
-      command = 'combine -d %s -n .%s%s -M FitDiagnostics' % (card, name, "asimov" if asimov else "")
+      command = 'combine -d %s -n .%s%s -M FitDiagnostics' % (card, name, tag)
       if asimov: command += ' -t -1'
       #Allow negative measured signal rates
       command += ' --rMin -50 --rMax 50'
@@ -40,7 +41,7 @@ def process_datacard(card, directory, name, asimov = False, skip_fit = False, ve
    #----------------------------------------------------------------------------
 
    if not skip_fit:
-      command = 'combine -d %s -n .%s%s -M Significance --uncapped 1' % (card, name, "asimov" if asimov else "")
+      command = 'combine -d %s -n .%s%s -M Significance --uncapped 1' % (card, name, tag)
       if asimov: command += ' -t -1'
       #Allow negative measured signal rates
       command += ' --rMin -50 --rMax 50'
@@ -57,7 +58,7 @@ def process_datacard(card, directory, name, asimov = False, skip_fit = False, ve
    #----------------------------------------------------------------------------
 
    if not skip_fit:
-      command = 'combine -d %s -n .%s%s -M AsymptoticLimits' % (card, name, "asimov" if asimov else "")
+      command = 'combine -d %s -n .%s%s -M AsymptoticLimits' % (card, name, tag)
       if asimov: command += ' -t -1'
       #Allow negative measured signal rates
       command += ' --rMin -200 --rMax 200'
@@ -89,7 +90,7 @@ def process_datacard(card, directory, name, asimov = False, skip_fit = False, ve
    # Extract the results
    #----------------------------------------------------------------------------
 
-   fit_file = '%sfitDiagnostics.%s%s.root' % (directory, name, "asimov" if asimov else "")
+   fit_file = '%sfitDiagnostics.%s%s.root' % (directory, name, tag)
    f = rt.TFile.Open(fit_file, 'READ')
    t = f.Get('tree_fit_sb')
    t.GetEntry(0)
@@ -97,7 +98,7 @@ def process_datacard(card, directory, name, asimov = False, skip_fit = False, ve
    if verbose > 0: print 'r fit results:', r_fit
    f.Close()
 
-   sig_file = '%shiggsCombine.%s%s.Significance.mH120.root' % (directory, name, "asimov" if asimov else "")
+   sig_file = '%shiggsCombine.%s%s.Significance.mH120.root' % (directory, name, tag)
    f = rt.TFile.Open(sig_file, 'READ')
    t = f.Get('limit')
    t.GetEntry(0)
@@ -105,7 +106,7 @@ def process_datacard(card, directory, name, asimov = False, skip_fit = False, ve
    if verbose > 0: print 'r significance results:', r_sig
    f.Close()
    
-   lim_file = '%shiggsCombine.%s%s.AsymptoticLimits.mH120.root' % (directory, name, "asimov" if asimov else "")
+   lim_file = '%shiggsCombine.%s%s.AsymptoticLimits.mH120.root' % (directory, name, tag)
    f = rt.TFile.Open(lim_file, 'READ')
    t = f.Get('limit')
    r_lim = []
@@ -133,6 +134,7 @@ parser.add_argument("--asimov", dest="asimov",default=False, action='store_true'
 parser.add_argument("--unblind", dest="unblind",default=False, action='store_true',help="Plot the observed limits")
 parser.add_argument("--max-steps", dest="max_steps",default=-1, type=int, help="Maximum steps to take in the scan")
 parser.add_argument("--first-step", dest="first_step",default=0, type=int, help="First mass step to process")
+parser.add_argument("--card-tag", dest="card_tag",default="", type=str, help="Card name tag to process")
 parser.add_argument("--tag", dest="tag",default="", type=str, help="Output directory tag")
 parser.add_argument("-v", dest="verbose",default=0, type=int,help="Add verbose printout")
 
@@ -163,7 +165,15 @@ rt.gROOT.SetBatch(True)
 # Perform the scan
 #----------------------------------------------
 
-list_of_files = [f for f in os.listdir(carddir) if '.txt' in f and '0d7' not in f]
+list_of_files = [f for f in os.listdir(carddir) if '.txt' in f]
+# If not using a BDT score region tag, only take the merged files
+if args.card_tag == "":  list_of_files = [f for f in list_of_files if '0d7' not in f]
+else:                    list_of_files = [f for f in list_of_files if args.card_tag in f]
+
+if len(list_of_files) == 0:
+   print "No card files found!"
+   exit()
+
 # Sort the list by mass point
 list_of_files.sort(key=file_sort)
 if args.first_step > 0:
@@ -193,12 +203,11 @@ min_lim =  1.e10
 max_lim = -1.e10
 min_r =  1.e10
 max_r = -1.e10
+
 for f in list_of_files:
    if '.txt' not in f: continue
-   # only process the merged fits
-   if '0d7' in f: continue
    mass_point = f.split('_mp')[1].split('.txt')[0]
-   [r_fit, r_lim, r_sig, mass] = process_datacard(f, carddir, args.name + '_mp'+mass_point, asimov, args.skip_fits, args.verbose)
+   [r_fit, r_lim, r_sig, mass] = process_datacard(f, carddir, args.name+ '_mp'+mass_point, asimov, args.skip_fits, args.tag, args.verbose)
 
    # store the results
    masses.append(mass)

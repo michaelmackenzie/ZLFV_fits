@@ -61,8 +61,11 @@ if [[ "${DRYRUN}" != "" ]]; then
 fi
 # Create the standard BDT score-defined regions
 if [[ "${SKIPFITS}" == "" ]]; then
-    python ScanMuE_fit_wrapper_v1.py -o bdt_0d3_0d7_${TAG} --scan-min ${MINMASS} --scan-max ${MAXMASS} --xgb-min 0.3 --xgb-max 0.70 --param-name bin1 ${ARG}
-    python ScanMuE_fit_wrapper_v1.py -o bdt_0d7_1d0_${TAG} --scan-min ${MINMASS} --scan-max ${MAXMASS} --xgb-min 0.7 --xgb-max 1.01 --param-name bin2 ${ARG}
+    [ ! -d log ] && mkdir log
+    echo "Running fits and creating datacards..."
+    python ScanMuE_fit_wrapper_v1.py -o bdt_0d3_0d7_${TAG} --scan-min ${MINMASS} --scan-max ${MAXMASS} --xgb-min 0.3 --xgb-max 0.70 --param-name bin1 ${ARG} >| log/make_bdt_0d3_0d7_${TAG}.log 2>&1 &
+    python ScanMuE_fit_wrapper_v1.py -o bdt_0d7_1d0_${TAG} --scan-min ${MINMASS} --scan-max ${MAXMASS} --xgb-min 0.7 --xgb-max 1.01 --param-name bin2 ${ARG} >| log/make_bdt_0d7_1d0_${TAG}.log 2>&1 &
+    wait
 fi
 
 # make a combined directory

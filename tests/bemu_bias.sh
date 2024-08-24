@@ -8,10 +8,12 @@ Help() {
     echo "--gentoys (-g): N(gen) per segment (default = 100)"
     echo "--fitarg      : Additional fit arguments"
     echo "--genarg      : Additional generator arguments"
+    echo "--name        : Name for output"
     echo "--tag         : Name tag for output"
     echo "--rrange  (-r): r range (default = 100)"
     echo "--seed    (-s): Base random seed (default = 90)"
     echo "--skipfits    : Skip fit loops, only create plots"
+    echo "--skipplots   : Skip plot creation"
     echo "--multidim    : Use the MultiDimFit method"
     echo "--grid        : Use a grid scan with MultiDimFit"
     echo "--dontclean   : Don't clean up temporary files"
@@ -26,6 +28,7 @@ TAG=""
 RRANGE="100"
 SEED="90"
 SKIPFITS=""
+SKIPPLOTS=""
 MULTIDIM=""
 GRID=""
 DONTCLEAN=""
@@ -53,6 +56,11 @@ do
         iarg=$((iarg + 1))
         eval "var=\${${iarg}}"
         NGENPERTOY=${var}
+    elif [[ "${var}" == "--name" ]]
+    then
+        iarg=$((iarg + 1))
+        eval "var=\${${iarg}}"
+        NAME=${var}
     elif [[ "${var}" == "--tag" ]]
     then
         iarg=$((iarg + 1))
@@ -76,6 +84,9 @@ do
     elif [[ "${var}" == "--skipfits" ]]
     then
         SKIPFITS="d"
+    elif [[ "${var}" == "--skipplots" ]]
+    then
+        SKIPPLOTS="d"
     elif [[ "${var}" == "--multidim" ]]
     then
         MULTIDIM="d"
@@ -90,7 +101,7 @@ do
         DRYRUN="d"
     elif [[ "${CARD}" != "" ]]
     then
-        echo "Arguments aren't configured correctly!"
+        echo "Arguments aren't configured correctly! (CARD = ${CARD}, var = ${var})"
         Help
         exit
     else
@@ -104,7 +115,9 @@ if [[ "${CARD}" == "" ]]; then
     exit
 fi
 
-NAME=`echo ${CARD} | sed 's/combine_bemu_//' | sed 's/.txt//' | sed 's/_workspace.root//'`
+if [[ "${NAME}" == "" ]]; then
+    NAME=`echo ${CARD} | sed 's/combine_zprime_//' | sed 's/.txt//' | sed 's/_workspace.root//'`
+fi
 echo ${NAME}
 GENCARD=${CARD}
 echo ${GENCARD}
@@ -138,7 +151,7 @@ if [[ "${SKIPFITS}" == "" ]]; then
         combine -d ${GENCARD} -M GenerateOnly --saveToys -t ${NGEN} -n .${OUTNAME} --genBinnedChannels lepm_13,lepm_12,lepm_11,lepm_10 -s ${SEED} ${GENARG}
 
         # Create binned data to fit
-        time root.exe -q -b -l "${CMSSW_BASE}/src/CLFVAnalysis/Roostats/convert_unbinned_to_binned.C(\"higgsCombine.${OUTNAME}.GenerateOnly.mH120.${SEED}.root\", \"higgsCombine.${OUTNAME}_binned.GenerateOnly.mH120.${SEED}.root\")"
+        root.exe -q -b -l "${CMSSW_BASE}/src/CLFVAnalysis/Roostats/convert_unbinned_to_binned.C(\"higgsCombine.${OUTNAME}.GenerateOnly.mH120.${SEED}.root\", \"higgsCombine.${OUTNAME}_binned.GenerateOnly.mH120.${SEED}.root\")"
 
         # Fit the toy data
         if [[ "${MULTIDIM}" == "" ]]; then
@@ -175,6 +188,10 @@ if [[ "${SKIPFITS}" == "" ]]; then
     if [[ "${DONTCLEAN}" == "" ]]; then
         rm ${OUTPUTLIST}
     fi
+fi
+
+if [[ "${SKIPPLOTS}" != "" ]]; then
+    exit
 fi
 
 #Create the bias plots

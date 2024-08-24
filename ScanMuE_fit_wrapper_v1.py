@@ -227,8 +227,12 @@ while (NextPoint):
   sr_min = round(sr_center - sr_buffer*sr_approx_width,2)
   sr_max = round(sr_center + sr_buffer*sr_approx_width,2)
   sr_yld = round(sig_yield,2)
-  min_mass = round(sr_center - region_buffer*sr_approx_width,2) if not args.full_mass else  90.
-  max_mass = round(sr_center + region_buffer*sr_approx_width,2) if not args.full_mass else 700.
+  cut_off_min =  95. # Don't use below 95 GeV due to Z->tautau contamination
+  cut_off_max = 700.
+  min_mass = round(sr_center - region_buffer*sr_approx_width,2) if not args.full_mass else cut_off_min
+  max_mass = round(sr_center + region_buffer*sr_approx_width,2) if not args.full_mass else cut_off_max
+  min_mass = max(cut_off_min, min_mass)
+  max_mass = min(cut_off_max, max_mass)
   print "SR central",sr_center,"width",sr_width,"min",sr_min,"max",sr_max,"yield",sr_yld
 
   if(args.mass_point < 0 or cnt == args.mass_point):
