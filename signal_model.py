@@ -3,6 +3,39 @@ import ROOT as rt
 from array import array
 
 #----------------------------------------------------------------------------------------
+# Signal sample structure
+class sample:
+    def __init__(self, file_path, n_gen, year, base_path):
+        self.file_path_ = file_path
+        self.n_gen_ = n_gen
+        self.year_ = year
+        self.base_path_ = base_path
+        self.full_path_ = base_path
+        if base_path[-1] != "/": self.full_path_ += "/"
+        self.full_path_ += file_path
+
+    def __repr__(self):
+        return "Sample:\n file = %s\n n_gen = %i\n year = %i\n base_path = %s\n" % (self.file_path_, self.n_gen_, self.year_, self.base_path_)
+
+#----------------------------------------------------------------------------------------
+# Retrieve the signal distribution, properly weighing each year's component
+def signal_distribution(sample_map, h, var, cuts, period = "Run2"):
+    lumis={"2016":36.33,"2017":41.48,"2018":59.83,"Run2":137.6}
+    periods = ["2016", "2017", "2018"] if period == "Run2" else [period]
+    for p in periods:
+        cc=rt.TChain("mytreefit")
+        cc.Add(sample_map[p].full_path_)
+        htmp = h.Clone("htmp")
+        htmp.Reset()
+        cc.Draw(var + ">>htmp", cuts)
+        cross_section = 1. #Use 1 fb cross section
+        scale = lumis[p]/sample_map[p].n_gen_
+        htmp.Scale(scale)
+        h.Add(htmp)
+    return h
+
+
+#----------------------------------------------------------------------------------------
 # Fit the signal mass distributions and create an interpolation map
 def interpolate(param_fits, mass):
     params = []

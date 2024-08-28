@@ -128,18 +128,40 @@ if not os.path.exists(carddir+"WorkspaceScanSGN"):
    
 
 ### MC signal mass points
+
 sgn_masspoints=["200","400","600","800","1000"]
-sgn_masspoint_files={
-               "200":"Meas_fullAndSF_bdt_v7_emu_scan_sgnM200_mcRun18.root",\
-               "400":"Meas_fullAndSF_bdt_v7_emu_scan_sgnM400_mcRun18.root",\
-               "600":"Meas_fullAndSF_bdt_v7_emu_scan_sgnM600_mcRun18.root",\
-               "800":"Meas_fullAndSF_bdt_v7_emu_scan_sgnM800_mcRun18.root",\
-               "1000":"Meas_fullAndSF_bdt_v7_emu_scan_sgnM1000_mcRun18.root"}
-ndens={"200":96300.,"400":97600.,"600":97600.,"800":97600.,"1000":97600.}
+
+# Define the signal samples by mass and period
+signal_samples = {
+   "200" : {
+      "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM200_mcRun18.root", 96300, 2016, path),
+      "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM200_mcRun18.root", 96300, 2017, path),
+      "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM200_mcRun18.root", 96300, 2018, path),
+   },
+   "400" : {
+      "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM400_mcRun18.root", 97600, 2016, path),
+      "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM400_mcRun18.root", 97600, 2017, path),
+      "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM400_mcRun18.root", 97600, 2018, path),
+   },
+   "600" : {
+      "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM600_mcRun18.root", 97600, 2016, path),
+      "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM600_mcRun18.root", 97600, 2017, path),
+      "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM600_mcRun18.root", 97600, 2018, path),
+   },
+   "800" : {
+      "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM800_mcRun18.root", 97600, 2016, path),
+      "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM800_mcRun18.root", 97600, 2017, path),
+      "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM800_mcRun18.root", 97600, 2018, path),
+   },
+   "1000" : {
+      "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM1000_mcRun18.root", 97600, 2016, path),
+      "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM1000_mcRun18.root", 97600, 2017, path),
+      "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM1000_mcRun18.root", 97600, 2018, path),
+   },
+}
 
 ### Data
 data_files={"2016":"Meas_full_bdt_v7_emu_scan_data_Run16.root","2017":"Meas_full_bdt_v7_emu_scan_data_Run17.root","2018":"Meas_full_bdt_v7_emu_scan_data_Run18.root","Run2":"Meas_full_bdt_v7_emu_scan_data_Run1*.root"}
-lumis={"2016":36.33,"2017":41.48,"2018":59.83,"Run2":137.6}
 
 ### sf
 #sf="Muon_RecoID_wt*Muon_ID_wt*Muon_IsoID_wt*Muon_dxydz_wt*Electron_RecoID_wt*Electron_ID_wt*Electron_IsoID_wt*Electron_dxydz_wt*PU_wt*PtZ_wt*Trg_wt*SFbtag_wt*JetPUIDWeight*PtSignal_wt*MixZ_wt*Prefire_wt*(SFBDT_weight_Zmumu(xgb)/2.+SFBDT_weight_Zee(xgb)/2.)"
@@ -173,16 +195,8 @@ rt.gROOT.SetBatch(True)
 signal_distributions = []
 cuts = sf+"*(Flag_met && Flag_muon && Flag_electron && "+args.xgb_min+"<=xgb && xgb<"+args.xgb_max+")"
 for mpoint in sgn_masspoints:
-  cc=rt.TChain("mytreefit")
-  cc.Add(path+"/"+sgn_masspoint_files[mpoint])
-  hname = "hmass_"+mpoint
-  h = rt.TH1F(hname,"Signal mass distribution",1100,0,1100)
-  cc.Draw("mass_ll>>"+hname,cuts)
-  # Scale the signal by lumi*cross section / N(gen)
-  cross_section = 1. # in fb
-  lumi = lumis[args.year]
-  h.Scale(lumi*cross_section/ndens[mpoint])
-  signal_distributions.append(h)
+  h = rt.TH1F("hmass_"+mpoint,"Signal mass distribution",1100,0,1100)
+  signal_distributions.append(signal_distribution(signal_samples[mpoint], h, "mass_ll", cuts, args.year))
 
 # Create a signal interpolation model
 masses = array('d')

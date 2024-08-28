@@ -4,3 +4,6 @@
 *.log
 *.save
 *.out
+WorkspaceScan*
+figures
+datacards
