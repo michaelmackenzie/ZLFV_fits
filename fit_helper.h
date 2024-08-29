@@ -215,22 +215,22 @@ double get_chi_squared(RooRealVar& obs, RooAbsPdf* pdf, RooDataSet& data, bool u
 }
 
 double get_chi_squared(RooRealVar& obs, RooAbsPdf* pdf, RooDataHist& data, bool unblind,
-		       int nbins_data, int n_param, bool ReturnNorm=true, bool IsPseudodata=false){
+		       int& nbins, int n_param, bool ReturnNorm=true, bool IsPseudodata=false){
     
     if(!unblind) {
-      int nbins = 0; //count of total bins used
+      nbins = 0; //count of total bins used
       int nbin_running = 0; //bins used in a single subrange
       double chi_sq = get_manual_subrange_chisquare(obs, pdf, data, "left", "sr", true, &nbin_running, IsPseudodata);
       nbins += nbin_running;
       chi_sq += get_manual_subrange_chisquare(obs, pdf, data, "right","sr", true, &nbin_running, IsPseudodata);
       nbins += nbin_running;
       cout<<">>>> chi2: "<<chi_sq<<" bins "<<nbins<<" n_param "<<n_param<<" chi2/ndof "<<chi_sq/(nbins - (n_param))<<endl;
-      if (ReturnNorm) chi_sq/=( nbins - n_param);
+      if (ReturnNorm) chi_sq/=(nbins - n_param);
       return chi_sq;
     } else {
-      double chi_sq= get_manual_subrange_chisquare(obs, pdf, data, "full",nullptr, true, nullptr, IsPseudodata);
-      cout<<">>>> chi2: "<<chi_sq<<" bins "<<nbins_data<<" n_param "<<n_param<<" chi2/ndof "<<chi_sq/(nbins_data - (n_param))<<endl;
-      if (ReturnNorm) chi_sq/=( nbins_data - n_param);
+      double chi_sq= get_manual_subrange_chisquare(obs, pdf, data, "full",nullptr, true, &nbins, IsPseudodata);
+      cout<<">>>> chi2: "<<chi_sq<<" bins "<<nbins<<" n_param "<<n_param<<" chi2/ndof "<<chi_sq/(nbins - n_param)<<endl;
+      if (ReturnNorm) chi_sq/=(nbins - n_param);
       return chi_sq;
     }
   

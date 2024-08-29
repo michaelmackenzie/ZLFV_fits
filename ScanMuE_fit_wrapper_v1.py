@@ -285,6 +285,6 @@ while (NextPoint):
      NextPoint=False
   
   
-print "scannned",cnt,"points"
+print "scannned",cnt+1,"points"
 
 
