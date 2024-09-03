@@ -84,3 +84,5 @@ Underlying tools to perform a single validation check:
 - [get_ngen.py](tools/get_ngen.py): Retrieve the signal ntuple normalization info.
 - [compare_scans.py](tools/compare_scans.py): Plot the ratio of the expected limit from two (identical mass point) scans as a function of mass to compare their sensitivity.
 - [optimize_binning.py](tools/optimize_binning.py): Rough optimization of a single BDT bin using cut-and-count limits without systematic uncertainties.
+- [skim_ntuple.py](skim_ntuple.py): Create a sparse TTree from the skimmed NANOAOD ntuples (not the official version, missing energy scale propagation to the MET and trigger matching).
+- [evaluate_bdt.py](evaluate_bdt.py): Evaluate the signal BDT and output a TTree with this score included.
