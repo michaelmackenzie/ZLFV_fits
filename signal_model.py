@@ -25,6 +25,8 @@ def signal_distribution(sample_map, h, var, cuts, period = "Run2"):
     for p in periods:
         cc=rt.TChain("mytreefit")
         cc.Add(sample_map[p].full_path_)
+        if cc.GetEntries() == 0:
+            print "Sample path", sample_map[p].full_path_, "has no entries!"
         htmp = h.Clone("htmp")
         htmp.Reset()
         cc.Draw(var + ">>htmp", cuts)
@@ -32,6 +34,8 @@ def signal_distribution(sample_map, h, var, cuts, period = "Run2"):
         scale = lumis[p]/sample_map[p].n_gen_
         htmp.Scale(scale)
         h.Add(htmp)
+    if h.Integral() <= 0.:
+        print "Histogram", var, cuts, period, "has no integral!"
     return h
 
 
