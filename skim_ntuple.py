@@ -4,7 +4,7 @@ import argparse
 import ROOT as rt
 from array import array
 from signal_model import *
-from math import sqrt,cos
+from math import sqrt,cos,sin,acos
 rt.gInterpreter.Declare('#include "SFBDT_weight_combined.h"')
 rt.gROOT.SetBatch(True)
 
@@ -25,12 +25,45 @@ def delta_phi(phi_1, phi_2):
    if dphi >   pi: dphi -= 2.*pi
    return dphi
       
+#----------------------------------------------
+# Apply a correction to the MET
+def met_correction(pt_change, phi, met, met_phi):
+   # Apply the correction in the opposite direction to the MET
+   x = met*cos(met_phi) - pt_change*cos(phi)
+   y = met*sin(met_phi) - pt_change*sin(phi)
+   met_corr = sqrt(x*x + y*y)
+   met_corr_phi = acos(max(-1., min(1., x/met_corr)))
+   if y < 0.: met_corr_phi *= -1
+   return [met_corr, met_corr_phi]
+      
 
 #----------------------------------------------
 # Transverse mass approximation
 def mt(pt_1, phi_1, pt_2, phi_2):
    return sqrt(2.*pt_1*pt_2*(1.-cos(delta_phi(phi_1, phi_2))));
       
+#----------------------------------------------
+# Trigger matching
+def trigger_matching(pt, eta, phi, flavor, year, tree):
+   # Configure the trigger parameters
+   trig_bit = 1 if flavor == 13 or year != 2017 else 10
+   if flavor == 13:
+      trig_pt = 27. if year == 2017 else 24.
+   else:
+      trig_pt = 27. if year == 2016 else 32.
+
+   # Loop through the trigger objects
+   for index in range(tree.nTrigObj):
+      if abs(tree.TrigObj_id[index]) != flavor: continue # Correct physics object
+      if tree.TrigObj_filterBits[index] & (1 << trig_bit) == 0: continue # Pass trigger ID
+      if tree.TrigObj_pt[index] <= trig_pt: continue # Trigger pT threshold
+      dphi = delta_phi(phi, tree.TrigObj_phi[index])
+      deta = eta - tree.TrigObj_eta[index]
+      if sqrt(dphi*dphi + deta*deta) > 0.1: continue # Fails Delta R matching
+      # Accept the trigger match
+      return True
+   return False # No trigger matches found
+
 
 #----------------------------------------------
 # Read in the input parameters
@@ -151,11 +184,11 @@ for entry in range(first_entry, max_entry):
    # Set the lepton kinematics
    ele_lead = t_in.Electron_pt[0] > t_in.Muon_corrected_pt[0]
    if ele_lead:
-      pt_l1[0] = t_in.Electron_pt[0]; eta_l1[0] = t_in.Electron_eta[0]; phi_l1[0] = t_in.Electron_phi[0]; mass_l1[0] = 0.511e-3;
-      pt_l2[0] = t_in.Muon_pt    [0]; eta_l2[0] = t_in.Muon_eta    [0]; phi_l2[0] = t_in.Muon_phi    [0]; mass_l2[0] = 0.10566;
+      pt_l1[0] = t_in.Electron_pt      [0]; eta_l1[0] = t_in.Electron_eta[0]; phi_l1[0] = t_in.Electron_phi[0]; mass_l1[0] = 0.511e-3;
+      pt_l2[0] = t_in.Muon_corrected_pt[0]; eta_l2[0] = t_in.Muon_eta    [0]; phi_l2[0] = t_in.Muon_phi    [0]; mass_l2[0] = 0.10566;
    else:
-      pt_l1[0] = t_in.Muon_pt    [0]; eta_l1[0] = t_in.Muon_eta    [0]; phi_l1[0] = t_in.Muon_phi    [0]; mass_l1[0] = 0.10566;
-      pt_l2[0] = t_in.Electron_pt[0]; eta_l2[0] = t_in.Electron_eta[0]; phi_l2[0] = t_in.Electron_phi[0]; mass_l2[0] = 0.511e-3;
+      pt_l1[0] = t_in.Muon_corrected_pt[0]; eta_l1[0] = t_in.Muon_eta    [0]; phi_l1[0] = t_in.Muon_phi    [0]; mass_l1[0] = 0.10566;
+      pt_l2[0] = t_in.Electron_pt      [0]; eta_l2[0] = t_in.Electron_eta[0]; phi_l2[0] = t_in.Electron_phi[0]; mass_l2[0] = 0.511e-3;
    lv1.SetPtEtaPhiM(pt_l1[0], eta_l1[0], phi_l1[0], mass_l1[0])
    lv2.SetPtEtaPhiM(pt_l2[0], eta_l2[0], phi_l2[0], mass_l2[0])
    isMuon_l1[0] = 0. if ele_lead else 1.
@@ -170,6 +203,10 @@ for entry in range(first_entry, max_entry):
    # Set the MET kinematics
    met           [0] = t_in.PuppiMET_pt
    met_phi       [0] = t_in.PuppiMET_phi
+   # Propagate the muon pT correction to the MET
+   [met_corr, met_corr_phi] = met_correction(t_in.Muon_corrected_pt[0] - t_in.Muon_pt[0], t_in.Muon_phi[0], met[0], met_phi[0])
+   met           [0] = met_corr
+   met_phi       [0] = met_corr_phi
    met_sig       [0] = t_in.MET_significance
    mt_l1         [0] = mt(pt_l1[0], phi_l1[0], met[0], met_phi[0])
    mt_l2         [0] = mt(pt_l2[0], phi_l2[0], met[0], met_phi[0])
@@ -226,6 +263,9 @@ for entry in range(first_entry, max_entry):
    else: #2018
       elec_trig = t_in.HLT_Ele32_WPTight_Gsf and t_in.Electron_pt[0] > 34.
       muon_trig = t_in.HLT_IsoMu24 and t_in.Muon_pt[0] > 25.
+   # Trigger matching
+   muon_trig &= trigger_matching(t_in.Muon_pt[0], t_in.Muon_eta[0], t_in.Muon_phi[0], 13, args.year, t_in)
+   elec_trig &= trigger_matching(t_in.Muon_pt[0], t_in.Muon_eta[0], t_in.Muon_phi[0], 13, args.year, t_in)
    if not elec_trig and not muon_trig: continue
 
    # Event flags:
@@ -242,7 +282,12 @@ for entry in range(first_entry, max_entry):
 
 
    # Event cuts
-   if t_in.nBJet > 0: continue
+   if t_in.nBJet > 0: # Check for any b-tagged jet with the b-tagging region
+      btagged = False
+      for bjet in range(t_in.nBJet):
+         btagged |= abs(t_in.BJet_eta[bjet]) < 2.4
+      if btagged: continue
+         
 
    #-----------------------------------------
    # Fill the outgoing data
