@@ -12,6 +12,18 @@ def file_sort(f):
    return int(f.split('_mp')[1].replace('.txt',''))
 
 #----------------------------------------------------------------------------------------
+# Smooth expected limits by fitting to an exponential
+def smooth_limits(vals, masses):
+   func = rt.TF1('func', 'exp([0] + [1]*(x/1000))', masses[0], masses[-1])
+   func.SetParameters(1., -1.)
+   g = rt.TGraph(len(masses), masses, vals)
+   g.Fit(func, 'R Q 0')
+   for index in range(len(masses)):
+      mass = masses[index]
+      vals[index] = func.Eval(mass)
+   return vals
+
+#----------------------------------------------------------------------------------------
 # Process a single mass point
 def process_datacard(card, directory, name, asimov = False, skip_fit = False, tag = '', verbose = 0):
    if not os.path.isfile(directory + card):
@@ -59,9 +71,9 @@ def process_datacard(card, directory, name, asimov = False, skip_fit = False, ta
 
    if not skip_fit:
       command = 'combine -d %s -n .%s%s -M AsymptoticLimits' % (card, name, tag)
-      if asimov: command += ' -t -1'
+      if asimov: command += ' -t -1 --noFitAsimov' # --freezeParameters pdfindex_bin1,pdfindex_bin2
       #Allow negative measured signal rates
-      command += ' --rMin -200 --rMax 200'
+      command += ' --rMin -50 --rMax 50'
       #Additional commands to help fit converge properly
       command += ' --cminDefaultMinimizerStrategy 0'
       command += ' --X-rtd MINIMIZER_freezeDisassociatedParams --X-rtd REMOVE_CONSTANT_ZERO_POINT=1 --X-rtd MINIMIZER_multiMin_hideConstants'
@@ -131,6 +143,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-o", dest="name",default="bdt_v01", type=str,help="datacard directory name")
 parser.add_argument("--skip-fits", dest="skip_fits",default=False, action='store_true',help="Skip fits, assume already processed")
 parser.add_argument("--asimov", dest="asimov",default=False, action='store_true',help="Perform fits Asimov dataset")
+parser.add_argument("--smooth-expected", dest="smooth_expected",default=False, action='store_true',help="Smooth the expected limit distribution")
 parser.add_argument("--unblind", dest="unblind",default=False, action='store_true',help="Plot the observed limits")
 parser.add_argument("--max-steps", dest="max_steps",default=-1, type=int, help="Maximum steps to take in the scan")
 parser.add_argument("--first-step", dest="first_step",default=0, type=int, help="First mass step to process")
@@ -151,6 +164,8 @@ if len(unknown)>0:
 #----------------------------------------------
 # Setup the scan
 #----------------------------------------------
+
+if args.tag != "": args.tag = "_" + args.tag
 
 ### default path
 path="/eos/cms/store/cmst3/user/gkaratha/ZmuE_forBDT_v7_tuples/BDT_outputs_v7/Scan_Zprime/"
@@ -230,6 +245,19 @@ for f in list_of_files:
    max_r = max(r_fit[0] + r_fit[2], max_r)
 
 if len(masses) > 1: masses_errs[0] = (masses[1] - masses[0])/2.
+
+#----------------------------------------------
+# Smooth the expected limits if requested
+#----------------------------------------------
+
+if args.smooth_expected:
+   # Fit the expected limits/uncertainties with an exponential
+   r_exps      = smooth_limits(r_exps     , masses)
+   r_exps_lo   = smooth_limits(r_exps_lo  , masses)
+   r_exps_hi   = smooth_limits(r_exps_hi  , masses)
+   r_exps_lo_2 = smooth_limits(r_exps_lo_2, masses)
+   r_exps_hi_2 = smooth_limits(r_exps_hi_2, masses)
+   
 
 #----------------------------------------------
 # Plot the results
@@ -363,18 +391,36 @@ c.SaveAs(figdir+'fits.png')
 g_sig   = rt.TGraph(len(masses), masses, r_sigs)
 
 c = rt.TCanvas('c_sig', 'c_sig', 800, 600)
+c.SetRightMargin(0.03)
+c.SetLeftMargin(0.08)
 g_sig.SetTitle("Measurement significance vs. Z' mass; Z' mass (GeV/c^{2}); #sigma(BR(Z'->e#mu))")
 g_sig.SetMarkerStyle(20)
-g_sig.SetMarkerSize(0.8)
+g_sig.SetMarkerSize(0.75)
 g_sig.SetLineWidth(2)
-g_sig.SetMarkerColor(rt.kBlack)
-g_sig.SetLineColor(rt.kBlack)
+g_sig.SetMarkerColor(rt.kRed)
+g_sig.SetLineColor  (rt.kGray+2)
 g_sig.Draw("APL")
 
+x_min = masses[ 0] - 0.02*(masses[-1] - masses[0])
+x_max = masses[-1] + 0.02*(masses[-1] - masses[0])
 min_sig = min(r_sigs)
 max_sig = max(r_sigs)
-g_sig.GetXaxis().SetRangeUser(masses[0], masses[-1])
+
+g_sig.GetXaxis().SetRangeUser(x_min, x_max)
 g_sig.GetYaxis().SetRangeUser(min_sig - 0.1*(max_sig-min_sig), max_sig + 0.1*(max_sig-min_sig))
+
+g_sig.GetXaxis().SetLabelSize(0.04)
+g_sig.GetXaxis().SetTitleSize(0.045)
+g_sig.GetXaxis().SetTitleOffset(1.00)
+g_sig.GetYaxis().SetLabelSize(0.04)
+g_sig.GetYaxis().SetTitleSize(0.045)
+g_sig.GetYaxis().SetTitleOffset(0.65)
+
+line = rt.TLine(x_min, 0., x_max, 0.)
+line.SetLineColor(rt.kBlack)
+line.SetLineStyle(rt.kDashed)
+line.SetLineWidth(2)
+line.Draw("same")
 
 c.SaveAs(figdir+'sig.png')
 

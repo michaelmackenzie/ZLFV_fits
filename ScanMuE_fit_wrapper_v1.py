@@ -46,8 +46,8 @@ def print_datacard(name, sig_file, bkg_file, param_name, mass):
 
    # Scale uncertainties
    f.write("-----------------------------------------------------------------------------------------------------------\n")
-   f.write("elec_ES_shift_%s param 0 1 [-7, 7]\n" % (param_name))
-   f.write("muon_ES_shift_%s param 0 1 [-7, 7]\n" % (param_name))
+   f.write("elec_ES_shift param 0 1 [-7, 7]\n") # correlated between categories
+   f.write("muon_ES_shift param 0 1 [-7, 7]\n")
    f.write("-----------------------------------------------------------------------------------------------------------\n\n")
 
    # Define the envelope discrete index to be scanned

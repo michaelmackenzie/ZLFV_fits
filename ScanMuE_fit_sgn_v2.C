@@ -51,8 +51,8 @@ int ScanMuE_fit_sgn_v2(TString name="bin1_r2",
   RooRealVar enne2 ("enne2_" +varname, "enne2" , signal_parameters[5]); enne2 .setConstant(true);
 
   const bool use_energy_scale = true; //include energy scale uncertainties
-  RooRealVar elec_ES_shift("elec_ES_shift_"+varname, "Electron ES shift", 0., -5., 5.); elec_ES_shift.setConstant(true);
-  RooRealVar muon_ES_shift("muon_ES_shift_"+varname, "Muon ES shift"    , 0., -5., 5.); muon_ES_shift.setConstant(true);
+  RooRealVar elec_ES_shift("elec_ES_shift", "Electron ES shift", 0., -5., 5.); elec_ES_shift.setConstant(true); //correlated between categories
+  RooRealVar muon_ES_shift("muon_ES_shift", "Muon ES shift"    , 0., -5., 5.); muon_ES_shift.setConstant(true);
   //Define the electron scale uncertainty as 0.5% and muon as 0.3%, assume the effect ~sqrt(sys/nom)
   // --> mean shift = 0.25% for electron ES and 0.15% for muon ES
   RooFormulaVar mean_func("mean_func_"+varname, "mean with offset",

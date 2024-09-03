@@ -770,7 +770,7 @@ FtestStruct HistFtest(std::vector<RooAbsPdf*> pdfs, std::vector<RooRealVar*> amp
                       vector<TString> names, std::vector<TString> legs,
                       int nbin_data, TString extra_name, float ftest_step,
                       float min_pvalue=-1, int print_level=0,
-                      bool force_inclusion = false){
+                      bool force_inclusion = false, bool force_standard_env = false){
 
   bool Print_details = 0;
   if (print_level) Print_details=true;
@@ -802,7 +802,19 @@ FtestStruct HistFtest(std::vector<RooAbsPdf*> pdfs, std::vector<RooRealVar*> amp
   vector<float> chis_pass_cut;
   vector<int> dofs_pass_cut;
   for (int i =0; i<chi2_dof.size(); i++){
-    if (pvalues[i]<min_pvalue) continue;
+    if(force_standard_env) { //enforce a specific envelop
+      if(extra_name.Contains("cheb")) { //Chebychev polynomials: Force first and second order
+        if(orders[i] != 1 && orders[i] != 2) continue;
+      }
+      if(extra_name.Contains("_exp")) { //Exponential sum: Force first and second order
+        if(orders[i] != 1 && orders[i] != 2) continue;
+      }
+      if(extra_name.Contains("plaw")) { //Power law sum: Force first order
+        if(orders[i] != 1) continue;
+      }
+    } else { //standard quality cut selection
+      if (pvalues[i]<min_pvalue) continue;
+    }
     orders_pass_cut.push_back(orders[i]);
     chis_pass_cut.push_back(chi2_dof[i][0]);
     dofs_pass_cut.push_back(chi2_dof[i][1]);
@@ -840,7 +852,7 @@ FtestStruct HistFtest(std::vector<RooAbsPdf*> pdfs, std::vector<RooRealVar*> amp
 
   //For each function with acceptable fit quality, check if it passes the F-test for information gain by increased function order
   for (int i =0; i<ftests_pass_cut.size(); i++){
-    if (ftests_pass_cut[i] > ftest_step) break;
+    if (ftests_pass_cut[i] > ftest_step && !force_standard_env) break;
     min_order=orders_pass_cut[i+1]; //store the best function (if higher order and passes the F-test, must be better)
     best_ftest=ftests_pass_cut[i];
     resultF.getAllOrder.push_back(orders_pass_cut[i+1]);
