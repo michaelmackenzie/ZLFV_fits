@@ -30,7 +30,7 @@ ls -l datacards/bdt_${NAME}/combine_combine_zprime_${NAME}_mp*.txt | head -n 2
 ### Scan the mass points, evaluating signal rates and upper limits
 ```
 NAME=v01
-time python perform_scan.py -o bdt_${NAME} [--asimov] [--unblind]
+time python perform_scan.py -o bdt_${NAME} [--asimov] [--unblind] [--smooth-expected]
 ls -l figures/scan_bdt_${NAME}[_asimov]/*.png
 ```
 
@@ -54,12 +54,33 @@ TOYFILE2="WorkspaceScanTOY/toy_file_toy_0d7_1d0_2.root"
 ./clone_cards_for_toy.sh ${CARDDIR} ${TOYDIR} ${TOYFILE1} ${TOYFILE2}
 
 # Run the scan over the toy datacards
-time python perform_scan.py -o bdt_v03_step_1d0_toy_2 --unblind
+time python perform_scan.py -o bdt_v03_step_1d0_toy_2 --unblind --smooth-expected
 ```
+
+### Validation studies
+
+Validation studies are performed using the [perform_scan_validation.py](perform_scan_validation.py) tool.
+
+```
+# Perform a bias test for each mass point in the scan:
+NTOYS=1000
+NAME="bdt_v06_step_1d0"
+time python perform_scan_validation.py -o ${NAME} -t ${NTOYS} --test bias
+ls -l figures/val_${NAME}_bias/pulls.png
+ls -l figures/val_${NAME}_bias/${NAME}_mp*_bias.png | head -n 5
+```
+
+Underlying tools to perform a single validation check:
+- [bemu_bias.sh](tests/bemu_bias.sh): Perform a self-closure bias test on a single data card.
+- [bemu_gen_fit_test.sh](tests/bemu_gen_fit_test.sh): Perform a closure test using (potentially) different generation and fit data cards.
+- [do_goodness_of_fit.sh](tests/do_goodness_of_fit.sh): Perform a goodness-of-fit test.
+- [impacts.sh](tests/impacts.sh): Evaluate impacts (including condor configurations if requested).
 
 ### Additional useful tools/studies
 
 - [plot_signal_model.py](tools/plot_signal_model.py): Plot the signal model interpolation, including the line shape and the overall efficiency.
 - [plot_zprime_bdt.py](tools/plot_zprime_bdt.py): Plot the Z prime BDT score distribution and CDF as a function of mass.
 - [eval_zprime_unc.py](tools/eval_zprime_unc.py): Evaluate standard uncertainties on the Z prime signal efficiency.
-- [get_ngen.py](tools/get_ngen.py): Retrieve the signal ntuple normalization info
+- [get_ngen.py](tools/get_ngen.py): Retrieve the signal ntuple normalization info.
+- [compare_scans.py](tools/compare_scans.py): Plot the ratio of the expected limit from two (identical mass point) scans as a function of mass to compare their sensitivity.
+- [optimize_binning.py](tools/optimize_binning.py): Rough optimization of a single BDT bin using cut-and-count limits without systematic uncertainties.
