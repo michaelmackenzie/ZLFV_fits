@@ -16,11 +16,10 @@
 int ScanMuE_fit_sgn_v2(TString name="bin1_r2", float min_mass=100,
     float max_mass=500, float sgn_central=110, float sgn_width=2.08,
     float expected_Nsgn=65, bool create_dc_input=true, TString outvar="mass_ll",
-    bool syst_sgn=false, TString varname="bin"){
+    bool syst_sgn=false, TString varname="bin", TString outdir="test"){
 
    //////////////////////////////////// configuration /////////////////////////
    gROOT->SetBatch(true);
-   TString outdir = "WorkspaceScanSGN/";
    gSystem->Exec(Form("[ ! -d %s ] && mkdir -p %s", outdir.Data(), outdir.Data()));
    figdir_ = "figures/" + name + "/";
    gSystem->Exec(Form("[ ! -d %s ] && mkdir -p %s", figdir_.Data(), figdir_.Data()));
@@ -69,7 +68,7 @@ int ScanMuE_fit_sgn_v2(TString name="bin1_r2", float min_mass=100,
    }
 
    if (create_dc_input){
-       RooWorkspace *wspace_sgn = new RooWorkspace("workspace_signal","workspace_signal");
+       RooWorkspace *wspace_sgn = new RooWorkspace("ws_sgn","ws_sgn");
        wspace_sgn->import(*signal_pdf);
        wspace_sgn->import(n_sgn);
        wspace_sgn->writeToFile(outdir+"workspace_scansgn_v2_"+name+".root");

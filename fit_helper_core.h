@@ -755,6 +755,7 @@ std::vector<std::vector<float>> FitHistBkgFunctions(std::vector<RooAbsPdf*> pdfs
   }
 
   dataset->plotOn(plot_frame,RooFit::Binning(nbin_data),RooFit::CutRange(plot_range),RooFit::Name("data") );
+  cout<<"name  "<<cfg_name+"_band_"+extra_name<<endl;
   save_plot(plot_frame,"m(e,#mu)",cfg_name+"_"+extra_name,leg,NULL,true,Logy);
   save_plot_and_band(plot_frame,dilep_mass,names,"m(e,#mu)",cfg_name+"_band_"+extra_name,leg,NULL,true,Logy);
   cout<<" ***************************************"<<endl;

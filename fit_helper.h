@@ -274,7 +274,7 @@ void save_plot( RooPlot * xframe, TString xaxis_title, TString name, TLegend* le
        leg->Draw("sames");
     if (pt!=NULL)
        pt->Draw("sames");
-    ctemp->SaveAs(figdir_ + name+".png");
+    ctemp->SaveAs(name+".png");
 }
 
 void save_plot_and_band( RooPlot * xframe,  RooRealVar var, std::vector<TString> functions, TString xaxis_title, TString name, TLegend* leg=new TLegend(),TPaveText * pt=NULL, bool IsData=true,bool Logy=false){
@@ -358,7 +358,7 @@ void save_plot_and_band( RooPlot * xframe,  RooRealVar var, std::vector<TString>
 //    TLine *line = new TLine(gPad->GetUxmin()+0.12, 0.665, gPad->GetUxmax()-0.04, 0.665); 
   //  line->SetNDC(kTRUE);  
    // line->Draw(); 
-    ctemp->SaveAs(figdir_ + name+".png");
+    ctemp->SaveAs(name+".png");
 }
 
 
