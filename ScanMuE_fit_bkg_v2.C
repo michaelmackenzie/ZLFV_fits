@@ -26,6 +26,7 @@ int ScanMuE_fit_bkg_v2(TString name="bin1_r2",
    if(!outdir.EndsWith("/")) outdir += "/";
    gSystem->Exec(Form("[ ! -d %s ] && mkdir -p %s", outdir.Data(), outdir.Data()));
    figdir_ = "figures/" + name + "/";
+   figdir_.ReplaceAll("_mp", "/mp"); //put mass point fits within the same sub-directory of the base processing name
    gSystem->Exec(Form("[ ! -d %s ] && mkdir -p %s", figdir_.Data(), figdir_.Data()));
 
    /// bkg functions

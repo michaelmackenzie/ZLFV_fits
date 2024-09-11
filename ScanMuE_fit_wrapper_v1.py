@@ -4,74 +4,17 @@ import argparse
 import ROOT as rt
 from array import array
 from signal_model import *
+from ScanMuE_wrapper_helper import *
+from multiprocessing import Process
 rt.gInterpreter.Declare('#include "SFBDT_weight_combined.h"')
 
-#----------------------------------------------------------------------------------------
-# Write a combine data card for a single bin
-def print_datacard(name, sig_file, bkg_file, param_name, mass):
-   # Re-create the card
-   f = open(name, "w")
-
-   # Standard preamble
-   f.write("# -*- mode: tcl -*-\n")
-   f.write("#Auto generated Z prime search COMBINE datacard\n")
-   f.write("#Using Z prime mass = %.2f\n\n" % (mass))
-   f.write("imax 1 number of channels\njmax * number of backgrounds\nkmax * number of nuisance parameters\n\n")
-
-   # Define the background and signal PDFs
-   f.write("-----------------------------------------------------------------------------------------------------------\n")
-   f.write("shapes signal * %s workspace_signal:signal_pdf_%s\n" % (sig_file, param_name))
-   f.write("shapes background * %s ws_bkg:multipdf_%s\n" % (bkg_file, param_name))
-   f.write("shapes data_obs * %s ws_bkg:data_obs\n" % (bkg_file))
-   f.write("-----------------------------------------------------------------------------------------------------------\n\n")
-
-   # Define the channel
-   f.write("bin         bin\n")
-   f.write("observation  -1\n\n")
-   f.write("bin         bin       bin\n")
-   f.write("process    signal   background\n\n")
-   f.write("process       0         1\n\n")
-   f.write("rate          1         1\n") #Rate is taken from the _norm variables
-
-   # Define the uncertainties
-   f.write("-----------------------------------------------------------------------------------------------------------\n")
-   #FIXME: Implement mass-dependent uncertainties
-   f.write("ElectronID lnN 1.02     -\n")
-   f.write("MuonID     lnN 1.02     -\n")
-   f.write("Lumi       lnN 1.02     -\n")
-   f.write("BTag       lnN 1.005    -\n")
-   f.write("Theory     lnN 1.01     -\n")
-   f.write("BDT        lnN 1.02     -\n")
-   f.write("-----------------------------------------------------------------------------------------------------------\n\n")
-
-   # Scale uncertainties
-   f.write("-----------------------------------------------------------------------------------------------------------\n")
-   f.write("elec_ES_shift param 0 1 [-7, 7]\n") # correlated between categories
-   f.write("muon_ES_shift param 0 1 [-7, 7]\n")
-   f.write("-----------------------------------------------------------------------------------------------------------\n\n")
-
-   # Define the envelope discrete index to be scanned
-   f.write("pdfindex_%s discrete\n" % (param_name))
-
-   # Close the file
-   f.close()
-   
-
-#----------------------------------------------------------------------------------------
-# Make a plot and save the figure, fit a 2nd order polynomial to it
-def plot_graph(mpoint_array,signal_array,name,xaxis="",yaxis=""):
-   signal_vs_mass = rt.TGraph(len(mpoint_array), mpoint_array, signal_array)
-
-   fnc = rt.TF1("fnc", "pol2", 200, 1000)
-   par_yld = array('d',[0, 0, 0])
-   cnv = rt.TCanvas("cnv_"+name,"",800,600)
-   signal_vs_mass.Draw("A*")
-   signal_vs_mass.SetTitle("#bf{CMS} #it{Preliminary};"+xaxis+";"+yaxis)
-   signal_vs_mass.Fit(fnc,"R")
-   cnv.SaveAs(name+".png")
-   fnc.GetParameters(par_yld)
-   return par_yld
-
+#----------------------------------------------------------------------------------------------------
+# Define a function to process the signal and background fitting calls
+def proc_unit(sgn_argument, bkg_argument):
+    if sgn_argument !='':
+       os.system(sgn_argument)
+    if bkg_argument != '':
+       os.system(bkg_argument)
 
 #----------------------------------------------
 # Read in the input parameters
@@ -92,6 +35,7 @@ parser.add_argument("--year", dest="year",default="Run2", type=str,help="year")
 parser.add_argument("--fit-version", dest="ver",default="2", type=str,help="fit version")
 parser.add_argument("--outvar", dest="outvar",default="mass_ll",type=str,help="data file")
 parser.add_argument("--param-name", dest="param_name",default="bin",type=str,help="data file")
+parser.add_argument("-j", "--nthreads", dest="nthreads",default=8,type=int,help="Number of threads to process using")
 parser.add_argument("--skip-fit", dest="skip_fit",default=False, action='store_true',help="fit skip")
 parser.add_argument("--skip-sgn-syst", dest="skip_sgn_syst",default=False, action='store_true',help="shape experiment")
 parser.add_argument("--skip-bkg-altfits", dest="skip_bkg_altfits",default=False, action='store_true',help="shape experiment")
@@ -130,8 +74,8 @@ if not os.path.exists(carddir+"WorkspaceScanSGN"):
 
 ### MC signal mass points
 
-# sgn_masspoints=["200","400","600","800","1000"]
-sgn_masspoints=["100","200","300","400","500","600","800","1000"]
+sgn_masspoints=["200","400","600","800","1000"]
+# sgn_masspoints=["100","200","300","400","500","600","800","1000"]
 
 # Define the signal samples by mass and period
 signal_samples = {
@@ -232,6 +176,9 @@ NextPoint=True
 # set intitial scan mass
 sr_center=args.scan_min
 
+# List of jobs to process for multi-threaded processing
+jobs = []
+
 cnt=-1
 script_head = 'echo ' if args.dry_run else ''
 while (NextPoint):
@@ -269,25 +216,29 @@ while (NextPoint):
   if(args.mass_point < 0 or cnt == args.mass_point):
     # create pdfs for mass point
     if not args.skip_fit:
+      sgn_argument = ''
+      bkg_argument = ''
       if args.component == "sgn" or args.component == "all":
         tail = (' >| log/fit_sgn_%s_mp%i.log' % (args.name, cnt)) if args.log_files else ''
         if args.use_gaus: #Define the signal shape parameters (Gaussian or Crystal Ball)
-           sig_line = '{'+str(sr_center)+','+str(sr_width)+'}'
+          sig_line = '{'+str(sr_center)+','+str(sr_width)+'}'
         else:
            sig_line = '{%.4f, %.4f, %.4f, %.4f, %.4f, %.4f}' % (sig_mean, sig_width, sig_alpha1, sig_alpha2, sig_enne1, sig_enne2)
-        os.system(script_head + 'root -l -b -q ScanMuE_fit_sgn_v'+args.ver+'.C\'("'
-                  +args.name+"_mp"+str(cnt)+'",'
-                  +str(min_mass)+','+str(max_mass)+','+sig_line+','
-                  +str(sr_yld)+','+shape_dc+',"'+args.outvar+'",'+do_sgn_syst+',"'+args.param_name+'")\'' + tail)
+        sgn_argument = script_head + 'root -l -b -q ScanMuE_fit_sgn_v'+args.ver+'.C\'("' \
+           +args.name+"_mp"+str(cnt)+'",' \
+           +str(min_mass)+','+str(max_mass)+','+sig_line+',' \
+           +str(sr_yld)+','+shape_dc+',"'+args.outvar+'",'+do_sgn_syst+',"'+args.param_name+'")\'' + tail
       if args.component == "bkg" or args.component == "all":
-         tail = (' >| log/fit_bkg_%s_mp%i.log' % (args.name, cnt)) if args.log_files else ''
-         os.system(script_head + 'root -l -b -q ScanMuE_fit_bkg_v'+args.ver+'.C\'("'+args.name+"_mp"+str(cnt)+'","'+args.data_file
-                   +'","'+args.xgb_min+'","'+args.xgb_max+'",'+str(min_mass)+','+str(max_mass)+','+str(sr_min)+','+str(sr_max)
-                   +','+unblind+','+shape_dc+',"'+args.outvar+'","'+args.param_name+'")\'' + tail)
-        
+        tail = (' >| log/fit_bkg_%s_mp%i.log' % (args.name, cnt)) if args.log_files else ''
+        bkg_argument = script_head + 'root -l -b -q ScanMuE_fit_bkg_v'+args.ver+'.C\'("'+args.name+"_mp"+str(cnt)+'","'+args.data_file \
+           +'","'+args.xgb_min+'","'+args.xgb_max+'",'+str(min_mass)+','+str(max_mass)+','+str(sr_min)+','+str(sr_max) \
+           +','+unblind+','+shape_dc+',"'+args.outvar+'","'+args.param_name+'")\'' + tail
+      job = Process(target = proc_unit, args=(sgn_argument,bkg_argument))
+      jobs.append(job)
+
 
     # Create a corresponding datacard
-    cardname = carddir + "combine_zprime_" + args.name + "_mp" + str(cnt) + ".txt"
+    cardname = carddir + "datacard_zprime_" + args.name + ("_mass-%.1f" % (sr_center)) + "_mp" + str(cnt) + ".txt"
     sig_file = "WorkspaceScanSGN/workspace_scansgn_v" + args.ver + "_" + args.name + "_mp" + str(cnt) + ".root"
     bkg_file = "WorkspaceScanBKG/workspace_scanbkg_v" + args.ver + "_" + args.name + "_mp" + str(cnt) + ".root"
     if not args.dry_run: print_datacard(cardname, sig_file, bkg_file, args.param_name, sr_center)
@@ -302,6 +253,18 @@ while (NextPoint):
      NextPoint=False
   
   
+if args.nthreads < 1: args.nthreads = 1
+print("Parallel processing using %i threads" % (args.nthreads))
+for ithread in range(0,len(jobs),args.nthreads):
+    nthread = args.nthreads+ithread
+    if (nthread>len(jobs)):
+       nthread=len(jobs)
+    print("Processing threads %i to %i out of %i jobs: %5.1f%% processed" % (ithread, nthread-1, len(jobs), (ithread*100./len(jobs))))
+    for job in jobs[ithread:nthread]:
+      job.start()
+    for job in jobs[ithread:nthread]:    
+      job.join()
+
 print "scannned",cnt+1,"points"
 
 

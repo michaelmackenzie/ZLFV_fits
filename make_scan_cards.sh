@@ -63,9 +63,8 @@ fi
 if [[ "${SKIPFITS}" == "" ]]; then
     [ ! -d log ] && mkdir log
     echo "Running fits and creating datacards..."
-    python ScanMuE_fit_wrapper_v1.py -o bdt_0d3_0d7_${TAG} --scan-min ${MINMASS} --scan-max ${MAXMASS} --xgb-min 0.3 --xgb-max 0.70 --param-name bin1 ${ARG} >| log/make_bdt_0d3_0d7_${TAG}.log 2>&1 &
-    python ScanMuE_fit_wrapper_v1.py -o bdt_0d7_1d0_${TAG} --scan-min ${MINMASS} --scan-max ${MAXMASS} --xgb-min 0.7 --xgb-max 1.01 --param-name bin2 ${ARG} >| log/make_bdt_0d7_1d0_${TAG}.log 2>&1 &
-    wait
+    python ScanMuE_fit_wrapper_v1.py -o bdt_0d3_0d7_${TAG} --scan-min ${MINMASS} --scan-max ${MAXMASS} --xgb-min 0.3 --xgb-max 0.70 --param-name bin1 ${ARG}
+    python ScanMuE_fit_wrapper_v1.py -o bdt_0d7_1d0_${TAG} --scan-min ${MINMASS} --scan-max ${MAXMASS} --xgb-min 0.7 --xgb-max 1.01 --param-name bin2 ${ARG}
 fi
 
 # make a combined directory
@@ -79,11 +78,11 @@ fi
 # Create combined datacards
 for CARD in `ls -d datacards/bdt_0d3_0d7_${TAG}/*.txt`
 do
-    if [[ "${CARD}" != *"combine_"* ]]; then
+    if [[ "${CARD}" != *"datacard_"* ]]; then
         continue
     fi
-    MASSPOINT=`echo ${CARD} | sed "s|datacards/bdt_0d3_0d7_${TAG}/combine_zprime_bdt_0d3_0d7_${TAG}_||" | sed 's/.txt//'`
-    CARD2=datacards/bdt_0d7_1d0_${TAG}/combine_zprime_bdt_0d7_1d0_${TAG}_${MASSPOINT}.txt
+    MASSPOINT=`echo ${CARD} | sed "s|datacards/bdt_0d3_0d7_${TAG}/datacard_zprime_bdt_0d3_0d7_${TAG}_||" | sed 's/.txt//'`
+    CARD2=datacards/bdt_0d7_1d0_${TAG}/datacard_zprime_bdt_0d7_1d0_${TAG}_${MASSPOINT}.txt
 
     cp ${CARD}  ${DIR}
     cp ${CARD2} ${DIR}
@@ -91,9 +90,9 @@ do
     [ ! -e WorkspaceScanBKG ] && ln -s ../../WorkspaceScanBKG WorkspaceScanBKG
     [ ! -e WorkspaceScanSGN ] && ln -s ../../WorkspaceScanSGN WorkspaceScanSGN
 
-    CARD1=combine_zprime_bdt_0d3_0d7_${TAG}_${MASSPOINT}.txt
-    CARD2=combine_zprime_bdt_0d7_1d0_${TAG}_${MASSPOINT}.txt
-    CARDOUT=combine_zprime_${TAG}_${MASSPOINT}.txt
+    CARD1=datacard_zprime_bdt_0d3_0d7_${TAG}_${MASSPOINT}.txt
+    CARD2=datacard_zprime_bdt_0d7_1d0_${TAG}_${MASSPOINT}.txt
+    CARDOUT=datacard_zprime_${TAG}_${MASSPOINT}.txt
     echo "Creating merged datacard ${CARDOUT}..."
     echo '# -*- mode: tcl -*-' >| ${CARDOUT}
     echo '#Merged Z prime search COMBINE datacard' >> ${CARDOUT}

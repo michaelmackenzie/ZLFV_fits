@@ -5,6 +5,7 @@ import ROOT as rt
 from array import array
 from math import exp
 from math import log10
+from multiprocessing import Process
 
 #----------------------------------------------------------------------------------------
 # Define the sorting of the datacards
@@ -25,7 +26,7 @@ def smooth_limits(vals, masses):
 
 #----------------------------------------------------------------------------------------
 # Process a single mass point
-def process_datacard(card, directory, name, asimov = False, skip_fit = False, tag = '', verbose = 0):
+def process_datacard(card, directory, name, asimov = False, tag = '', verbose = 0):
    if not os.path.isfile(directory + card):
       print "Card %s not found" % (card)
    if verbose > -1: print 'Processing mass point', name, '(card =', card+')'
@@ -35,68 +36,56 @@ def process_datacard(card, directory, name, asimov = False, skip_fit = False, ta
    #----------------------------------------------------------------------------
 
    if asimov: tag += '_asimov'
-   if not skip_fit:
-      command = 'combine -d %s -n .%s%s -M FitDiagnostics' % (card, name, tag)
-      if asimov: command += ' -t -1'
-      #Allow negative measured signal rates
-      command += ' --rMin -50 --rMax 50'
-      #Additional commands to help fit converge properly
-      command += ' --cminDefaultMinimizerStrategy 0'
-      command += ' --X-rtd MINIMIZER_freezeDisassociatedParams --X-rtd REMOVE_CONSTANT_ZERO_POINT=1 --X-rtd MINIMIZER_multiMin_hideConstants'
-      command += ' --cminRunAllDiscreteCombinations'
-      output = 'fit_rate_%s.log' % (name)
-      if verbose > 1: print command
-      os.system('cd %s; %s >| %s; cd ..' % (directory, command, output))
+   command = 'combine -d %s -n .%s%s -M FitDiagnostics' % (card, name, tag)
+   if asimov: command += ' -t -1'
+   #Allow negative measured signal rates
+   command += ' --rMin -50 --rMax 50'
+   #Additional commands to help fit converge properly
+   command += ' --cminDefaultMinimizerStrategy 0'
+   command += ' --X-rtd MINIMIZER_freezeDisassociatedParams --X-rtd REMOVE_CONSTANT_ZERO_POINT=1 --X-rtd MINIMIZER_multiMin_hideConstants'
+   command += ' --cminRunAllDiscreteCombinations'
+   output = 'fit_rate_%s.log' % (name)
+   if verbose > 1: print command
+   os.system('cd %s; %s >| %s 2>&1; cd ..' % (directory, command, output))
 
    #----------------------------------------------------------------------------
    # Evaluate the signal rate significance
    #----------------------------------------------------------------------------
 
-   if not skip_fit:
-      command = 'combine -d %s -n .%s%s -M Significance --uncapped 1' % (card, name, tag)
-      if asimov: command += ' -t -1'
-      #Allow negative measured signal rates
-      command += ' --rMin -50 --rMax 50'
-      #Additional commands to help fit converge properly
-      command += ' --cminDefaultMinimizerStrategy 0'
-      command += ' --X-rtd MINIMIZER_freezeDisassociatedParams --X-rtd REMOVE_CONSTANT_ZERO_POINT=1 --X-rtd MINIMIZER_multiMin_hideConstants'
-      command += ' --cminRunAllDiscreteCombinations'
-      output = 'fit_sig_%s.log' % (name)
-      if verbose > 1: print command
-      os.system('cd %s; %s >| %s; cd ..' % (directory, command, output))
+   command = 'combine -d %s -n .%s%s -M Significance --uncapped 1' % (card, name, tag)
+   if asimov: command += ' -t -1'
+   #Allow negative measured signal rates
+   command += ' --rMin -50 --rMax 50'
+   #Additional commands to help fit converge properly
+   command += ' --cminDefaultMinimizerStrategy 0'
+   command += ' --X-rtd MINIMIZER_freezeDisassociatedParams --X-rtd REMOVE_CONSTANT_ZERO_POINT=1 --X-rtd MINIMIZER_multiMin_hideConstants'
+   command += ' --cminRunAllDiscreteCombinations'
+   output = 'fit_sig_%s.log' % (name)
+   if verbose > 1: print command
+   os.system('cd %s; %s >| %s 2>&1; cd ..' % (directory, command, output))
 
    #----------------------------------------------------------------------------
    # Perform an upper limit evaluation
    #----------------------------------------------------------------------------
 
-   if not skip_fit:
-      command = 'combine -d %s -n .%s%s -M AsymptoticLimits' % (card, name, tag)
-      if asimov: command += ' -t -1 --noFitAsimov' # --freezeParameters pdfindex_bin1,pdfindex_bin2
-      #Allow negative measured signal rates
-      command += ' --rMin -50 --rMax 50'
-      #Additional commands to help fit converge properly
-      command += ' --cminDefaultMinimizerStrategy 0'
-      command += ' --X-rtd MINIMIZER_freezeDisassociatedParams --X-rtd REMOVE_CONSTANT_ZERO_POINT=1 --X-rtd MINIMIZER_multiMin_hideConstants'
-      command += ' --cminRunAllDiscreteCombinations'
-      output = 'fit_limit_%s.log' % (name)
-      if verbose > 1: print command
-      os.system('cd %s; %s >| %s; cd ..' % (directory, command, output))
+   command = 'combine -d %s -n .%s%s -M AsymptoticLimits' % (card, name, tag)
+   if asimov: command += ' -t -1 --noFitAsimov' # --freezeParameters pdfindex_bin1,pdfindex_bin2
+   #Allow negative measured signal rates
+   command += ' --rMin -50 --rMax 50'
+   #Additional commands to help fit converge properly
+   command += ' --cminDefaultMinimizerStrategy 0'
+   command += ' --X-rtd MINIMIZER_freezeDisassociatedParams --X-rtd REMOVE_CONSTANT_ZERO_POINT=1 --X-rtd MINIMIZER_multiMin_hideConstants'
+   command += ' --cminRunAllDiscreteCombinations'
+   output = 'fit_limit_%s.log' % (name)
+   if verbose > 1: print command
+   os.system('cd %s; %s >| %s 2>&1; cd ..' % (directory, command, output))
 
-   #----------------------------------------------------------------------------
-   # Extract the mass FIXME: Make this more robust
-   #----------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------
+# Retrieve fit information for a single mass point
+def retrieve_info(card, directory, name, asimov = False, tag = '', verbose = 0):
 
-   ws_name = name
-   ws_name = name.replace('bdt_', 'bdt_0d7_1d0_')
-   ws_file = 'WorkspaceScanSGN/workspace_scansgn_v2_%s.root' % (ws_name)
-   if 'toy' in ws_file:
-      ws_file = ws_file.split('_toy')[0] + '_mp' + ws_file.split('_mp')[1]
-   f = rt.TFile.Open(ws_file, 'READ')
-   ws = f.Get('workspace_signal')
-   mass_var = ws.var('mean_bin2')
-   mass = mass_var.getVal()
-   f.Close()
-   
+   mass = float(card.split('mass-')[1].split('_')[0])
+   if asimov: tag += '_asimov'
 
    #----------------------------------------------------------------------------
    # Extract the results
@@ -141,6 +130,7 @@ def process_datacard(card, directory, name, asimov = False, skip_fit = False, ta
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-o", dest="name",default="bdt_v01", type=str,help="datacard directory name")
+parser.add_argument("-j", "--nthreads", dest="nthreads",default=8,type=int,help="Number of threads to process using")
 parser.add_argument("--skip-fits", dest="skip_fits",default=False, action='store_true',help="Skip fits, assume already processed")
 parser.add_argument("--asimov", dest="asimov",default=False, action='store_true',help="Perform fits Asimov dataset")
 parser.add_argument("--smooth-expected", dest="smooth_expected",default=False, action='store_true',help="Smooth the expected limit distribution")
@@ -219,10 +209,32 @@ max_lim = -1.e10
 min_r =  1.e10
 max_r = -1.e10
 
+jobs = [] # For multithreaded processing
+
+# Process the combine jobs for each card
+if not args.skip_fits:
+   for f in list_of_files:
+      if '.txt' not in f: continue
+      mass_point = f.split('_mp')[1].split('.txt')[0]
+      job = Process(target = process_datacard, args=(f, carddir, args.name+ '_mp'+mass_point, asimov, args.tag, args.verbose))
+      jobs.append(job)
+   if args.nthreads < 1: args.nthreads = 1
+   print("Parallel processing using %i threads" % (args.nthreads))
+   for ithread in range(0,len(jobs),args.nthreads):
+      nthread = args.nthreads+ithread
+      if (nthread>len(jobs)):
+         nthread=len(jobs)
+      print("Processing threads %i to %i out of %i jobs: %5.1f%% processed" % (ithread, nthread-1, len(jobs), (ithread*100./len(jobs))))
+      for job in jobs[ithread:nthread]:
+         job.start()
+      for job in jobs[ithread:nthread]:    
+         job.join()
+
+# Retrieve and plot the fit results for each card
 for f in list_of_files:
    if '.txt' not in f: continue
    mass_point = f.split('_mp')[1].split('.txt')[0]
-   [r_fit, r_lim, r_sig, mass] = process_datacard(f, carddir, args.name+ '_mp'+mass_point, asimov, args.skip_fits, args.tag, args.verbose)
+   [r_fit, r_lim, r_sig, mass] = retrieve_info(f, carddir, args.name+ '_mp'+mass_point, asimov, args.tag, args.verbose)
 
    # store the results
    masses.append(mass)

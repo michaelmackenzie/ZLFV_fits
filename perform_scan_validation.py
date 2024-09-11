@@ -55,19 +55,10 @@ def process_datacard(card, directory, name, test = 'bias', toys = 100, skip_fit 
       results = [mean, pull, width]
 
    #----------------------------------------------------------------------------
-   # Extract the mass FIXME: Make this more robust
+   # Extract the mass
    #----------------------------------------------------------------------------
 
-   ws_name = name
-   ws_name = name.replace('bdt_', 'bdt_0d7_1d0_')
-   ws_file = 'WorkspaceScanSGN/workspace_scansgn_v2_%s.root' % (ws_name)
-   if 'toy' in ws_file:
-      ws_file = ws_file.split('_toy')[0] + '_mp' + ws_file.split('_mp')[1]
-   f = rt.TFile.Open(ws_file, 'READ')
-   ws = f.Get('workspace_signal')
-   mass_var = ws.var('mean_bin2')
-   mass = mass_var.getVal()
-   f.Close()
+   mass = float(card.split('mass-')[1].split('_')[0])
       
    #----------------------------------------------------------------------------
    # Return the results
