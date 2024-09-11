@@ -1,8 +1,8 @@
 #! /bin/bash
-# Create Z prime scan COMBINE datacards
+# Create A' prime scan COMBINE datacards
 
 Help() {
-    echo "Create Z prime scan COMBINE datacards"
+    echo "Create Z' prime scan COMBINE datacards"
     echo "Options:"
     echo " --min-mass       : Minimum mass to scan (default = 110)"
     echo " --max-mass       : Maximum mass to scan (default = 500)"

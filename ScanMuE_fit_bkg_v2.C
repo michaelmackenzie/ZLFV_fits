@@ -18,11 +18,12 @@ int ScanMuE_fit_bkg_v2(TString name="bin1_r2",
     TString xgbmin="0.7",TString xgbmax="1.01", double  min_fit_range=90,
     double  max_fit_range = 135, double blind_min=106, double blind_max=114,
     bool unblind=false, bool create_dc_input=false, TString outvar="mass_ll",
-    TString varname="bin"){
+    TString varname="bin",TString outdir="WorkspaceScanBKG/"){
 
    //////////////////////////////////// configuration /////////////////////////
    gROOT->SetBatch(true);
-   TString outdir = "WorkspaceScanBKG/";
+   if(outdir == "") outdir = "WorkspaceScanBKG/";
+   if(!outdir.EndsWith("/")) outdir += "/";
    gSystem->Exec(Form("[ ! -d %s ] && mkdir -p %s", outdir.Data(), outdir.Data()));
    figdir_ = "figures/" + name + "/";
    gSystem->Exec(Form("[ ! -d %s ] && mkdir -p %s", figdir_.Data(), figdir_.Data()));
@@ -45,7 +46,6 @@ int ScanMuE_fit_bkg_v2(TString name="bin1_r2",
    TString tree_name="mytreefit";
    //bin data such that a single bin is ~1/2 of the signal width --> +-1 sigma = 4 bins
    int nbin_data = (max_fit_range-min_fit_range)/(0.5*(blind_max-blind_min)/2.); //(blind_max - blind_min) = 2*width
-   // int nbin_data = int(max_fit_range-min_fit_range); //~1 GeV binning
    bool Verbose=false; // RooFit verbosity
    int printout_levels=1; // 0: Print only final fits parameters, 1: Print all fits from F test tests
 
@@ -85,6 +85,8 @@ int ScanMuE_fit_bkg_v2(TString name="bin1_r2",
    cc->Draw("mass_ll>>hbkg",cuts);
 
    RooDataHist * dhist_bkg = new RooDataHist("dhist_bkg","dhist_bkg",RooArgSet(dilep_mass),hbkg);
+
+   RooDataHist * dhist_data = new RooDataHist("dhist_data","dhist_data",RooArgSet(dilep_mass_out),hbkg);
 
    cout<<"dataset = "<<dhist_bkg->sumEntries()<<endl;
 
@@ -141,7 +143,9 @@ int ScanMuE_fit_bkg_v2(TString name="bin1_r2",
    if (Fit_sumexp) {
        ////// ftest
        cout<<" ************************ Ftest SumExp begin ************************ "<<endl;
-       sumexp_Ftest =  HistFtest(bkg_sumexp_pdfs, bkg_sumexp_ampl,  dhist_bkg, dilep_mass, bkg_sumexp_orders, bkg_sumexp_names, bkg_sumexp_legs, nbin_data, "scanbkg_v2_exp_"+name, ftest_step, min_p_value,printout_levels, force_inclusion, force_standard_env_);
+       sumexp_Ftest =  HistFtest(bkg_sumexp_pdfs, bkg_sumexp_ampl,  dhist_bkg, dilep_mass, bkg_sumexp_orders,
+                                 bkg_sumexp_names, bkg_sumexp_legs, nbin_data, "scanbkg_v2_exp_"+name,
+                                 ftest_step, min_p_value,printout_levels, force_inclusion, force_standard_env_);
        cout<<" ************************ Ftest SumExp end ************************ "<<endl;
    }
 
@@ -166,7 +170,9 @@ int ScanMuE_fit_bkg_v2(TString name="bin1_r2",
    sumplaw_Ftest.success=false;
    if (Fit_sumplaw){
       cout<<" ************************ Ftest Sum Power Law begin ************************ "<<endl;
-      sumplaw_Ftest =  HistFtest(bkg_sumplaw_pdfs, bkg_sumplaw_ampl,  dhist_bkg, dilep_mass, bkg_sumplaw_orders, bkg_sumplaw_names, bkg_sumplaw_legs, nbin_data, "scanbkg_v2_sumplaw_"+name, ftest_step, min_p_value,printout_levels, force_inclusion, force_standard_env_);
+      sumplaw_Ftest =  HistFtest(bkg_sumplaw_pdfs, bkg_sumplaw_ampl,  dhist_bkg, dilep_mass, bkg_sumplaw_orders,
+                                 bkg_sumplaw_names, bkg_sumplaw_legs, nbin_data, "scanbkg_v2_sumplaw_"+name,
+                                 ftest_step, min_p_value,printout_levels, force_inclusion, force_standard_env_);
       cout<<" ************************ Ftest Sum Power Law end ************************ "<<endl;
    }
 
@@ -324,9 +330,9 @@ int ScanMuE_fit_bkg_v2(TString name="bin1_r2",
    wspace->import(cat);
    wspace->import(multipdf);
    wspace->import(norm_out);
-   dhist_bkg->SetName("data_obs");
-   wspace->import(*dhist_bkg); //import data as well
-   wspace->writeToFile(outdir+"workspace_scanbkg_v2_"+name+".root"); // write output
+   dhist_data->SetName("data_obs");
+   wspace->import(*dhist_data); //import the data as well
+   wspace->writeToFile(outdir+"workspace_scanbkg_v2_"+name+".root"); // write the output
 
 
 

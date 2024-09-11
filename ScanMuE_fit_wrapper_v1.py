@@ -130,7 +130,7 @@ if not os.path.exists(carddir+"WorkspaceScanSGN"):
 
 ### MC signal mass points
 
-sgn_masspoints=["200","400","600","800","1000"]
+# sgn_masspoints=["200","400","600","800","1000"]
 sgn_masspoints=["100","200","300","400","500","600","800","1000"]
 
 # Define the signal samples by mass and period

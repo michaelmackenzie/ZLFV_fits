@@ -57,7 +57,7 @@ double get_manual_subrange_chisquare(RooRealVar& obs, RooAbsPdf* pdf, RooDataSet
     delete htmp_data;
     return -1.;
   }
-    
+
   //Create the PDF normalization by matching it to the data, skipping the region requested
   const double xmin_norm = (norm_range) ? obs.getMin(norm_range) : (norm_skip) ?  1. : obs.getMin();
   const double xmax_norm = (norm_range) ? obs.getMax(norm_range) : (norm_skip) ? -1. : obs.getMax();
@@ -73,7 +73,7 @@ double get_manual_subrange_chisquare(RooRealVar& obs, RooAbsPdf* pdf, RooDataSet
     const double ndata = htmp_data->GetBinContent(ibin); //observed N(events)
     pdf_norm  += npdf;
     data_norm += ndata;
-   // cout << "Norm Bin " << ibin << " (" << htmp_data->GetBinLowEdge(ibin) << " - " << htmp_data->GetBinLowEdge(ibin) + htmp_data->GetBinWidth(ibin) << "): Data = " << ndata << " PDF = " << npdf  << endl; 
+   // cout << "Norm Bin " << ibin << " (" << htmp_data->GetBinLowEdge(ibin) << " - " << htmp_data->GetBinLowEdge(ibin) + htmp_data->GetBinWidth(ibin) << "): Data = " << ndata << " PDF = " << npdf  << endl;
   }
   if(pdf_norm <= 0.) {
     cout << __func__ << ": PDF normalization is non-positive!\n";
@@ -98,17 +98,17 @@ double get_manual_subrange_chisquare(RooRealVar& obs, RooAbsPdf* pdf, RooDataSet
     }
     const double npdf = htmp_pdf->GetBinContent(ibin)*htmp_pdf->GetBinWidth(ibin);
     const double error = htmp_data->GetBinError  (ibin);
-    
+
     const double ndata = htmp_data->GetBinContent(ibin);
     const double val  = ndata - npdf;
     //cout<<"val "<<val<<" error "<<error<<" npdf "<<npdf<<endl;
     const double sigma = val*val / ((IsPseudodata) ? error*error : (npdf <= 0. ? 1.e-5 : npdf));
    // const double sigma = val*val/(error*error);
     chisq += sigma;
-   
+
  //     cout << "Bin " << ibin << " (" << htmp_data->GetBinLowEdge(ibin) << " - "<< htmp_data->GetBinLowEdge(ibin) + htmp_data->GetBinWidth(ibin) << "): Data = " << ndata << " PDF = " << npdf<< " --> sigma = " << sigma << endl;
     }
-  
+
 //  cout << __func__ << ": Total chi^2 = " << chisq << " / " << bin_hi - bin_lo+1 << " bins\n";
   if(nbins) *nbins = bin_hi - bin_lo+1;
   delete htmp_pdf;
@@ -128,7 +128,7 @@ double get_manual_subrange_chisquare(RooRealVar& obs, RooAbsPdf* pdf, RooDataHis
     delete htmp_data;
     return -1.;
   }
-    
+
   //Create the PDF normalization by matching it to the data, skipping the region requested
   const double xmin_norm = (norm_range) ? obs.getMin(norm_range) : (norm_skip) ?  1. : obs.getMin();
   const double xmax_norm = (norm_range) ? obs.getMax(norm_range) : (norm_skip) ? -1. : obs.getMax();
@@ -144,7 +144,7 @@ double get_manual_subrange_chisquare(RooRealVar& obs, RooAbsPdf* pdf, RooDataHis
     const double ndata = htmp_data->GetBinContent(ibin); //observed N(events)
     pdf_norm  += npdf;
     data_norm += ndata;
-   // cout << "Norm Bin " << ibin << " (" << htmp_data->GetBinLowEdge(ibin) << " - " << htmp_data->GetBinLowEdge(ibin) + htmp_data->GetBinWidth(ibin) << "): Data = " << ndata << " PDF = " << npdf  << endl; 
+   // cout << "Norm Bin " << ibin << " (" << htmp_data->GetBinLowEdge(ibin) << " - " << htmp_data->GetBinLowEdge(ibin) + htmp_data->GetBinWidth(ibin) << "): Data = " << ndata << " PDF = " << npdf  << endl;
   }
   if(pdf_norm <= 0.) {
     cout << __func__ << ": PDF normalization is non-positive!\n";
@@ -172,17 +172,17 @@ double get_manual_subrange_chisquare(RooRealVar& obs, RooAbsPdf* pdf, RooDataHis
     }
     const double npdf = htmp_pdf->GetBinContent(ibin)*htmp_pdf->GetBinWidth(ibin);
     const double error = htmp_data->GetBinError  (ibin);
-    
+
     const double ndata = htmp_data->GetBinContent(ibin);
     const double val  = ndata - npdf;
     //cout<<"val "<<val<<" error "<<error<<" npdf "<<npdf<<endl;
     const double sigma = val*val / ((IsPseudodata) ? error*error : (npdf <= 0. ? 1.e-5 : npdf));
    // const double sigma = val*val/(error*error);
     chisq += sigma;
-   
+
  //     cout << "Bin " << ibin << " (" << htmp_data->GetBinLowEdge(ibin) << " - "<< htmp_data->GetBinLowEdge(ibin) + htmp_data->GetBinWidth(ibin) << "): Data = " << ndata << " PDF = " << npdf<< " --> sigma = " << sigma << endl;
     }
-  
+
 //  cout << __func__ << ": Total chi^2 = " << chisq << " / " << bin_hi - bin_lo+1 << " bins\n";
   if(nbins) *nbins = bin_hi - bin_lo+1;
   delete htmp_pdf;
@@ -193,7 +193,7 @@ double get_manual_subrange_chisquare(RooRealVar& obs, RooAbsPdf* pdf, RooDataHis
 
 double get_chi_squared(RooRealVar& obs, RooAbsPdf* pdf, RooDataSet& data, bool unblind,
 		       int nbins_data, int n_param, bool ReturnNorm=true, bool IsPseudodata=false){
-    
+
     if(!unblind) {
       int nbins = 0; //count of total bins used
       int nbin_running = 0; //bins used in a single subrange
@@ -211,12 +211,12 @@ double get_chi_squared(RooRealVar& obs, RooAbsPdf* pdf, RooDataSet& data, bool u
       if (ReturnNorm) chi_sq/=(nbins_data - n_param);
       return chi_sq;
     }
-  
+
 }
 
 double get_chi_squared(RooRealVar& obs, RooAbsPdf* pdf, RooDataHist& data, bool unblind,
 		       int& nbins, int n_param, bool ReturnNorm=true, bool IsPseudodata=false){
-    
+
     if(!unblind) {
       nbins = 0; //count of total bins used
       int nbin_running = 0; //bins used in a single subrange
@@ -233,7 +233,7 @@ double get_chi_squared(RooRealVar& obs, RooAbsPdf* pdf, RooDataHist& data, bool 
       if (ReturnNorm) chi_sq/=(nbins - n_param);
       return chi_sq;
     }
-  
+
 }
 
 TCanvas * create_canvas(TString name){
@@ -274,7 +274,7 @@ void save_plot( RooPlot * xframe, TString xaxis_title, TString name, TLegend* le
        leg->Draw("sames");
     if (pt!=NULL)
        pt->Draw("sames");
-    ctemp->SaveAs(figdir_ + name+".png");
+    ctemp->SaveAs(figdir_+name+".png");
 }
 
 void save_plot_and_band( RooPlot * xframe,  RooRealVar var, std::vector<TString> functions, TString xaxis_title, TString name, TLegend* leg=new TLegend(),TPaveText * pt=NULL, bool IsData=true,bool Logy=false){
@@ -357,10 +357,10 @@ void save_plot_and_band( RooPlot * xframe,  RooRealVar var, std::vector<TString>
     line.SetLineStyle(kDashed);
     line.SetLineColor(kBlack);
     line.Draw("same");
-//    TLine *line = new TLine(gPad->GetUxmin()+0.12, 0.665, gPad->GetUxmax()-0.04, 0.665); 
-  //  line->SetNDC(kTRUE);  
-   // line->Draw(); 
-    ctemp->SaveAs(figdir_ + name+".png");
+//    TLine *line = new TLine(gPad->GetUxmin()+0.12, 0.665, gPad->GetUxmax()-0.04, 0.665);
+  //  line->SetNDC(kTRUE);
+   // line->Draw();
+    ctemp->SaveAs(figdir_+name+".png");
 }
 
 
@@ -450,8 +450,8 @@ void save_th1(std::vector<TH1F*> histos, std::vector<TString> legs, TString xaxi
 
     if (histos.size()>1)
        leg->Draw("sames");
-    
-     cnv->SaveAs(figdir_+name+".png"); 
+
+     cnv->SaveAs(figdir_+name+".png");
 }
 
 #endif
