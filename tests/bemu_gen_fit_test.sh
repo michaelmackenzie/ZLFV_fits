@@ -125,7 +125,7 @@ fi
 
 if [[ "${NAME}" == "" ]]; then
     echo "Creating test name from gen card ${GENCARD}..."
-    NAME=`echo ${GENCARD} | sed 's/combine_bemu_//' | sed 's/.txt//' | sed 's/_workspace.root//'`
+    NAME=`echo ${GENCARD} | sed 's/datacard_zprime_//' | sed 's/.txt//' | sed 's/_workspace.root//'`
 fi
 
 OUTNAME="${NAME}_test"

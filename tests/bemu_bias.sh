@@ -116,7 +116,7 @@ if [[ "${CARD}" == "" ]]; then
 fi
 
 if [[ "${NAME}" == "" ]]; then
-    NAME=`echo ${CARD} | sed 's/combine_zprime_//' | sed 's/.txt//' | sed 's/_workspace.root//'`
+    NAME=`echo ${CARD} | sed 's/datacard_zprime_//' | sed 's/.txt//' | sed 's/_workspace.root//'`
 fi
 echo ${NAME}
 GENCARD=${CARD}

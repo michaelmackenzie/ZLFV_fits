@@ -23,18 +23,18 @@ def proc_unit(sgn_argument, bkg_argument):
 parser = argparse.ArgumentParser()
 parser.add_argument("-o", dest="name",default="test", type=str,help="output root name")
 parser.add_argument("--data-file", dest="data_file",default="", type=str,help="data file")
-parser.add_argument("--xgb-min", dest="xgb_min",default="0.70", type=str,help="data file")
-parser.add_argument("--xgb-max", dest="xgb_max",default="1.01", type=str,help="data file")
-parser.add_argument("--scan-min", dest="scan_min",default=110., type=float,help="mass signal")
-parser.add_argument("--scan-max", dest="scan_max",default=500., type=float,help="mass signal")
-parser.add_argument("--scan-step", dest="scan_step",default=0.5, type=float,help="mass signal")
-parser.add_argument("--component", dest="component",type=str,default="all",help="Options: all sgn bkg ")
-parser.add_argument("--unblind", dest="unblind",default=False, action='store_true',help="data file")
+parser.add_argument("--xgb-min", dest="xgb_min",default="0.70", type=str,help="BDT score minimum for the category")
+parser.add_argument("--xgb-max", dest="xgb_max",default="1.01", type=str,help="BDT score maximum for the category")
+parser.add_argument("--scan-min", dest="scan_min",default=110., type=float,help="Minimum mass hypothesis to scan")
+parser.add_argument("--scan-max", dest="scan_max",default=500., type=float,help="Maximum mass hypothesis to scan")
+parser.add_argument("--scan-step", dest="scan_step",default=1., type=float,help="Step size in the mass scan, in units of signal core sigma")
+parser.add_argument("--component", dest="component",type=str,default="all",help="Only process the given fit component: all, sgn, bkg, or none")
+parser.add_argument("--unblind", dest="unblind",default=False, action='store_true',help="Unblind the fits")
 parser.add_argument("--skip-shape-dc", dest="skip_shape_dc",default=False, action='store_true',help="shape experiment")
-parser.add_argument("--year", dest="year",default="Run2", type=str,help="year")
+parser.add_argument("--year", dest="year",default="Run2", type=str,help="Data period to use (2016, 2017, 2018, or Run2)")
 parser.add_argument("--fit-version", dest="ver",default="2", type=str,help="fit version")
-parser.add_argument("--outvar", dest="outvar",default="mass_ll",type=str,help="data file")
-parser.add_argument("--param-name", dest="param_name",default="bin",type=str,help="data file")
+parser.add_argument("--outvar", dest="outvar",default="mass_ll",type=str,help="Name out the output observable")
+parser.add_argument("--param-name", dest="param_name",default="bin",type=str,help="Name of the COMBINE category")
 parser.add_argument("-j", "--nthreads", dest="nthreads",default=8,type=int,help="Number of threads to process using")
 parser.add_argument("--skip-fit", dest="skip_fit",default=False, action='store_true',help="fit skip")
 parser.add_argument("--skip-sgn-syst", dest="skip_sgn_syst",default=False, action='store_true',help="shape experiment")
@@ -241,7 +241,7 @@ while (NextPoint):
     cardname = carddir + "datacard_zprime_" + args.name + ("_mass-%.1f" % (sr_center)) + "_mp" + str(cnt) + ".txt"
     sig_file = "WorkspaceScanSGN/workspace_scansgn_v" + args.ver + "_" + args.name + "_mp" + str(cnt) + ".root"
     bkg_file = "WorkspaceScanBKG/workspace_scanbkg_v" + args.ver + "_" + args.name + "_mp" + str(cnt) + ".root"
-    if not args.dry_run: print_datacard(cardname, sig_file, bkg_file, args.param_name, sr_center)
+    if not args.dry_run and not args.skip_dc: print_datacard(cardname, sig_file, bkg_file, args.param_name, sr_center)
 
 
   # next iteration mass and exit conditions

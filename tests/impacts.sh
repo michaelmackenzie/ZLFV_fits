@@ -197,8 +197,8 @@ echo "Performing impacts on combine card ${CARD}"
 echo "Parameters: DONTCLEAN=${DONTCLEAN}; DOOBS=${DOOBS}; RRANGE=${RRANGE}"
 
 WORKSPACE=`echo ${CARD} | sed 's/.txt/_workspace.root/'`
-JSON=`echo ${CARD} | sed 's/.txt/.json/' | sed 's/_workspace.root/.json/' | sed 's/.root/.json/' | sed 's/combine_/impacts_/'`
-FITNAME=`echo ${CARD} | sed 's/.txt//' | sed 's/_workspace.root//' | sed 's/.root//' | sed 's/combine_mva_//'`
+JSON=`echo ${CARD} | sed 's/.txt/.json/' | sed 's/_workspace.root/.json/' | sed 's/.root/.json/' | sed 's/datacard_/impacts_/'`
+FITNAME=`echo ${CARD} | sed 's/.txt//' | sed 's/_workspace.root//' | sed 's/.root//' | sed 's/datacard_zprime_//'`
 # Task name for grid processing
 TASK=`echo ${CARD} | sed 's/.txt//' | sed 's/_workspace.root//' | sed 's/.root//'`
 if [[ "${APPROX}" != "" ]]; then

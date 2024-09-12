@@ -53,13 +53,13 @@ if [ ! -e ${OUTDIR}WorkspaceScanBKG ]; then
     cd -
 fi
 
-cp ${DATACARDS}combine_zprime_*_mp*.txt ${OUTDIR}
+cp ${DATACARDS}datacard_zprime_*_mp*.txt ${OUTDIR}
 
 for CARD in `ls -d ${OUTDIR}*_0d3_0d7_*.txt`
 do
     # Create binned toy datasets for each input mass point
     echo ${CARD}
-    DATAWS1=`echo ${CARD} | sed "s|${OUTDIR}combine_zprime|WorkspaceScanBKG/workspace_scanbkg_v2|g" | sed 's/.txt/.root/'`
+    DATAWS1=`cat ${CARD} | grep "shapes background" | awk '{print $4}'` #Retrieve the background workspace name from the datacard
     DATAWS2=`echo ${DATAWS1} | sed "s/0d3_0d7/0d7_1d0/g"`
     MASSPOINT=$(echo $DATAWS1 | tr "_" " " | awk '{print $NF}' | sed 's/.root//')
     TOY_MP_1=`echo ${TOYFILE1} | sed "s/.root/_${MASSPOINT}.root/"`

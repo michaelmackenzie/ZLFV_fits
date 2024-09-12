@@ -11,8 +11,8 @@ MAXMASS=500
 MINBDT=0.70
 MAXBDT=1.01
 NAME=bdt_0d7_1d0_v01
-time python ScanMuE_fit_wrapper_v1.py -o ${NAME} --scan-min ${MINMASS} --scan-max ${MAXMASS} --xgb-min ${MINBDT} --xgb-max ${MAXBDT}
-ls -l datacards/${NAME}/combine_combine_zprime_${NAME}_mp*.txt | head -n 2
+time python ScanMuE_fit_wrapper_v1.py -o ${NAME} --scan-min ${MINMASS} --scan-max ${MAXMASS} --xgb-min ${MINBDT} --xgb-max ${MAXBDT} --log-files --scan-step 1 [-j N]
+ls -l datacards/${NAME}/datacard_zprime_${NAME}_mass-*_mp*.txt | head -n 2
 ls -l WorkspaceScanSGN/workspace_scansgn_v2_${NAME}_mp*.root | head -n 2
 ls -l WorkspaceScanBKG/workspace_scanbkg_v2_${NAME}_mp*.root | head -n 2
 #figures are printed to: figures/${NAME}/ (signal) and figures/${NAME}_mp*/ (background/data)
@@ -23,8 +23,8 @@ ls -l WorkspaceScanBKG/workspace_scanbkg_v2_${NAME}_mp*.root | head -n 2
 MINMASS=110
 MAXMASS=500
 NAME=v01
-time ./make_scan_cards.sh --min-mass ${MINMASS} --max-mass ${MAXMASS} --tag ${NAME}
-ls -l datacards/bdt_${NAME}/combine_combine_zprime_${NAME}_mp*.txt | head -n 2
+time ./make_scan_cards.sh --min-mass ${MINMASS} --max-mass ${MAXMASS} --tag ${NAME} --scan-arg "--scan-step 1 --log-files"
+ls -l datacards/bdt_${NAME}/datacard_zprime_${NAME}_mass-*_mp*.txt | head -n 2
 ```
 
 ### Scan the mass points, evaluating signal rates and upper limits
@@ -47,14 +47,12 @@ python create_toy.py --fit-file WorkspaceScanBKG/workspace_scanbkg_v2_bdt_0d3_0d
 python create_toy.py --fit-file WorkspaceScanBKG/workspace_scanbkg_v2_bdt_0d7_1d0_LEE_mp0.root -o toy_0d7_1d0 --toy 2 --param bin2 --seed 90
 
 # Create toy scan COMBINE cards from an existing scan dataset
-CARDDIR="datacards/bdt_v03_step_1d0/" #Existing datacards
-TOYDIR="datacards/bdt_v03_step_1d0_toy_2/" #Output toy datacard directory
-TOYFILE1="WorkspaceScanTOY/toy_file_toy_0d3_0d7_2.root" #Low score toy file
-TOYFILE2="WorkspaceScanTOY/toy_file_toy_0d7_1d0_2.root"
-./clone_cards_for_toy.sh ${CARDDIR} ${TOYDIR} ${TOYFILE1} ${TOYFILE2}
+TOY="2" #Toy number
+MAIN="bdt_v01" #Main directory used for cloning
+./clone_cards_for_toy.sh datacards/${MAIN}/ datacards/${MAIN}_toy_${TOY}/ WorkspaceScanTOY/toy_file_toy_0d3_0d7_${TOY}.root WorkspaceScanTOY/toy_file_toy_0d7_1d0_${TOY}.root
 
 # Run the scan over the toy datacards
-time python perform_scan.py -o bdt_v03_step_1d0_toy_2 --unblind --smooth-expected
+time python perform_scan.py -o ${MAIN}_toy_${TOY} --unblind --smooth-expected
 ```
 
 ### Validation studies
@@ -64,7 +62,7 @@ Validation studies are performed using the [perform_scan_validation.py](perform_
 ```
 # Perform a bias test for each mass point in the scan:
 NTOYS=1000
-NAME="bdt_v06_step_1d0"
+NAME="bdt_v01"
 time python perform_scan_validation.py -o ${NAME} -t ${NTOYS} --test bias
 ls -l figures/val_${NAME}_bias/pulls.png
 ls -l figures/val_${NAME}_bias/${NAME}_mp*_bias.png | head -n 5
