@@ -135,6 +135,7 @@ parser.add_argument("--skip-fits", dest="skip_fits",default=False, action='store
 parser.add_argument("--asimov", dest="asimov",default=False, action='store_true',help="Perform fits Asimov dataset")
 parser.add_argument("--smooth-expected", dest="smooth_expected",default=False, action='store_true',help="Smooth the expected limit distribution")
 parser.add_argument("--unblind", dest="unblind",default=False, action='store_true',help="Plot the observed limits")
+parser.add_argument("--draw-asimov", dest="draw_asimov",default=False, action='store_true',help="Draw the observed fits in the Asimov scan")
 parser.add_argument("--max-steps", dest="max_steps",default=-1, type=int, help="Maximum steps to take in the scan")
 parser.add_argument("--first-step", dest="first_step",default=0, type=int, help="First mass step to process")
 parser.add_argument("--card-tag", dest="card_tag",default="", type=str, help="Card name tag to process")
@@ -281,6 +282,8 @@ rt.gStyle.SetOptStat(0)
 # Limit plot
 #----------------------------------------------
 
+draw_obs = (args.asimov and args.draw_asimov) or args.unblind
+
 g_exp   = rt.TGraph(len(masses), masses, r_exps)
 g_exp_1 = rt.TGraphAsymmErrors(len(masses), masses, r_exps, masses_errs, masses_errs, r_exps_lo  , r_exps_hi  )
 g_exp_2 = rt.TGraphAsymmErrors(len(masses), masses, r_exps, masses_errs, masses_errs, r_exps_lo_2, r_exps_hi_2)
@@ -298,7 +301,7 @@ g_exp.SetLineWidth(2)
 g_exp.SetLineColor(rt.kBlack)
 g_exp.Draw("XL")
 
-if args.asimov or args.unblind:
+if draw_obs:
    g_obs = rt.TGraph(len(masses), masses, r_lims)
    g_obs.SetMarkerStyle(20)
    g_obs.SetMarkerSize(0.8)
@@ -312,7 +315,7 @@ g_exp_2.GetYaxis().SetRangeUser(0.8*min_lim, 1.4*max_lim)
 
 leg = rt.TLegend(0.7, 0.7, 0.89, 0.89)
 leg.SetLineWidth(0)
-if args.asimov or args.unblind:
+if draw_obs:
    leg.AddEntry(g_obs  , 'Observed', 'PL')
 leg.AddEntry(g_exp  , 'Expected', 'L')
 leg.AddEntry(g_exp_1, '#pm1#sigma' , 'F')

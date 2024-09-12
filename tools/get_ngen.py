@@ -12,13 +12,14 @@ rt.gROOT.SetBatch(True)
 path="/eos/cms/store/group/phys_smp/ZLFV/MC_generation/"
 
 # Signal samples to process
-sgn_masspoints=["500"]
-years = ["2017"]
+sgn_masspoints=["100"]
+years = ["2016"]
 
 # Signal samples by year and mass
 sgn_masspoint_files = {"2016": {}, "2017": {}, "2018": {}}
 
 sgn_masspoint_files["2016"]={
+    "100" :"ZEMu_NANO_M100_2016_100k4/CRAB_UserFiles/ZLFVAnalysis_NANO_M100_2016_100k4/240906_125113/0000/*.root",
     "500" :"ZEMu_NANO_2016_M500_100k4/CRAB_UserFiles/ZLFVAnalysis_NANO_M500_100k4/240830_140542/0000/*.root",
 }
 sgn_masspoint_files["2017"]={

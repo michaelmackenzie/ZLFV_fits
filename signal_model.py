@@ -68,8 +68,9 @@ def create_signal_interpolation(masses, distributions, use_gaus = False, figdir 
          min_mass = h_mean - 0.75*h_width
          max_mass = h_mean + 0.75*h_width
       else:
-         min_mass = h_mean - 5.*h_width if h_mean > 100. else 70.
-         max_mass = h_mean + 5.*h_width if h_mean > 100. else 110.
+         min_mass = h_mean - 5.*h_width if h_mean > 95. else 70.
+         max_mass = h_mean + 5.*h_width if h_mean > 95. else 110.
+      min_mass = max(70., min_mass)
 
       # Create a RooFit setup to perform the fit
       obs = rt.RooRealVar("obs", "obs", h_mean, min_mass, max_mass, "GeV/c^{2}")

@@ -74,15 +74,15 @@ if not os.path.exists(carddir+"WorkspaceScanSGN"):
 
 ### MC signal mass points
 
-sgn_masspoints=["200","400","600","800","1000"]
-# sgn_masspoints=["100","200","300","400","500","600","800","1000"]
+# sgn_masspoints=["200","400","600","800","1000"]
+sgn_masspoints=["100","200","300","400","500","600","800","1000"]
 
 # Define the signal samples by mass and period
 signal_samples = {
    "100" : {
-      "2016" : sample("forMeas_bdt_v7_emu_scan_ZPrime_M100_mcRun2018.root" , 99200, 2016, altpath),
-      "2017" : sample("forMeas_bdt_v7_emu_scan_ZPrime_M100_mcRun2018.root" , 97800, 2017, altpath),
-      "2018" : sample("forMeas_bdt_v7_emu_scan_ZPrime_M100_mcRun2018.root" , 99200, 2018, altpath),
+      "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM100_mcRun16.root", 94800, 2016, path),
+      "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM100_mcRun17.root", 97800, 2017, path),
+      "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM100_mcRun18.root", 99200, 2018, path),
    },
    "200" : {
       "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM200_mcRun18.root", 96300, 2016, path),
@@ -90,9 +90,9 @@ signal_samples = {
       "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM200_mcRun18.root", 96300, 2018, path),
    },
    "300" : {
-      "2016" : sample("forMeas_bdt_v7_emu_scan_ZPrime_M300_mcRun2018.root" , 99700, 2016, altpath),
-      "2017" : sample("forMeas_bdt_v7_emu_scan_ZPrime_M300_mcRun2018.root" , 99700, 2017, altpath),
-      "2018" : sample("forMeas_bdt_v7_emu_scan_ZPrime_M300_mcRun2018.root" , 99700, 2018, altpath),
+      "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM300_mcRun18.root", 99700, 2016, path),
+      "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM300_mcRun18.root", 99700, 2017, path),
+      "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM300_mcRun18.root", 99700, 2018, path),
    },
    "400" : {
       "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM400_mcRun18.root", 97600, 2016, path),
@@ -100,9 +100,9 @@ signal_samples = {
       "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM400_mcRun18.root", 97600, 2018, path),
    },
    "500" : {
-      "2016" : sample("forMeas_bdt_v7_emu_scan_ZPrime_M500_mcRun2016.root" , 81300, 2016, altpath),
-      "2017" : sample("forMeas_bdt_v7_emu_scan_ZPrime_M500_mcRun2017.root" , 97800, 2017, altpath),
-      "2018" : sample("forMeas_bdt_v7_emu_scan_ZPrime_M500_mcRun2018.root" , 98700, 2018, altpath),
+      "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM500_mcRun16.root", 81300, 2016, path),
+      "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM500_mcRun17.root", 97800, 2017, path),
+      "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM500_mcRun18.root", 98700, 2018, path),
    },
    "600" : {
       "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM600_mcRun18.root", 97600, 2016, path),
@@ -122,7 +122,10 @@ signal_samples = {
 }
 
 ### Data
-data_files={"2016":"Meas_full_bdt_v7_emu_scan_data_Run16.root","2017":"Meas_full_bdt_v7_emu_scan_data_Run17.root","2018":"Meas_full_bdt_v7_emu_scan_data_Run18.root","Run2":"Meas_full_bdt_v7_emu_scan_data_Run1*.root"}
+data_files={"2016":"Meas_full_bdt_v7_emu_scan_data_Run16.root",
+            "2017":"Meas_full_bdt_v7_emu_scan_data_Run17.root",
+            "2018":"Meas_full_bdt_v7_emu_scan_data_Run18.root",
+            "Run2":"Meas_full_bdt_v7_emu_scan_data_Run1*.root"}
 
 ### sf
 #sf="Muon_RecoID_wt*Muon_ID_wt*Muon_IsoID_wt*Muon_dxydz_wt*Electron_RecoID_wt*Electron_ID_wt*Electron_IsoID_wt*Electron_dxydz_wt*PU_wt*PtZ_wt*Trg_wt*SFbtag_wt*JetPUIDWeight*PtSignal_wt*MixZ_wt*Prefire_wt*(SFBDT_weight_Zmumu(xgb)/2.+SFBDT_weight_Zee(xgb)/2.)"
