@@ -4,5 +4,8 @@
 *.log
 *.save
 *.out
+WorkspaceScan*
+figures
+datacards
 *.hist
 *.root
