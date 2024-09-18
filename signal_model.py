@@ -1,6 +1,7 @@
 # Fit the signal MC and create an interpolation model
 import ROOT as rt
 from array import array
+from math import erf
 
 #----------------------------------------------------------------------------------------
 # Signal sample structure
@@ -44,8 +45,12 @@ def signal_distribution(sample_map, h, var, cuts, period = "Run2"):
 def interpolate(param_fits, mass):
     params = []
     mass = mass/1000.
+    index = 0
     for param_fit in param_fits:
-        params.append(param_fit[0] + param_fit[1]*mass + param_fit[2]*mass*mass)
+        if index == 0: #yield is modeled with a function that includes the turn on
+            params.append(param_fit[0]*(1. + erf(param_fit[1]*mass + param_fit[2])) + param_fit[3]*mass)
+        else: params.append(param_fit[0] + param_fit[1]*mass + param_fit[2]*mass*mass)
+        index += 1
     return params
 
 #----------------------------------------------------------------------------------------
@@ -146,14 +151,22 @@ def create_signal_interpolation(masses, distributions, use_gaus = False, figdir 
       g.GetXaxis().SetTitleOffset(0.75)
 
       # Divide mass by 1,000 for numerical stability
-      func = rt.TF1("func", "[0] + [1]*(x/1000.) + [2]*pow(x/1000.,2)", 0., 1000.)
-      func.SetParameters(0.5, 0., 0.)
+      if name == "yield": #Use a higher order function for the yield turn on
+          func = rt.TF1("func", "[0]*(1. + erf([1]*x/1000. + [2])) + [3]*x/1000", 0., 1000.)
+          func.SetParameters(0.5, 1., 0., 0.)
+      else:
+          func = rt.TF1("func", "[0] + [1]*(x/1000.) + [2]*pow(x/1000.,2)", 0., 1000.)
+          func.SetParameters(0.5, 0., 0.)
       g.Fit(func, "R")
       func.Draw("same")
       c.SaveAs("%sparam_%i.png" % (figdir, param))
 
       # Store the fit result
-      signal_params.append([func.GetParameter(0), func.GetParameter(1), func.GetParameter(2)])
+      if name == "yield":
+          signal_params.append([func.GetParameter(0), func.GetParameter(1), func.GetParameter(2), func.GetParameter(3)])
+          print signal_params[-1]
+      else:
+          signal_params.append([func.GetParameter(0), func.GetParameter(1), func.GetParameter(2)])
    
 
    # Return the list of interpolation fit results, one fit per parameter
