@@ -84,6 +84,21 @@ signal_samples = {
       "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM100_mcRun17.root", 97800, 2017, path),
       "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM100_mcRun18.root", 99200, 2018, path),
    },
+   "125" : {
+      "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM125_mcRun18.root", 98400, 2018, path),
+      "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM125_mcRun18.root", 98400, 2018, path),
+      "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM125_mcRun18.root", 98400, 2018, path),
+   },
+   "150" : {
+      "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM150_mcRun18.root", 90500, 2018, path),
+      "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM150_mcRun18.root", 90500, 2018, path),
+      "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM150_mcRun18.root", 90500, 2018, path),
+   },
+   "175" : {
+      "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM175_mcRun18.root", 89900, 2018, path),
+      "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM175_mcRun18.root", 89900, 2018, path),
+      "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM175_mcRun18.root", 89900, 2018, path),
+   },
    "200" : {
       "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM200_mcRun18.root", 96300, 2016, path),
       "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM200_mcRun18.root", 96300, 2017, path),
