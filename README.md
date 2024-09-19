@@ -4,6 +4,15 @@
 
 The Z prime scan searches for a narrow resonance in the e-mu data using the Z->e+mu analysis framework and BDT.
 
+### To do list
+
+- Account for the effects of different running periods: see [evaluate_years_effect.py](tools/evaluate_years_effects.py) for a starting point
+- Validate systematic uncertainty values: see [eval_zprime_unc.py](tools/eval_zprime_unc.py) for a starting point
+- Code updates: Merge ScanMuE_fit_wrapper_v1.py changes, add ntupling code to repo, add BDT score code to repo
+- Update documentation: AN has a preliminary discussion added
+- Find a relevant theory model to compare to (e.g. EXO-19-014 Z' model with B = 1e-4 or something)
+- Make slides for a mini-preapproval presentation on Oct. 1st
+
 ### Create signal and background PDFs for a range of mass points for a single BDT category
 ```
 MINMASS=110
