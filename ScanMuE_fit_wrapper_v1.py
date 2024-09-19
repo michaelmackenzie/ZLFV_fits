@@ -32,6 +32,7 @@ parser.add_argument("--component", dest="component",type=str,default="all",help=
 parser.add_argument("--unblind", dest="unblind",default=False, action='store_true',help="Unblind the fits")
 parser.add_argument("--skip-shape-dc", dest="skip_shape_dc",default=False, action='store_true',help="shape experiment")
 parser.add_argument("--year", dest="year",default="Run2", type=str,help="Data period to use (2016, 2017, 2018, or Run2)")
+parser.add_argument("--skip-correct", dest="skip_correct",default=False, action='store_true', help="Skip sample year efficiency corrections")
 parser.add_argument("--fit-version", dest="ver",default="2", type=str,help="fit version")
 parser.add_argument("--outvar", dest="outvar",default="mass_ll",type=str,help="Name out the output observable")
 parser.add_argument("--param-name", dest="param_name",default="bin",type=str,help="Name of the COMBINE category")
@@ -75,7 +76,8 @@ if not os.path.exists(carddir+"WorkspaceScanSGN"):
 ### MC signal mass points
 
 # sgn_masspoints=["200","400","600","800","1000"]
-sgn_masspoints=["100","200","300","400","500","600","800","1000"]
+# sgn_masspoints=["100","200","300","400","500","600","800","1000"]
+sgn_masspoints=["100","200","300","400","500","600"]
 
 # Define the signal samples by mass and period
 signal_samples = {
@@ -100,18 +102,18 @@ signal_samples = {
       "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM175_mcRun18.root", 89900, 2018, path),
    },
    "200" : {
-      "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM200_mcRun18.root", 96300, 2016, path),
-      "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM200_mcRun18.root", 96300, 2017, path),
+      "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM200_mcRun18.root", 96300, 2018, path),
+      "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM200_mcRun18.root", 96300, 2018, path),
       "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM200_mcRun18.root", 96300, 2018, path),
    },
    "300" : {
-      "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM300_mcRun18.root", 99700, 2016, path),
-      "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM300_mcRun18.root", 99700, 2017, path),
+      "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM300_mcRun18.root", 99700, 2018, path),
+      "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM300_mcRun18.root", 99700, 2018, path),
       "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM300_mcRun18.root", 99700, 2018, path),
    },
    "400" : {
-      "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM400_mcRun18.root", 97600, 2016, path),
-      "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM400_mcRun18.root", 97600, 2017, path),
+      "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM400_mcRun18.root", 97600, 2018, path),
+      "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM400_mcRun18.root", 97600, 2018, path),
       "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM400_mcRun18.root", 97600, 2018, path),
    },
    "500" : {
@@ -120,18 +122,18 @@ signal_samples = {
       "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM500_mcRun18.root", 98700, 2018, path),
    },
    "600" : {
-      "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM600_mcRun18.root", 97600, 2016, path),
-      "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM600_mcRun18.root", 97600, 2017, path),
+      "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM600_mcRun18.root", 97600, 2018, path),
+      "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM600_mcRun18.root", 97600, 2018, path),
       "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM600_mcRun18.root", 97600, 2018, path),
    },
    "800" : {
-      "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM800_mcRun18.root", 97600, 2016, path),
-      "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM800_mcRun18.root", 97600, 2017, path),
+      "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM800_mcRun18.root", 97600, 2018, path),
+      "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM800_mcRun18.root", 97600, 2018, path),
       "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM800_mcRun18.root", 97600, 2018, path),
    },
    "1000" : {
-      "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM1000_mcRun18.root", 97600, 2016, path),
-      "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM1000_mcRun18.root", 97600, 2017, path),
+      "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM1000_mcRun18.root", 97600, 2018, path),
+      "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM1000_mcRun18.root", 97600, 2018, path),
       "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM1000_mcRun18.root", 97600, 2018, path),
    },
 }
@@ -172,10 +174,10 @@ rt.gROOT.SetBatch(True)
 
 # Get the signal mass distribution for each Z prime MC sample
 signal_distributions = []
-cuts = sf+"*(Flag_met && Flag_muon && Flag_electron && "+args.xgb_min+"<=xgb && xgb<"+args.xgb_max+")"
+cuts = sf+"*(Flag_met && Flag_muon && Flag_electron && "+args.xgb_min+"<xgb && xgb<="+args.xgb_max+")"
 for mpoint in sgn_masspoints:
   h = rt.TH1F("hmass_"+mpoint,"Signal mass distribution",1100,0,1100)
-  signal_distributions.append(signal_distribution(signal_samples[mpoint], h, "mass_ll", cuts, args.year))
+  signal_distributions.append(signal_distribution(signal_samples[mpoint], h, "mass_ll", cuts, args.year, not args.skip_correct))
 
 # Create a signal interpolation model
 masses = array('d')

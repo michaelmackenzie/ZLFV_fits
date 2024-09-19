@@ -2,11 +2,12 @@
 import ROOT as rt
 from array import array
 from math import erf
+import ctypes
 
 #----------------------------------------------------------------------------------------
 # Signal sample structure
 class sample:
-    def __init__(self, file_path, n_gen, year, base_path):
+    def __init__(self, file_path, n_gen, year, base_path, mass = 0.):
         self.file_path_ = file_path
         self.n_gen_ = n_gen
         self.year_ = year
@@ -15,12 +16,16 @@ class sample:
         if base_path[-1] != "/": self.full_path_ += "/"
         self.full_path_ += file_path
 
+        if mass <= 0.: # try to get the mass from the file name
+            mass = float(file_path.split('_sgnM')[1].split('_mcRun')[0])
+        self.mass_ = mass
+
     def __repr__(self):
         return "Sample:\n file = %s\n n_gen = %i\n year = %i\n base_path = %s\n" % (self.file_path_, self.n_gen_, self.year_, self.base_path_)
 
 #----------------------------------------------------------------------------------------
 # Retrieve the signal distribution, properly weighing each year's component
-def signal_distribution(sample_map, h, var, cuts, period = "Run2"):
+def signal_distribution(sample_map, h, var, cuts, period = "Run2", correct_samples = True):
     lumis={"2016":36.33,"2017":41.48,"2018":59.83,"Run2":137.6}
     periods = ["2016", "2017", "2018"] if period == "Run2" else [period]
     for p in periods:
@@ -33,6 +38,17 @@ def signal_distribution(sample_map, h, var, cuts, period = "Run2"):
         cc.Draw(var + ">>htmp", cuts)
         cross_section = 1. #Use 1 fb cross section
         scale = lumis[p]/sample_map[p].n_gen_
+        if correct_samples and sample_map[p].year_ == 2018 and p != "2018": # If using a different year to model the distribution, apply a correction factor
+            is_high_score = "xgb<=1" in cuts
+            is_low_score  = "xgb<=0.7" in cuts
+            # linear interpolation between 100 and 500 GeV samples
+            ratio = 1.
+            mass = sample_map[p].mass_
+            if is_high_score and p == "2016": ratio = 0.923 + (0.874 - 0.923)/(500. - 100.)*(mass - 100.)
+            if is_high_score and p == "2017": ratio = 0.928 + (0.940 - 0.928)/(500. - 100.)*(mass - 100.)
+            if is_low_score  and p == "2016": ratio = 0.939 + (0.907 - 0.939)/(500. - 100.)*(mass - 100.)
+            if is_low_score  and p == "2017": ratio = 0.984 + (0.984 - 0.949)/(500. - 100.)*(mass - 100.)
+            scale *= ratio
         htmp.Scale(scale)
         h.Add(htmp)
     if h.Integral() <= 0.:
@@ -109,9 +125,10 @@ def create_signal_interpolation(masses, distributions, use_gaus = False, figdir 
       c.SaveAs(figdir+h.GetName()+"_fit_log.png")
 
       # Include the efficiency in the yield
-      eff = h.Integral()
-      fit_results.append([eff     , mean.getVal()  , sigma.getVal()  , alpha1.getVal()  , alpha2.getVal()  , enne1.getVal()  , enne2.getVal()  ])
-      fit_errs   .append([0.01*eff, mean.getError(), sigma.getError(), alpha1.getError(), alpha2.getError(), enne1.getError(), enne2.getError()])
+      eff_err = ctypes.c_double(1.)
+      eff = h.IntegralAndError(1, h.GetNbinsX(), eff_err)
+      fit_results.append([eff          , mean.getVal()  , sigma.getVal()  , alpha1.getVal()  , alpha2.getVal()  , enne1.getVal()  , enne2.getVal()  ])
+      fit_errs   .append([eff_err.value, mean.getError(), sigma.getError(), alpha1.getError(), alpha2.getError(), enne1.getError(), enne2.getError()])
 
    # Create the interpolation by fitting the parameters as a function of mass
    if use_gaus:
