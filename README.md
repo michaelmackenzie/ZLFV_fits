@@ -89,6 +89,7 @@ Underlying tools to perform a single validation check:
 - [plot_signal_model.py](tools/plot_signal_model.py): Plot the signal model interpolation, including the line shape and the overall efficiency.
 - [plot_zprime_bdt.py](tools/plot_zprime_bdt.py): Plot the Z prime BDT score distribution and CDF as a function of mass.
 - [eval_zprime_unc.py](tools/eval_zprime_unc.py): Evaluate standard uncertainties on the Z prime signal efficiency.
+- [evaluate_years_effect.py](tools/evaluate_years_effect.py): Evaluate the difference in signal yield by year vs. mass
 - [get_ngen.py](tools/get_ngen.py): Retrieve the signal ntuple normalization info.
 - [compare_scans.py](tools/compare_scans.py): Plot the ratio of the expected limit from two (identical mass point) scans as a function of mass to compare their sensitivity.
 - [optimize_binning.py](tools/optimize_binning.py): Rough optimization of a single BDT bin using cut-and-count limits without systematic uncertainties.
