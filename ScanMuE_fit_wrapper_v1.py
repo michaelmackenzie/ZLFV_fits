@@ -145,8 +145,11 @@ data_files={"2016":"Meas_full_bdt_v7_emu_scan_data_Run16.root",
             "Run2":"Meas_full_bdt_v7_emu_scan_data_Run1*.root"}
 
 ### sf
-#sf="Muon_RecoID_wt*Muon_ID_wt*Muon_IsoID_wt*Muon_dxydz_wt*Electron_RecoID_wt*Electron_ID_wt*Electron_IsoID_wt*Electron_dxydz_wt*PU_wt*PtZ_wt*Trg_wt*SFbtag_wt*JetPUIDWeight*PtSignal_wt*MixZ_wt*Prefire_wt*(SFBDT_weight_Zmumu(xgb)/2.+SFBDT_weight_Zee(xgb)/2.)"
-sf="1"
+# Scale factors
+sf="Muon_RecoID_wt*Muon_ID_wt*Muon_IsoID_wt*Muon_dxydz_wt"
+sf += "*Electron_RecoID_wt*Electron_ID_wt*Electron_IsoID_wt*Electron_dxydz_wt"
+sf += "*PU_wt*PtZ_wt*Trg_wt*SFbtag_wt*JetPUIDWeight*PtSignal_wt*Prefire_wt"
+# sf += "*MixZ_wt*(SFBDT_weight_Zmumu(xgb)/2.+SFBDT_weight_Zee(xgb)/2.)" # LFV Z-specific weights
 
 
 ### arange flags

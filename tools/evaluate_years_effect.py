@@ -96,7 +96,13 @@ signal_samples = {
 # Loop through the signal files, retrieving the signal rates for each running period
 yields = {"2016": array('d'), "2017": array('d'), "2018": array('d')}
 yerrs  = {"2016": array('d'), "2017": array('d'), "2018": array('d')}
-cuts = "(Flag_met && Flag_muon && Flag_electron)"
+# Scale factors
+sf="Muon_RecoID_wt*Muon_ID_wt*Muon_IsoID_wt*Muon_dxydz_wt"
+sf += "*Electron_RecoID_wt*Electron_ID_wt*Electron_IsoID_wt*Electron_dxydz_wt"
+sf += "*PU_wt*PtZ_wt*Trg_wt*SFbtag_wt*JetPUIDWeight*PtSignal_wt*Prefire_wt"
+# sf += "*MixZ_wt*(SFBDT_weight_Zmumu(xgb)/2.+SFBDT_weight_Zee(xgb)/2.)" # LFV Z-specific weights
+
+cuts = sf + "*(Flag_met && Flag_muon && Flag_electron)"
 if xgb_min < xgb_max: cuts += " && (xgb > %.2f && xgb <= %.2f)" % (xgb_min, xgb_max)
 lumis={"2016":36.33,"2017":41.48,"2018":59.83,"Run2":137.6}
 for mpoint in sgn_masspoints:
@@ -153,5 +159,6 @@ for year in ["2016", "2017"]:
     g.SetLineWidth(2)
     g.SetTitle("Signal efficiency relative to 2018 vs. mass;Z prime mass (GeV/c^{2});eff / 2018 eff")
     g.Draw("APE")
+    g.GetYaxis().SetRangeUser(0.8, 1.1)
     c.SaveAs(figdir+'rel_eff_' + year + '.png')
     print year, y

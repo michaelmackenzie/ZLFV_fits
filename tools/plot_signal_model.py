@@ -94,7 +94,13 @@ signal_samples = {
 
 # Loop through the signal files
 hmasses = []
-cuts = "(Flag_met && Flag_muon && Flag_electron)"
+# Scale factors
+sf="Muon_RecoID_wt*Muon_ID_wt*Muon_IsoID_wt*Muon_dxydz_wt"
+sf += "*Electron_RecoID_wt*Electron_ID_wt*Electron_IsoID_wt*Electron_dxydz_wt"
+sf += "*PU_wt*PtZ_wt*Trg_wt*SFbtag_wt*JetPUIDWeight*PtSignal_wt*Prefire_wt"
+# sf += "*MixZ_wt*(SFBDT_weight_Zmumu(xgb)/2.+SFBDT_weight_Zee(xgb)/2.)" # LFV Z-specific weights
+
+cuts = sf + "*(Flag_met && Flag_muon && Flag_electron)"
 if xgb_min < xgb_max: cuts += " && (xgb > %.2f && xgb <= %.2f)" % (xgb_min, xgb_max)
 
 effs = array('d')

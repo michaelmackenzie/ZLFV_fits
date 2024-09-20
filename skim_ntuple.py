@@ -5,7 +5,6 @@ import ROOT as rt
 from array import array
 from signal_model import *
 from math import sqrt,cos,sin,acos
-rt.gInterpreter.Declare('#include "SFBDT_weight_combined.h"')
 rt.gROOT.SetBatch(True)
 
 #----------------------------------------------
@@ -124,40 +123,40 @@ f_out = rt.TFile.Open(outdir + 'skim_' + args.name + '_' + str(args.year) + '.ro
 t_out = rt.TTree(args.out_tree_name, 'Z prime events tree')
 
 
-pt_ll          = add_branch(t_out, 'pt_ll'          )
-eta_ll         = add_branch(t_out, 'eta_ll'         )
-phi_ll         = add_branch(t_out, 'phi_ll'         )
-mass_ll        = add_branch(t_out, 'mass_ll'        )
-pt_l1          = add_branch(t_out, 'pt_l1'          )
-eta_l1         = add_branch(t_out, 'eta_l1'         )
-phi_l1         = add_branch(t_out, 'phi_l1'         )
-mass_l1        = add_branch(t_out, 'mass_l1'        )
-isMuon_l1      = add_branch(t_out, 'isMuon_l1'      )
-pt_l2          = add_branch(t_out, 'pt_l2'          )
-eta_l2         = add_branch(t_out, 'eta_l2'         )
-phi_l2         = add_branch(t_out, 'phi_l2'         )
-mass_l2        = add_branch(t_out, 'mass_l2'        )
-isMuon_l2      = add_branch(t_out, 'isMuon_l2'      )
-pt_ratio       = add_branch(t_out, 'ratio_ptl2_ptl1')
+pt_ll          = add_branch(t_out, 'pt_ll'           )
+eta_ll         = add_branch(t_out, 'eta_ll'          )
+phi_ll         = add_branch(t_out, 'phi_ll'          )
+mass_ll        = add_branch(t_out, 'mass_ll'         )
+pt_l1          = add_branch(t_out, 'pt_l1'           )
+eta_l1         = add_branch(t_out, 'eta_l1'          )
+phi_l1         = add_branch(t_out, 'phi_l1'          )
+mass_l1        = add_branch(t_out, 'mass_l1'         )
+isMuon_l1      = add_branch(t_out, 'isMuon_l1'       )
+pt_l2          = add_branch(t_out, 'pt_l2'           )
+eta_l2         = add_branch(t_out, 'eta_l2'          )
+phi_l2         = add_branch(t_out, 'phi_l2'          )
+mass_l2        = add_branch(t_out, 'mass_l2'         )
+isMuon_l2      = add_branch(t_out, 'isMuon_l2'       )
+pt_ratio       = add_branch(t_out, 'ratio_ptl2_ptl1' )
 
-met            = add_branch(t_out, 'met')
-met_phi        = add_branch(t_out, 'met_phi')
-mt_l1          = add_branch(t_out, 'mt_l1')
-mt_l2          = add_branch(t_out, 'mt_l2')
+met            = add_branch(t_out, 'met'             )
+met_phi        = add_branch(t_out, 'met_phi'         )
+mt_l1          = add_branch(t_out, 'mt_l1'           )
+mt_l2          = add_branch(t_out, 'mt_l2'           )
 met_sig        = add_branch(t_out, 'met_significance')
-pt_j1          = add_branch(t_out, 'pt_j1')
-ht             = add_branch(t_out, 'ht')
-st             = add_branch(t_out, 'st')
-njets          = add_branch(t_out, 'njets')
-ratio_met_ptll = add_branch(t_out, 'ratio_met_ptll')
-ratio_met_ht   = add_branch(t_out, 'ratio_met_ht')
-dphi_met_ll    = add_branch(t_out, 'dphi_met_ll')
+pt_j1          = add_branch(t_out, 'pt_j1'           )
+ht             = add_branch(t_out, 'ht'              )
+st             = add_branch(t_out, 'st'              )
+njets          = add_branch(t_out, 'njets'           )
+ratio_met_ptll = add_branch(t_out, 'ratio_met_ptll'  )
+ratio_met_ht   = add_branch(t_out, 'ratio_met_ht'    )
+dphi_met_ll    = add_branch(t_out, 'dphi_met_ll'     )
 
-Flag_met       = add_branch(t_out, 'Flag_met')
-Flag_muon      = add_branch(t_out, 'Flag_muon')
-Flag_electron  = add_branch(t_out, 'Flag_electron')
+Flag_met       = add_branch(t_out, 'Flag_met'        )
+Flag_muon      = add_branch(t_out, 'Flag_muon'       )
+Flag_electron  = add_branch(t_out, 'Flag_electron'   )
 
-evtnum         = add_branch(t_out, 'evtnum')
+evtnum         = add_branch(t_out, 'evtnum'          )
 
 #----------------------------------------------
 # Useful evaluated objects
