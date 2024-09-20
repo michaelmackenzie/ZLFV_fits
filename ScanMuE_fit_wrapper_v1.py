@@ -77,7 +77,7 @@ if not os.path.exists(carddir+"WorkspaceScanSGN"):
 
 # sgn_masspoints=["200","400","600","800","1000"]
 # sgn_masspoints=["100","200","300","400","500","600","800","1000"]
-sgn_masspoints=["100","200","300","400","500","600"]
+sgn_masspoints=["100","125","150","175","200","300","400","500","600"]
 
 # Define the signal samples by mass and period
 signal_samples = {
@@ -87,19 +87,19 @@ signal_samples = {
       "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM100_mcRun18.root", 99200, 2018, path),
    },
    "125" : {
-      "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM125_mcRun18.root", 98400, 2018, path),
-      "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM125_mcRun18.root", 98400, 2018, path),
-      "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM125_mcRun18.root", 98400, 2018, path),
+      "2016" : sample("Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM125_mcRun18.root", 98400, 2018, path),
+      "2017" : sample("Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM125_mcRun18.root", 98400, 2018, path),
+      "2018" : sample("Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM125_mcRun18.root", 98400, 2018, path),
    },
    "150" : {
-      "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM150_mcRun18.root", 90500, 2018, path),
-      "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM150_mcRun18.root", 90500, 2018, path),
-      "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM150_mcRun18.root", 90500, 2018, path),
+      "2016" : sample("Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM150_mcRun18.root", 90500, 2018, path),
+      "2017" : sample("Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM150_mcRun18.root", 90500, 2018, path),
+      "2018" : sample("Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM150_mcRun18.root", 90500, 2018, path),
    },
    "175" : {
-      "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM175_mcRun18.root", 89900, 2018, path),
-      "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM175_mcRun18.root", 89900, 2018, path),
-      "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM175_mcRun18.root", 89900, 2018, path),
+      "2016" : sample("Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM175_mcRun18.root", 89900, 2018, path),
+      "2017" : sample("Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM175_mcRun18.root", 89900, 2018, path),
+      "2018" : sample("Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM175_mcRun18.root", 89900, 2018, path),
    },
    "200" : {
       "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM200_mcRun18.root", 96300, 2018, path),

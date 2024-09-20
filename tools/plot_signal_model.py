@@ -31,7 +31,7 @@ os.system("[ ! -d %s ] && mkdir -p %s" % (figdir , figdir ))
 
 ### MC signal mass points
 # sgn_masspoints=["200","400","600","800","1000"]
-sgn_masspoints=["100","200","300","400","500","600","800","1000"]
+sgn_masspoints=["100","125","150","175","200","300","400","500","600","800","1000"]
 
 # Define the signal samples by mass and period
 signal_samples = {
@@ -41,19 +41,19 @@ signal_samples = {
       "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM100_mcRun18.root", 99200, 2018, path),
    },
    "125" : {
-      "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM125_mcRun18.root", 98400, 2018, path),
-      "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM125_mcRun18.root", 98400, 2018, path),
-      "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM125_mcRun18.root", 98400, 2018, path),
+      "2016" : sample("Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM125_mcRun18.root", 98400, 2018, path),
+      "2017" : sample("Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM125_mcRun18.root", 98400, 2018, path),
+      "2018" : sample("Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM125_mcRun18.root", 98400, 2018, path),
    },
    "150" : {
-      "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM150_mcRun18.root", 90500, 2018, path),
-      "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM150_mcRun18.root", 90500, 2018, path),
-      "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM150_mcRun18.root", 90500, 2018, path),
+      "2016" : sample("Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM150_mcRun18.root", 90500, 2018, path),
+      "2017" : sample("Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM150_mcRun18.root", 90500, 2018, path),
+      "2018" : sample("Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM150_mcRun18.root", 90500, 2018, path),
    },
    "175" : {
-      "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM175_mcRun18.root", 89900, 2018, path),
-      "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM175_mcRun18.root", 89900, 2018, path),
-      "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM175_mcRun18.root", 89900, 2018, path),
+      "2016" : sample("Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM175_mcRun18.root", 89900, 2018, path),
+      "2017" : sample("Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM175_mcRun18.root", 89900, 2018, path),
+      "2018" : sample("Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM175_mcRun18.root", 89900, 2018, path),
    },
    "200" : {
       "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM200_mcRun18.root", 96300, 2016, path),
@@ -164,8 +164,9 @@ obs.setBins(550)
 frame = obs.frame(rt.RooFit.Title("Signal model interpolation"))
 
 max_yield = 0.
-for mass_point in range(100,1100,100):
-    sig_params = interpolate(signal_model, mass_point)
+for mpoint in sgn_masspoints:
+    mass = float(mpoint)
+    sig_params = interpolate(signal_model, mass)
     sig_yield  = sig_params[0]
     sig_mean   = sig_params[1]
     sig_width  = sig_params[2]
@@ -174,16 +175,16 @@ for mass_point in range(100,1100,100):
     sig_enne1  = sig_params[5] if not args.gaus else 0.
     sig_enne2  = sig_params[6] if not args.gaus else 0.
 
-    mean   = rt.RooRealVar("mean"  +str(mass_point), "mean"  , sig_mean)
-    sigma  = rt.RooRealVar("sigma" +str(mass_point), "sigma" , sig_width)
+    mean   = rt.RooRealVar("mean"  +mpoint, "mean"  , sig_mean)
+    sigma  = rt.RooRealVar("sigma" +mpoint, "sigma" , sig_width)
     if gaus:
         pdf    = rt.RooGaussian("pdf"+str(mass_point), "PDF", obs, mean, sigma)
     else:
-        alpha1 = rt.RooRealVar("alpha1"+str(mass_point), "alpha1", sig_alpha1)
-        alpha2 = rt.RooRealVar("alpha2"+str(mass_point), "alpha2", sig_alpha2)
-        enne1  = rt.RooRealVar("enne1" +str(mass_point), "enne1" , sig_enne1)
-        enne2  = rt.RooRealVar("enne2" +str(mass_point), "enne2" , sig_enne2)
-        pdf    = rt.RooDoubleCrystalBall("pdf"+str(mass_point), "PDF", obs, mean, sigma, alpha1, enne1, alpha2, enne2)
+        alpha1 = rt.RooRealVar("alpha1"+mpoint, "alpha1", sig_alpha1)
+        alpha2 = rt.RooRealVar("alpha2"+mpoint, "alpha2", sig_alpha2)
+        enne1  = rt.RooRealVar("enne1" +mpoint, "enne1" , sig_enne1)
+        enne2  = rt.RooRealVar("enne2" +mpoint, "enne2" , sig_enne2)
+        pdf    = rt.RooDoubleCrystalBall("pdf"+mpoint, "PDF", obs, mean, sigma, alpha1, enne1, alpha2, enne2)
     pdf.plotOn(frame, rt.RooFit.Normalization(sig_yield))
     max_yield = max(max_yield, sig_yield)
 
