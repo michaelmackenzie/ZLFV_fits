@@ -71,6 +71,7 @@ def trigger_matching(pt, eta, phi, flavor, year, tree):
 parser = argparse.ArgumentParser()
 parser.add_argument("-o", dest="name",required=True,type=str,help="output root name")
 parser.add_argument("--input-file", dest="input_file",required=True,type=str,help="Input MC/data file")
+parser.add_argument("--input-directory", dest="input_directory",default="lfvanalysis_rootfiles",type=str,help="Input MC/data file directory")
 parser.add_argument("--tree-name", dest="tree_name",default="Events",type=str,help="Input TTree name")
 parser.add_argument("--year", dest="year",required=True,type=int,help="Data/MC processing year (2016, 2017, or 2018)")
 parser.add_argument("--out-tree-name", dest="out_tree_name",default="mytree",type=str,help="Output TTree name")
@@ -98,8 +99,8 @@ if args.year not in [2016, 2017, 2018]:
 
 # default path
 # path="/eos/cms/store/cmst3/user/gkaratha/ZmuE_forBDT_v7_tuples/BDT_outputs_v7/Scan_Zprime/"
-path="/eos/cms/store/group/phys_smp/ZLFV/lfvanalysis_rootfiles/"
-figdir = "./figures/%s/" % (args.name)
+path="/eos/cms/store/group/phys_smp/ZLFV/%s/" % (args.input_directory)
+figdir = "./figures/skims/%s_%i/" % (args.name, args.year)
 outdir = "./trees/"
 os.system("[ ! -d %s ] && mkdir -p %s" % (figdir, figdir))
 os.system("[ ! -d %s ] && mkdir -p %s" % (outdir, outdir))
@@ -114,6 +115,16 @@ print "Input ntuple has", nentries, "entries"
 first_entry = min(args.first_entry, nentries)
 max_entries = nentries-first_entry if args.max_entries < 0 else min(nentries-first_entry, args.max_entries)
 max_entry = first_entry + max_entries
+
+t_in.SetBranchStatus('GenPart*', 0)
+t_in.SetBranchStatus('Tau*', 0)
+t_in.SetBranchStatus('Photon*', 0)
+t_in.SetBranchStatus('GenMET*', 0)
+t_in.SetBranchStatus('RawMET*', 0)
+t_in.SetBranchStatus('RawPuppiMET*', 0)
+t_in.SetBranchStatus('PV*', 0)
+t_in.SetBranchStatus('Pileup_*', 0)
+t_in.SetBranchStatus('LHE*', 0)
 
 #----------------------------------------------
 # Create the output data structure
@@ -173,7 +184,9 @@ step = 0
 for entry in range(first_entry, max_entry):
    t_in.GetEntry(entry)
    if step % 10000 == 0:
-      print "Processing event %7i (entry %7i, event %12i)" % (step, entry, t_in.event)
+      print "Processing event %7i (entry %7i, event %12i): %5.1f%% complete, %5.1f%% accepted" % (step, entry, t_in.event,
+                                                                                                step*100./(max_entry-first_entry),
+                                                                                                accepted*100./(step if step > 0 else 1.))
    step += 1
 
    #-----------------------------------------
@@ -243,7 +256,9 @@ for entry in range(first_entry, max_entry):
 
    # Lepton displacement cuts
    if t_in.Electron_dz[0] >= 0.5 or t_in.Electron_dxy[0] >= 0.2: continue
+   if t_in.Electron_dzErr[0] <= 0. or t_in.Electron_dxyErr[0] <= 0.: continue
    if t_in.Muon_dz[0] >= 0.5 or t_in.Muon_dxy[0] >= 0.2: continue
+   if t_in.Muon_dzErr[0] <= 0. or t_in.Muon_dxyErr[0] <= 0.: continue
    if t_in.Electron_dz[0]/t_in.Electron_dzErr[0] >= 4.7: continue
    if t_in.Muon_dz[0]/t_in.Muon_dzErr[0] >= 4.7: continue
    if t_in.Electron_dxy[0]/t_in.Electron_dxyErr[0] >= 3.0: continue
@@ -263,8 +278,8 @@ for entry in range(first_entry, max_entry):
       elec_trig = t_in.HLT_Ele32_WPTight_Gsf and t_in.Electron_pt[0] > 34.
       muon_trig = t_in.HLT_IsoMu24 and t_in.Muon_pt[0] > 25.
    # Trigger matching
-   muon_trig &= trigger_matching(t_in.Muon_pt[0], t_in.Muon_eta[0], t_in.Muon_phi[0], 13, args.year, t_in)
-   elec_trig &= trigger_matching(t_in.Muon_pt[0], t_in.Muon_eta[0], t_in.Muon_phi[0], 13, args.year, t_in)
+   muon_trig &= trigger_matching(t_in.Muon_pt[0]    , t_in.Muon_eta[0]    , t_in.Muon_phi[0]    , 13, args.year, t_in)
+   elec_trig &= trigger_matching(t_in.Electron_pt[0], t_in.Electron_eta[0], t_in.Electron_phi[0], 11, args.year, t_in)
    if not elec_trig and not muon_trig: continue
 
    # Event flags:

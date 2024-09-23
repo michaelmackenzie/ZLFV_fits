@@ -31,7 +31,7 @@ def evaluate_bdt(bdt,data_file,bdt_cols,common_cols,selection,modelname):
   decisions=np.array(decisions,dtype=np.float64)
   decisions.dtype=[("xgb",np.float64)]   
   for i in [decisions,commonVars]:
-    root_numpy.array2root(i,modelname+".root","mytreefit")
+    root_numpy.array2root(i,"trees/"+modelname+".root","mytreefit")
   return decisions.shape[0]
 
 

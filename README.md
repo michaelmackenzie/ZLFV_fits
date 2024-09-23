@@ -9,7 +9,7 @@ The Z prime scan searches for a narrow resonance in the e-mu data using the Z->e
 - Validate the efficiencies and its turn on with mass
 - Account for the effects of different running periods: see [evaluate_years_effect.py](tools/evaluate_years_effects.py) for a starting point, added linear correction to [signal_model.py](signal_model.py)
 - Validate systematic uncertainty values: see [eval_zprime_unc.py](tools/eval_zprime_unc.py) for a starting point
-- Validate WW and ttbar have flat-ish mass distributions up to 600 GeV
+- Validate WW and ttbar (and maybe same-sign data) have flat-ish mass distributions in 95-600 GeV: see [test_mc_flatness.py](tools/test_mc_flatness.py)
 - Code updates: Merge ScanMuE_fit_wrapper_v2.py changes, add ntupling code to repo, add BDT score code to repo
 - Update documentation: AN has a preliminary discussion added
 - Find a relevant theory model to compare to (e.g. EXO-19-014 Z' model with B = 1e-4 or something)
@@ -92,6 +92,7 @@ Underlying tools to perform a single validation check:
 - [eval_zprime_unc.py](tools/eval_zprime_unc.py): Evaluate standard uncertainties on the Z prime signal efficiency.
 - [evaluate_years_effect.py](tools/evaluate_years_effect.py): Evaluate the difference in signal yield by year vs. mass
 - [get_ngen.py](tools/get_ngen.py): Retrieve the signal ntuple normalization info.
+- [test_mc_flatness.py](tools/test_mc_flatness.py): Test how flat the MC backgrounds are expected to be
 - [compare_scans.py](tools/compare_scans.py): Plot the ratio of the expected limit from two (identical mass point) scans as a function of mass to compare their sensitivity.
 - [optimize_binning.py](tools/optimize_binning.py): Rough optimization of a single BDT bin using cut-and-count limits without systematic uncertainties.
 - [skim_ntuple.py](skim_ntuple.py): Create a sparse TTree from the skimmed NANOAOD ntuples (not the official version, not fully validated).

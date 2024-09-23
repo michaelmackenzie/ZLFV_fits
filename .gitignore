@@ -1,6 +1,7 @@
 
 *~
 *.png
+*.pdf
 *.log
 *.save
 *.out
@@ -9,3 +10,5 @@ figures
 datacards
 *.hist
 *.root
+*.pyc
+*.org
