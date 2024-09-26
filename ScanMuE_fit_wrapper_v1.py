@@ -27,6 +27,8 @@ parser.add_argument("--xgb-min", dest="xgb_min",default="0.70", type=str,help="B
 parser.add_argument("--xgb-max", dest="xgb_max",default="1.01", type=str,help="BDT score maximum for the category")
 parser.add_argument("--scan-min", dest="scan_min",default=110., type=float,help="Minimum mass hypothesis to scan")
 parser.add_argument("--scan-max", dest="scan_max",default=500., type=float,help="Maximum mass hypothesis to scan")
+parser.add_argument("--min-fit-mass", dest="min_fit_mass",default=110., type=float,help="Minimum mass used in the fits")
+parser.add_argument("--max-fit-mass", dest="max_fit_mass",default=500., type=float,help="Maximum mass used in the fits")
 parser.add_argument("--scan-step", dest="scan_step",default=1., type=float,help="Step size in the mass scan, in units of signal core sigma")
 parser.add_argument("--component", dest="component",type=str,default="all",help="Only process the given fit component: all, sgn, bkg, or none")
 parser.add_argument("--unblind", dest="unblind",default=False, action='store_true',help="Unblind the fits")
@@ -228,8 +230,8 @@ while (NextPoint):
   sr_min = round(sr_center - sr_buffer*sr_approx_width,2)
   sr_max = round(sr_center + sr_buffer*sr_approx_width,2)
   sr_yld = round(sig_yield,2)
-  cut_off_min =  95. # Don't use below 95 GeV due to Z->tautau contamination
-  cut_off_max = 700.
+  cut_off_min = args.min_fit_mass # Don't use below 95 GeV due to Z->tautau contamination
+  cut_off_max = args.max_fit_mass
   min_mass = round(sr_center - region_buffer*sr_approx_width,2) if not args.full_mass else cut_off_min
   max_mass = round(sr_center + region_buffer*sr_approx_width,2) if not args.full_mass else cut_off_max
   min_mass = max(cut_off_min, min_mass)
