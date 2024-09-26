@@ -39,8 +39,8 @@ def signal_distribution(sample_map, h, var, cuts, period = "Run2", correct_sampl
         cross_section = 1. #Use 1 fb cross section
         scale = lumis[p]/sample_map[p].n_gen_
         if correct_samples and sample_map[p].year_ == 2018 and p != "2018": # If using a different year to model the distribution, apply a correction factor
-            is_high_score = "xgb<=1" in cuts
-            is_low_score  = "xgb<=0.7" in cuts
+            is_high_score = "xgb<=1" in cuts or "xgb <= 1" in cuts
+            is_low_score  = "xgb<=0.7" in cuts or "xgb <= 0.7" in cuts
             # linear interpolation between 100 and 500 GeV samples
             ratio = 1.
             mass = sample_map[p].mass_

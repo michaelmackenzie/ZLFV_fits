@@ -8,6 +8,8 @@
 WorkspaceScan*
 figures
 datacards
+templates
+hists
 *.hist
 *.root
 *.pyc

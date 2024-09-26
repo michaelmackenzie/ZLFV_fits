@@ -82,6 +82,7 @@ ls -l figures/val_${NAME}_bias/${NAME}_mp*_bias.png | head -n 5
 Underlying tools to perform a single validation check:
 - [bemu_bias.sh](tests/bemu_bias.sh): Perform a self-closure bias test on a single data card.
 - [bemu_gen_fit_test.sh](tests/bemu_gen_fit_test.sh): Perform a closure test using (potentially) different generation and fit data cards.
+- [mc_template_bias.sh](tests/mc_template_bias.sh): Perform a bias test generating with a fit MC template and fitting with an envelope data card
 - [do_goodness_of_fit.sh](tests/do_goodness_of_fit.sh): Perform a goodness-of-fit test.
 - [impacts.sh](tests/impacts.sh): Evaluate impacts (including condor configurations if requested).
 
@@ -93,6 +94,7 @@ Underlying tools to perform a single validation check:
 - [evaluate_years_effect.py](tools/evaluate_years_effect.py): Evaluate the difference in signal yield by year vs. mass
 - [get_ngen.py](tools/get_ngen.py): Retrieve the signal ntuple normalization info.
 - [test_mc_flatness.py](tools/test_mc_flatness.py): Test how flat the MC backgrounds are expected to be
+- [make_mc_templates.py](tools/make_mc_templates.py): Make an MC template data card/workspace using fits to the MC process histograms
 - [compare_scans.py](tools/compare_scans.py): Plot the ratio of the expected limit from two (identical mass point) scans as a function of mass to compare their sensitivity.
 - [optimize_binning.py](tools/optimize_binning.py): Rough optimization of a single BDT bin using cut-and-count limits without systematic uncertainties.
 - [skim_ntuple.py](skim_ntuple.py): Create a sparse TTree from the skimmed NANOAOD ntuples (not the official version, not fully validated).
