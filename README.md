@@ -6,14 +6,13 @@ The Z prime scan searches for a narrow resonance in the e-mu data using the Z->e
 
 ### To do list
 
-- Validate the efficiencies and its turn on with mass
 - Account for the effects of different running periods: see [evaluate_years_effect.py](tools/evaluate_years_effects.py) for a starting point, added linear correction to [signal_model.py](signal_model.py)
+- Add uncertainty for efficiency turn-on (perhaps maximum difference from the fit)
 - Validate systematic uncertainty values: see [eval_zprime_unc.py](tools/eval_zprime_unc.py) for a starting point
-- Validate WW and ttbar (and maybe same-sign data) have flat-ish mass distributions in 95-600 GeV: see [test_mc_flatness.py](tools/test_mc_flatness.py)
 - Code updates: Merge ScanMuE_fit_wrapper_v2.py changes, add ntupling code to repo, add BDT score code to repo
-- Update documentation: AN has a preliminary discussion added
+- Update documentation: AN and paper have a preliminary discussion added
 - Find a relevant theory model to compare to (e.g. EXO-19-014 Z' model with B = 1e-4 or something)
-- Make slides for a mini-preapproval presentation on Oct. 1st
+- Prepare for mini-preapproval presentation on Oct. 1st
 
 ### Create signal and background PDFs for a range of mass points for a single BDT category
 ```
