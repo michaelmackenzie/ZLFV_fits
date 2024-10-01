@@ -194,6 +194,7 @@ tot_wt = 0.
 
 step = 0
 prev_time = time.time()
+start_time = prev_time
 for entry in range(first_entry, max_entry):
    if step % 10000 == 0:
       curr_time = time.time()
@@ -334,7 +335,10 @@ for entry in range(first_entry, max_entry):
 # Post-processing steps
 #-----------------------------------------
 
-print "%i events accepted (efficiency = %.3f)" % (accepted, accepted*1./max_entries)
+total_time = time.time() - start_time
+print "%i events accepted (efficiency = %.3f), processing took %.1f %s" % (accepted, accepted*1./max_entries,
+                                                                           total_time/60. if total_time > 120. else total_time,
+                                                                           "min" if total_time > 120. else "s")
 
 t_out.Write()
 f_out.Close()

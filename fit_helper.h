@@ -12,6 +12,10 @@ TTree * get_tree(TString tree_name, TString path, TString cuts="",Long64_t nmax=
     tree->Add(path);
     if (cuts=="")
        cuts="1>0";
+    if(tree->GetEntries() == 0) {
+      cout << __func__ << ": Tree " << tree_name.Data() << " (path = " << path.Data() << ") has no entries\n";
+      return nullptr;
+    }
     TTree * tree_cut = tree->CopyTree(cuts,"",nmax);
     return tree_cut;
 }
@@ -332,7 +336,7 @@ void save_plot_and_band( RooPlot * xframe,  RooRealVar var, std::vector<TString>
     for (int i =0; i<functions.size(); i++){
       auto hpull = xframe->pullHist("data",functions[i]);
       hpull->SetName("ratio_fnc");
-      hpull->SetLineColor(i+1);
+      hpull->SetLineColor(i+1 + (i >= 4)); //skip yellow due to the difficulty to see
       hpull->SetLineWidth(2);
       hpull->SetMarkerSize(0);
       xframe3->addPlotable(hpull,"PE1");

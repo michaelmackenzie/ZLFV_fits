@@ -30,10 +30,10 @@ parser.add_argument("--scan-max", dest="scan_max",default=500., type=float,help=
 parser.add_argument("--min-fit-mass", dest="min_fit_mass",default=110., type=float,help="Minimum mass used in the fits")
 parser.add_argument("--max-fit-mass", dest="max_fit_mass",default=500., type=float,help="Maximum mass used in the fits")
 parser.add_argument("--scan-step", dest="scan_step",default=1., type=float,help="Step size in the mass scan, in units of signal core sigma")
+parser.add_argument("--year", dest="year",default="Run2", type=str,help="Data period to use (2016, 2017, 2018, or Run2)")
 parser.add_argument("--component", dest="component",type=str,default="all",help="Only process the given fit component: all, sgn, bkg, or none")
 parser.add_argument("--unblind", dest="unblind",default=False, action='store_true',help="Unblind the fits")
 parser.add_argument("--skip-shape-dc", dest="skip_shape_dc",default=False, action='store_true',help="shape experiment")
-parser.add_argument("--year", dest="year",default="Run2", type=str,help="Data period to use (2016, 2017, 2018, or Run2)")
 parser.add_argument("--skip-correct", dest="skip_correct",default=False, action='store_true', help="Skip sample year efficiency corrections")
 parser.add_argument("--fit-version", dest="ver",default="2", type=str,help="fit version")
 parser.add_argument("--outvar", dest="outvar",default="mass_ll",type=str,help="Name out the output observable")
@@ -46,6 +46,8 @@ parser.add_argument("--skip-dc", dest="skip_dc",default=False, action='store_tru
 parser.add_argument("--mass-point", dest="mass_point",default=-1,type=int,help="Single mass point to process")
 parser.add_argument("--full-mass", dest="full_mass",default=False,action='store_true',help="Fit the entire mass distribution")
 parser.add_argument("--use-gaus", dest="use_gaus",default=False,action='store_true',help="Model the signal with a Gaussian instead of a Crystal Ball")
+parser.add_argument("--use-mc-signal", dest="use_mc_signal",default=False, action='store_true', help="Use the MC signal fit to the mass point instead of the interpolation")
+parser.add_argument("--skip-mc-point", dest="skip_mc_point",default="", type=str, help="MC sample to ignore in interpolation")
 parser.add_argument("--log-files", dest="log_files",default=False,action='store_true',help="Write individual mass point fits to log files")
 parser.add_argument("--dry-run", dest="dry_run",default=False,action='store_true',help="Don't execute script calls")
 
@@ -176,6 +178,18 @@ rt.gROOT.SetBatch(True)
 #----------------------------------------------
 # Get the signal parameterization vs. mass
 #----------------------------------------------
+
+# Check if testing a single MC mass point with the MC fit
+tested_mass_point = ""
+if args.use_mc_signal:
+    tested_mass_point = "%.0f" % (args.scan_min)
+    sgn_masspoints = [tested_mass_point]
+if args.skip_mc_point != "":
+    if args.skip_mc_point not in sgn_masspoints:
+        print "Mass point %s not found in the signal MC list!" % (args.skip_mc_point)
+        exit()
+    sgn_masspoints = [mpoint for mpoint in sgn_masspoints if mpoint != args.skip_mc_point]
+
 
 # Get the signal mass distribution for each Z prime MC sample
 signal_distributions = []

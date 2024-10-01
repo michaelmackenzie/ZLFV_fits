@@ -1,5 +1,58 @@
 # LFV Z resonance fits
 
+Code base to perform LFV Z decay resonance fits.
+
+## Z to e+mu decay resonance search
+
+The Z to e+mu decay signature is a resonance at the Z mass in the e-mu data. This framework uses a BDT to separate the signal from the background,
+without disturbing this resonance signature, and then perform resonance fits simultaneously in categories of the BDT score.
+
+### Signal model
+
+The signal is modeled with a double-sided Crystal Ball, fit to the signal MC separately for each BDT score region.
+The signal MC fits are peformed using [ZMuE_fit_mk2_sgn_v1.C](ZMuE_fit_mk2_sgn_v1.C).
+
+### Z->mumu model
+
+The Z->mumu background is modeled with a double-sided Crystal Ball fit to the MC.
+The fits are performed using [ZMuE_fit_mk2_Zmm_v1.C](ZMuE_fit_mk2_Zmm_v1.C)
+
+### Parametric background model
+
+The continuum of e-mu background events are modeled with data-driven parametric function fits.
+The background is modeled using a broad Gaussian to describe Z->tau_e+tau_mu and a second function
+chosen from polynomial, exponential, and power law families using a fit quality selection and an F-test.
+
+The fits are performed using [ZMuE_fit_mk2_bkg_v1.C](ZMuE_fit_mk2_bkg_v1.C)
+
+### Retrieve MC templates
+
+Smoothed MC templates are used for bias tests and studying background function choices.
+These can be retrieved using [CreatePseudoData_from_MC_v2.py](CreatePseudoData_from_MC_v2.py).
+
+```
+python CreatePseudoData_from_MC_v2.py
+ls -lt pseudo_data_*.root | head -n 1
+```
+
+### Build the model
+
+The total model is built using [ZMuE_fit_mk2_wrapper_v1.py](ZMuE_fit_mk2_wrapper_v1.py).
+The Z->e+mu search uses three exclusive BDT score-defined categories: 0.3-0.7, 0.7-0.9, and 0.9-1.0.
+
+```
+#FIXME: Currently signal systematics, Z->mumu MC, and background MC are not in a publicly visible location
+MCFILE="pseudo_data_from_MC_v2_r0_ZmmR1.25_updateID.root"
+DATAFILE="/eos/cms/store/cmst3/user/gkaratha/ZmuE_forBDT_v7_tuples/BDT_outputs_v7/Meas_fullAndSF_bdt_v7_signal_mcRun1*.root"
+python ZMuE_fit_mk2_wrapper_v1.py -o bin1 --fit-version 1 --skip-sgn-syst --zmm-file ${MCFILE} --bkg-file ${MCFILE} --xgb-min 0.3 --xgb-max 0.7 --param-name bin1 --outvar lepm_11 --create-shape-dc
+python ZMuE_fit_mk2_wrapper_v1.py -o bin2 --fit-version 1 --skip-sgn-syst --zmm-file ${MCFILE} --bkg-file ${MCFILE} --xgb-min 0.7 --xgb-max 0.9 --param-name bin2 --outvar lepm_12 --create-shape-dc
+python ZMuE_fit_mk2_wrapper_v1.py -o bin3 --fit-version 1 --skip-sgn-syst --zmm-file ${MCFILE} --bkg-file ${MCFILE} --xgb-min 0.9 --xgb-max 1.1 --param-name bin3 --outvar lepm_13 --create-shape-dc
+python ZMuE_fit_mk2_wrapper_v1.py -o bin3 --fit-version 1 --skip-sgn-syst --zmm-file ${MCFILE} --bkg-file ${DATAFILE} --xgb-min 0.9 --xgb-max 1.1 --param-name bin3 --outvar lepm_13 --create-shape-dc
+[ ! -d zemu ] && mkdir zemu
+mv *mk2*_bin?.png zemu/
+mv *mk2*_bin?.root zemu/
+```
+
 ## Z prime scan
 
 The Z prime scan searches for a narrow resonance in the e-mu data using the Z->e+mu analysis framework and BDT.
@@ -67,7 +120,7 @@ time python perform_scan.py -o ${MAIN}_toy_${TOY} --unblind --smooth-expected
 
 ### Validation studies
 
-Validation studies are performed using the [perform_scan_validation.py](perform_scan_validation.py) tool.
+Validation studies for the entire scan are performed using the [perform_scan_validation.py](perform_scan_validation.py) tool.
 
 ```
 # Perform a bias test for each mass point in the scan:
@@ -84,6 +137,24 @@ Underlying tools to perform a single validation check:
 - [mc_template_bias.sh](tests/mc_template_bias.sh): Perform a bias test generating with a fit MC template and fitting with an envelope data card
 - [do_goodness_of_fit.sh](tests/do_goodness_of_fit.sh): Perform a goodness-of-fit test.
 - [impacts.sh](tests/impacts.sh): Evaluate impacts (including condor configurations if requested).
+
+#### Individual validation tests
+
+Test the interpolation by comparing a mass point fit to the interpolation omitting this point:
+```
+[ ! -d biases ] && mkdir biases
+GENSIGNAL=5
+for MPOINT in "125" "300" "500"
+do
+  ./make_scan_cards.sh --min-mass ${MPOINT} --max-mass ${MPOINT}.1 --tag mass_${MPOINT}_mc --scan-arg "--use-mc-signal"
+  ./make_scan_cards.sh --min-mass ${MPOINT} --max-mass ${MPOINT}.1 --tag mass_${MPOINT}_int --scan-arg "--skip-mc-point ${MPOINT}"
+  CARD1="datacards/bdt_mass_${MPOINT}_mc/datacard_zprime_mass_${MPOINT}_mc_mass-${MPOINT}.0_mp0.txt"
+  CARD2="datacards/bdt_mass_${MPOINT}_int/datacard_zprime_mass_${MPOINT}_int_mass-${MPOINT}.0_mp0.txt"
+  time tests/bemu_gen_fit_test.sh --card_1 ${CARD1} --card_2 ${CARD2} -t 1000 -g 1000 -r 20 --gensignal "${GENSIGNAL}" --name mc_vs_int_${MPOINT} --skipfullplots
+  mv bias_mc_vs_int_${MPOINT}_test.png biases/
+  GENSIGNAL=$((${GENSIGNAL}-2))
+done
+```
 
 ### Additional useful tools/studies
 

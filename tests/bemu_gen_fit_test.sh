@@ -11,8 +11,9 @@ Help() {
     echo "--gentoys (-g) : N(gen) per segment (default = 100)"
     echo "--fitarg       : Additional fit arguments"
     echo "--genarg       : Additional generator arguments"
+    echo "--gensignal    : Rate to inject signal in the generation (default = 0)"
     echo "--tag          : Name tag for output"
-    echo "--rrange  (-r) : r range (default = 100)"
+    echo "--rrange  (-r) : r range (default = 10)"
     echo "--seed    (-s) : Base random seed (default = 90)"
     echo "--skipfits     : Skip fit loops, only create plots"
     echo "--skipfullplots: Skip printing plots of all fit parameters"
@@ -28,9 +29,10 @@ NTOYS="1000"
 NGENPERTOY="100"
 FITARG=""
 GENARG=""
+GENSIGNAL="0"
 NAME=""
 TAG=""
-RRANGE="100"
+RRANGE="10"
 SEED="90"
 SKIPFITS=""
 MULTIDIM=""
@@ -91,6 +93,11 @@ do
         iarg=$((iarg + 1))
         eval "var=\${${iarg}}"
         GENARG=${var}
+    elif [[ "${var}" == "--gensignal" ]]
+    then
+        iarg=$((iarg + 1))
+        eval "var=\${${iarg}}"
+        GENSIGNAL=${var}
     elif [[ "${var}" == "--seed" ]] || [[ "${var}" == "-s" ]]
     then
         iarg=$((iarg + 1))
@@ -140,7 +147,7 @@ ARGS="${ARGS} --X-rtd MINIMIZER_freezeDisassociatedParams"
 ARGS="${ARGS} --X-rtd MINIMIZER_multiMin_hideConstants"
 
 FITARG="${ARGS} ${FITARG}"
-GENARG="${ARGS} ${GENARG}"
+GENARG="${ARGS} ${GENARG} --expectSignal ${GENSIGNAL}"
 ALGO="singles --cl=0.68"
 if [[ "${GRID}" == "d" ]]; then
     ALGO="grid --points 3 --alignEdges 1"
@@ -208,12 +215,12 @@ ${HEAD} ls -l ${OUTFILE}
 
 echo "Creating bias plots..."
 if [[ "${MULTIDIM}" == "" ]]; then
-    ${HEAD} root.exe -q -b "${CMSSW_BASE}/src/CLFVAnalysis/Roostats/tools/plot_combine_fits.C(\"${OUTFILE}\", 0, \"bias_${OUTNAME}${TAG}\", 2, 0)"
+    ${HEAD} root.exe -q -b "${CMSSW_BASE}/src/ZLFV_fits/tools/plot_combine_fits.C(\"${OUTFILE}\", ${GENSIGNAL}, \"bias_${OUTNAME}${TAG}\", 2, 0)"
 else
-    ${HEAD} root.exe -q -b "${CMSSW_BASE}/src/CLFVAnalysis/Roostats/tools/plot_combine_multidim_fits.C(\"${OUTFILE}\", 0., \"bias_${OUTNAME}${TAG}\")"
+    ${HEAD} root.exe -q -b "${CMSSW_BASE}/src/ZLFV_fits/tools/plot_combine_multidim_fits.C(\"${OUTFILE}\", ${GENSIGNAL}, \"bias_${OUTNAME}${TAG}\")"
 fi
 
 if [[ "${SKIPFULLPLOTS}" == "" ]]; then
     echo "Creating plots of all fit params..."
-    ${HEAD} root.exe -q -b "${CMSSW_BASE}/src/CLFVAnalysis/Roostats/tools/plot_combine_fit_params.C(\"${OUTFILE}\", \"figures/bias_${OUTNAME}${TAG}\")"
+    ${HEAD} root.exe -q -b "${CMSSW_BASE}/src/ZLFV_fits/tools/plot_combine_fit_params.C(\"${OUTFILE}\", \"figures/bias_${OUTNAME}${TAG}\")"
 fi
