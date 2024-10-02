@@ -7,6 +7,20 @@ from ScanMuE_wrapper_helper import *
 rt.gInterpreter.Declare('#include "SFBDT_weight_combined.h"')
 from multiprocessing import Process
 
+def eff_cor_wrt18(bdt_min,bdt_max,year):
+    
+    if bdt_min=="0.3" and bdt_max=="0.7" and year=="2016":
+       return 1.018
+    elif bdt_min=="0.3" and bdt_max=="0.7" and year=="2017":
+       return 1.002
+    elif bdt_min=="0.7" and bdt_max=="1.01" and year=="2016":
+       return 0.9469 
+    elif bdt_min=="0.7" and bdt_max=="1.01" and year=="2017":
+       return 0.9837
+    else: 
+       return 1;
+
+
 
 def proc_unit(sgn_argument, bkg_argument):
     if sgn_argument !='':
@@ -26,7 +40,7 @@ parser.add_argument("--xgb-min", dest="xgb_min",default="0.70", type=str,help="d
 parser.add_argument("--xgb-max", dest="xgb_max",default="1.01", type=str,help="data file")
 parser.add_argument("--scan-min", dest="scan_min",default=110., type=float,help="mass signal")
 parser.add_argument("--scan-max", dest="scan_max",default=500., type=float,help="mass signal")
-parser.add_argument("--scan-step", dest="scan_step",default=0.5, type=float,help="mass signal")
+parser.add_argument("--scan-step", dest="scan_step",default=1.0, type=float,help="mass signal")
 parser.add_argument("--component", dest="component",type=str,default="all",help="Options: all sgn bkg ")
 parser.add_argument("--unblind", dest="unblind",default=False, action='store_true',help="data file")
 parser.add_argument("--skip-shape-dc", dest="skip_shape_dc",default=False, action='store_true',help="shape experiment")
@@ -53,7 +67,24 @@ if len(unknown)>0:
    print "not found:",unknown,"exitting"
    exit()
 
-MaxMasspoints=1 #X for debug; -1 for run
+MaxMasspoints=-1 #X for debug; -1 for run
+sr_buffer = 1 #in signal width units
+region_buffer = 10 #in signal width units
+
+### MC signal mass points
+sgn_masspoints=["100","125","150","175","200","300","400","500"]
+sgn_masspoint_files={
+               "100":"Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM100_mcRun18.root",\
+               "125":"Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM125_mcRun18.root",\
+               "150":"Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM150_mcRun18.root",\
+               "175":"Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM175_mcRun18.root",\
+               "200":"Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM200_mcRun18.root",\
+               "300":"Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM300_mcRun18.root",\
+               "400":"Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM400_mcRun18.root",\
+               "500":"Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM500_mcRun18.root"}
+ndens={"100":99200.,"125":98400.,"150":90500.,"175":89900.,"200":96300.,"300":99700.,"400":97600.,"500":98700.}
+
+
 
 ### default path
 path="/eos/cms/store/cmst3/user/gkaratha/ZmuE_forBDT_v7_tuples/BDT_outputs_v7/Scan_Zprime/"
@@ -74,21 +105,9 @@ os.system("[ ! -d log ] && mkdir log")
 #   os.symlink("../../WorkspaceScanSGN", carddir+"WorkspaceScanSGN")
    
 
-### MC signal mass points
-sgn_masspoints=["100","200","300","400","500"]
-sgn_masspoint_files={
-               "100":"Meas_fullAndSF_bdt_v7_emu_scan_sgnM100_mcRun18.root",\
-               "200":"Meas_fullAndSF_bdt_v7_emu_scan_sgnM200_mcRun18.root",\
-               "300":"Meas_fullAndSF_bdt_v7_emu_scan_sgnM300_mcRun18.root",\
-               "400":"Meas_fullAndSF_bdt_v7_emu_scan_sgnM400_mcRun18.root",\
-               "500":"Meas_fullAndSF_bdt_v7_emu_scan_sgnM500_mcRun18.root"}
-ndens={"100":99200.,"200":96300.,"300":99700.,"400":97600.,"500":98700.}
-
 ### Data
 data_files={"2016":"Meas_full_bdt_v7_emu_scan_data_Run16.root","2017":"Meas_full_bdt_v7_emu_scan_data_Run17.root","2018":"Meas_full_bdt_v7_emu_scan_data_Run18.root","Run2":"Meas_full_bdt_v7_emu_scan_data_Run1*.root"}
-sr_buffer = 1 #in signal width units
-region_buffer = 10 #in signal width units
-lumis={"2016":36.33,"2017":41.48,"2018":59.83,"Run2":137.6}
+lumis={"2016":36.33,"2017":41.48,"2018":59.83,"Run2":36.33*eff_cor_wrt18(args.xgb_min,args.xgb_max,"2016")+41.48*eff_cor_wrt18(args.xgb_min,args.xgb_max,"2017")+59.83}
 
 
 ### sf
@@ -151,7 +170,7 @@ while (NextPoint):
   max_mass = round(sr_center + region_buffer*sr_width,2) if not args.full_mass else 700.
   if min_mass<95: min_mass=95.
   
-  print "SR central",sr_center,"width",sr_width,"min",sr_min,"max",sr_max,"yield",sr_yld
+  print "SR #",cnt," central",sr_center,"width",sr_width,"min",sr_min,"max",sr_max,"yield",sr_yld
 
   if(args.mass_point < 0 or cnt == args.mass_point):        
     if not args.skip_fit:
@@ -171,15 +190,14 @@ while (NextPoint):
        print_datacard(carddir, args.name, args.ver, str(cnt), args.param_name, sr_center)
 
   # next iteration mass and exit conditions
-  sr_approx_width = sr_center*(4./200.) # approximate as a linear function so it's stable between BDT categories where the width may vary
-  sr_center = round(sr_center +args.scan_step*sr_approx_width,2)
+  sr_center = round(sr_center +args.scan_step*sr_width,2)
   if cnt>= MaxMasspoints and MaxMasspoints>0:
      print "Requested only",MaxMasspoints,"run"
      NextPoint=False
   if sr_center >= args.scan_max:
      NextPoint=False
 
-print("Parallel processing 8 threads")
+print("Parallel processing 8 threads for",len(jobs),"points")
 for ithread in range(0,len(jobs),8):
     nthread = 8+ithread
     if (nthread>len(jobs)):
@@ -191,3 +209,6 @@ for ithread in range(0,len(jobs),8):
       job.join()
   
 print "scannned",cnt,"points"
+
+
+
