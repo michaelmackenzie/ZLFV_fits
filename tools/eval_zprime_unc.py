@@ -61,7 +61,7 @@ sgn_masspoint_files={
                "600":"Meas_fullAndSF_bdt_v7_emu_scan_sgnM600_mcRun18.root",\
                "800":"Meas_fullAndSF_bdt_v7_emu_scan_sgnM800_mcRun18.root",\
                "1000":"Meas_fullAndSF_bdt_v7_emu_scan_sgnM1000_mcRun18.root"}
-ndens={"200":44844.,"400":55294.,"600":60192.,"800":64756.,"1000":67263.}
+ndens={"200":96300.,"400":97600.,"600":97600.,"800":97600.,"1000":97600.}
 
 # Define the uncertainties
 uncs = ['SFbtag', 'Electron_dxydz', 'Muon_dxydz', 'Trg', 'Prefire', 'PU', 'Electron_IsoID', 'Muon_IsoID',

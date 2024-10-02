@@ -2,7 +2,7 @@
 #include "fit_helper.h"
 #include "fit_helper_core.h"
 
-
+bool force_standard_env_ = false; //force a specific background envelope with a specific asimov template
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////// Main code ///////////////////////////////////
@@ -18,16 +18,19 @@ int ScanMuE_fit_bkg_v2(TString name="bin1_r2",
     TString xgbmin="0.7",TString xgbmax="1.01", double  min_fit_range=90,
     double  max_fit_range = 135, double blind_min=106, double blind_max=114,
     bool unblind=false, bool create_dc_input=false, TString outvar="mass_ll",
-    TString varname="bin",TString outdir="test"){
+    TString varname="bin",TString outdir="WorkspaceScanBKG/"){
 
    //////////////////////////////////// configuration /////////////////////////
    gROOT->SetBatch(true);
+   if(outdir == "") outdir = "WorkspaceScanBKG/";
+   if(!outdir.EndsWith("/")) outdir += "/";
    gSystem->Exec(Form("[ ! -d %s ] && mkdir -p %s", outdir.Data(), outdir.Data()));
    figdir_ = "figures/" + name + "/";
+   figdir_.ReplaceAll("_mp", "/mp"); //put mass point fits within the same sub-directory of the base processing name
    gSystem->Exec(Form("[ ! -d %s ] && mkdir -p %s", figdir_.Data(), figdir_.Data()));
 
    /// bkg functions
-   bool Fit_cheb=true; 
+   bool Fit_cheb=true;
       int min_cheb_order=1,max_cheb_order=(max_fit_range > 500. && min_fit_range < 150.) ? 6 : 4;
       int add_orders_cheb=0;
    bool Fit_sumexp=true;
@@ -38,13 +41,12 @@ int ScanMuE_fit_bkg_v2(TString name="bin1_r2",
       int min_sumplaw_order=1,max_sumplaw_order=4;
       int add_orders_sumplaw=0;
       bool sumplaw_recurse_coef=true;
- 
+
    /// generic
    TString cuts = xgbmin+"<xgb && xgb<"+xgbmax+" && Flag_met && Flag_muon && Flag_electron"; // not add mass_ll here when run systematics
    TString tree_name="mytreefit";
    //bin data such that a single bin is ~1/2 of the signal width --> +-1 sigma = 4 bins
    int nbin_data = (max_fit_range-min_fit_range)/(0.5*(blind_max-blind_min)/2.); //(blind_max - blind_min) = 2*width
-   // int nbin_data = int(max_fit_range-min_fit_range); //~1 GeV binning
    bool Verbose=false; // RooFit verbosity
    int printout_levels=1; // 0: Print only final fits parameters, 1: Print all fits from F test tests
 
@@ -63,7 +65,7 @@ int ScanMuE_fit_bkg_v2(TString name="bin1_r2",
       nbin_blind = (blind_max-blind_min) /( max_fit_range - min_fit_range )*nbin_data;
 
    // read trees
-   RooRealVar dilep_mass("mass_ll","m(e,#mu)", min_fit_range, min_fit_range , max_fit_range, "GeV/c^{2}");
+   RooRealVar dilep_mass ("mass_ll","m(e,#mu)", min_fit_range, min_fit_range , max_fit_range, "GeV/c^{2}");
    RooRealVar dilep_mass_out(outvar,"m(e,#mu)", min_fit_range, min_fit_range , max_fit_range, "GeV/c^{2}");
 
    dilep_mass.setRange("left",min_fit_range, blind_min);
@@ -82,7 +84,7 @@ int ScanMuE_fit_bkg_v2(TString name="bin1_r2",
    TChain * cc = new TChain("mytreefit");
    cc->Add(data_file);
    cc->Draw("mass_ll>>hbkg",cuts);
- 
+
    RooDataHist * dhist_bkg = new RooDataHist("dhist_bkg","dhist_bkg",RooArgSet(dilep_mass),hbkg);
 
    RooDataHist * dhist_data = new RooDataHist("dhist_data","dhist_data",RooArgSet(dilep_mass_out),hbkg);
@@ -115,14 +117,14 @@ int ScanMuE_fit_bkg_v2(TString name="bin1_r2",
    if (Fit_cheb) {
        cout<<" ************************ Chebychev begin ************************ "<<endl;
        cheb_Ftest =  HistFtest(bkg_cheb_pdfs, bkg_cheb_ampl,  dhist_bkg, dilep_mass, bkg_cheb_orders,
-                               bkg_cheb_names, bkg_cheb_legs, nbin_data,outdir+"/WorkspaceBKG/scanbkg_v2_cheb_"+name,
-                               ftest_step, min_p_value,printout_levels, force_inclusion);
+                               bkg_cheb_names, bkg_cheb_legs, nbin_data,"scanbkg_v2_cheb_"+name,
+                               ftest_step, min_p_value,printout_levels, force_inclusion, force_standard_env_);
        cout<<" ************************ Chebychev end ************************ "<<endl;
     }
 
 
 
-   /////// sum exp 
+   /////// sum exp
    std::vector<RooAbsPdf*> bkg_sumexp_pdfs;
    std::vector<RooRealVar*> bkg_sumexp_ampl;
    std::vector<TString> bkg_sumexp_names;
@@ -136,13 +138,15 @@ int ScanMuE_fit_bkg_v2(TString name="bin1_r2",
         bkg_sumexp_legs.push_back("#Sigma Expo "+sorder);
         bkg_sumexp_orders.push_back(iorder);
    }
-   
+
    FtestStruct sumexp_Ftest;
    sumexp_Ftest.success=false;
    if (Fit_sumexp) {
        ////// ftest
        cout<<" ************************ Ftest SumExp begin ************************ "<<endl;
-       sumexp_Ftest =  HistFtest(bkg_sumexp_pdfs, bkg_sumexp_ampl,  dhist_bkg, dilep_mass, bkg_sumexp_orders, bkg_sumexp_names, bkg_sumexp_legs, nbin_data, outdir+"/WorkspaceBKG/scanbkg_v2_exp_"+name, ftest_step, min_p_value,printout_levels, force_inclusion);
+       sumexp_Ftest =  HistFtest(bkg_sumexp_pdfs, bkg_sumexp_ampl,  dhist_bkg, dilep_mass, bkg_sumexp_orders,
+                                 bkg_sumexp_names, bkg_sumexp_legs, nbin_data, "scanbkg_v2_exp_"+name,
+                                 ftest_step, min_p_value,printout_levels, force_inclusion, force_standard_env_);
        cout<<" ************************ Ftest SumExp end ************************ "<<endl;
    }
 
@@ -167,12 +171,14 @@ int ScanMuE_fit_bkg_v2(TString name="bin1_r2",
    sumplaw_Ftest.success=false;
    if (Fit_sumplaw){
       cout<<" ************************ Ftest Sum Power Law begin ************************ "<<endl;
-      sumplaw_Ftest =  HistFtest(bkg_sumplaw_pdfs, bkg_sumplaw_ampl,  dhist_bkg, dilep_mass, bkg_sumplaw_orders, bkg_sumplaw_names, bkg_sumplaw_legs, nbin_data, outdir+"/WorkspaceBKG/scanbkg_v2_sumplaw_"+name, ftest_step, min_p_value,printout_levels, force_inclusion);
+      sumplaw_Ftest =  HistFtest(bkg_sumplaw_pdfs, bkg_sumplaw_ampl,  dhist_bkg, dilep_mass, bkg_sumplaw_orders,
+                                 bkg_sumplaw_names, bkg_sumplaw_legs, nbin_data, "scanbkg_v2_sumplaw_"+name,
+                                 ftest_step, min_p_value,printout_levels, force_inclusion, force_standard_env_);
       cout<<" ************************ Ftest Sum Power Law end ************************ "<<endl;
    }
 
 
-   
+
    //////////////////// fit all candidate functions ////////////////
 
    // For each accepted function, create a new PDF and fit this to the data sidebands
@@ -219,7 +225,7 @@ int ScanMuE_fit_bkg_v2(TString name="bin1_r2",
    cout<<" Fit of best variables "<<endl;
    std::vector<std::vector<float>> final_results =  FitHistBkgFunctions(bkg_pdfs, bkg_ampl, dhist_bkg, dilep_mass,
                                                                         bkg_names, bkg_legs, nbin_data, unblind,
-                                                                        "scanbkg_v2_best_"+name+"cfit", true,outdir,true,unblind);
+                                                                        "scanbkg_v2_best_"+name, true,"cfit",true,unblind);
 
    if (!create_dc_input)
    return 0;
@@ -285,7 +291,7 @@ int ScanMuE_fit_bkg_v2(TString name="bin1_r2",
        models_out.add( *CreateSumExpo( "bkg_sumexp"+sord+"_pdf_"+varname, iord, dilep_mass_out, sumexp_recurse_coef) );
      }
    }
-   
+
    int nstartFNC3=nstartFNC2;
    if (sumplaw_Ftest.success) {
      for (int i=0; i<sumplaw_Ftest.getAllOrder.size(); i++){
@@ -315,18 +321,21 @@ int ScanMuE_fit_bkg_v2(TString name="bin1_r2",
    //Create a RooMultiPdf envelope with all of the accepted functions and the associated function index
    RooMultiPdf multipdf("multipdf_"+varname, "", cat, models_out);
    RooRealVar norm_out("multipdf_"+varname+"_norm","",dhist_bkg->sumEntries(),0.5*dhist_bkg->sumEntries(),10*dhist_bkg->sumEntries());
-   cat.setIndex(best_index); //initialize to the best fit result
-   cout << "Using best index " << best_index << " with p-value " << best_pvalue << " (" << models_out.at(best_index)->GetName() << ")\n";
+   if(force_standard_env_) cat.setIndex(1); //use the 2nd order Chebychev for the Asimov template if using fixed envelopes
+   else {
+     cat.setIndex(best_index); //initialize to the best fit result
+     cout << "Using best index " << best_index << " with p-value " << best_pvalue << " (" << models_out.at(best_index)->GetName() << ")\n";
+   }
 
    models_out.Print();
    wspace->import(cat);
    wspace->import(multipdf);
    wspace->import(norm_out);
    dhist_data->SetName("data_obs");
-   wspace->import(*dhist_data); //import data as well
-   wspace->writeToFile(outdir+"workspace_scanbkg_v2_"+name+".root"); // write output
+   wspace->import(*dhist_data); //import the data as well
+   wspace->writeToFile(outdir+"workspace_scanbkg_v2_"+name+".root"); // write the output
 
 
 
  return 0;
-} 
+}

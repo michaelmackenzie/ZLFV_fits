@@ -1,17 +1,16 @@
 from array import array
 import ROOT as rt
 
+#----------------------------------------------------------------------------------------
 # Write a combine data card for a single bin
-def print_datacard(carddir, name, ver, cnt, param_name, mass):
-   sig_file = "WorkspaceSGN/workspace_scansgn_v" + ver + "_" + name + "_mp" + str(cnt) + ".root"
-   bkg_file = "WorkspaceBKG/workspace_scanbkg_v" + ver + "_" + name + "_mp" + cnt + ".root"
-   
-   
-   
+def print_datacard(name, sig_file, bkg_file, param_name, mass):
+   # sig_file = "WorkspaceSGN/workspace_scansgn_v" + ver + "_" + name + "_mp" + str(cnt) + ".root"
+   # bkg_file = "WorkspaceBKG/workspace_scanbkg_v" + ver + "_" + name + "_mp" + cnt + ".root"
+      
    # Standard preamble
    txt="# -*- mode: tcl -*-\n"
    txt+="#Auto generated Z prime search COMBINE datacard\n"
-   txt+="#Using Z prime mass = %.2f\n\n" % (mass)
+   txt+="#Using Z prime mass = %.3f\n\n" % (mass)
    txt+="imax * number of channels\njmax * number of backgrounds\nkmax * number of nuisance parameters\n\n"
 
    # Define the background and signal PDFs
@@ -27,7 +26,7 @@ def print_datacard(carddir, name, ver, cnt, param_name, mass):
    txt+="bin         "+param_name+"    "+param_name+"\n"
    txt+="process    signal   background\n\n"
    txt+="process       0         1\n\n"
-   txt+="rate          1.0         1\n" #Rate is taken from the _norm variables
+   txt+="rate          1         1\n" #Rate is taken from the _norm variables
 
    # Define the uncertainties
    txt+="### uncertainties-----------------------------------------------------------------------------------------------------------\n"
@@ -41,20 +40,22 @@ def print_datacard(carddir, name, ver, cnt, param_name, mass):
 
    txt+="#### scales-----------------------------------------------------------------------------------------------------------\n\n"
    # Scale uncertainties
-   txt+="elec_ES_shift_%s param 0 1 [-7, 7]\n" % (param_name)
-   txt+="muon_ES_shift_%s param 0 1 [-7, 7]\n" % (param_name)
+   txt+="elec_ES_shift param 0 1 [-7, 7]\n"
+   txt+="muon_ES_shift param 0 1 [-7, 7]\n"
 
    txt+="#### pdfs-----------------------------------------------------------------------------------------------------------\n\n"
    # Define the envelope discrete index to be scanned
    txt+="pdfindex_%s discrete\n" % (param_name)
 
    # Write the file
-   with open(carddir + "/datacard_zprime_" + name +"_mass-"+str(mass)+ "_mp" + cnt + ".txt",'w') as fl:
+   # with open(carddir + "/datacard_zprime_" + name +"_mass-"+str(mass)+ "_mp" + cnt + ".txt",'w') as fl:
+   with open(name,'w') as fl:
      fl.write(txt)
    fl.close()
 
 
 
+#----------------------------------------------------------------------------------------
 # Make a plot and save the figure, fit a 2nd order polynomial to it
 def plot_graph(mpoint_array,signal_array,name,xaxis="",yaxis=""):
    signal_vs_mass = rt.TGraph(len(mpoint_array), mpoint_array, signal_array)
@@ -70,6 +71,7 @@ def plot_graph(mpoint_array,signal_array,name,xaxis="",yaxis=""):
    return par_yld
 
 
+#----------------------------------------------------------------------------------------
 ##### mass points analysis ######
 ### efficiency and yield vs mass
 def mass_analysis(sgn_masspoints,path,sgn_masspoint_files, xgb_min, xgb_max, sf, ndens, lumi, figdir):

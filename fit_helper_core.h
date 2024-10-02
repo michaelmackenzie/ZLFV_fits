@@ -681,7 +681,7 @@ std::pair<int,float> Ftest(std::vector<RooAbsPdf*> pdfs, std::vector<RooRealVar*
 /////////////////////////////////// Repeat the sames for RooHist
 ////////// Fit bkg only functions
 /**
-   Return: vector<fit results>
+   Return: vector<fit results>, fit_result per background function
    fit results: [chi^2, N(DOF), param_1, param_2, ...]
  **/
 std::vector<std::vector<float>> FitHistBkgFunctions(std::vector<RooAbsPdf*> pdfs, std::vector<RooRealVar*> ampls,
@@ -725,15 +725,16 @@ std::vector<std::vector<float>> FitHistBkgFunctions(std::vector<RooAbsPdf*> pdfs
     dataset->plotOn(chi2_frame,RooFit::Name("data"));
     pdfs[i]->plotOn(chi2_frame,RooFit::Range("full"));
     //FIXME: Should the chi^2 and N(DOF) only consider the sidebands, not the full range?
-    RooChi2Var chi("chi", "chi", *pdfs[i], *dataset, RooFit::Range("full"));
-    float chi2 = chi.getVal();//chi2_frame->chiSquare(nbin_data-1);
-    float pvalue = ROOT::Math::chisquared_cdf_c(chi2,nbin_data-n_param);
-    if(Print_details) printf(">>> Chi^2/dof = %.4f (frame chi^2/dof = %.4f)\n", chi2/(nbin_data-1), chi2_frame->chiSquare(n_param));
-    ROOT::Math::chisquared_cdf_c(chi2,nbin_data-n_param);
-    if (chi2<0) chi2=1000000000;
+    int nbins_used; //set by the chi^2 call
+    float chi2 = get_chi_squared(dilep_mass, pdfs[i], *dataset, true || Unblind_data_sr, nbins_used, n_param, false, false);
+    const int ndof = max(1, nbins_used - n_param); //force positive N(dof) to avoid division by 0
+    // RooChi2Var chi("chi", "chi", *pdfs[i], *dataset, RooFit::Range("full"));
+    // float chi2 = chi.getVal();//chi2_frame->chiSquare(nbin_data-1);
+    const float pvalue = ROOT::Math::chisquared_cdf_c(chi2,ndof);
+    if(Print_details) printf(">>> Chi^2/dof = %.4f (frame chi^2/dof = %.4f)\n", chi2/ndof, chi2_frame->chiSquare(n_param));
+    if (chi2<0.) chi2=1.e10; //unphysical result
     temp.push_back(chi2);
- //   temp.push_back(fit_result->minNll());
-    temp.push_back(nbin_data-n_param);
+    temp.push_back(ndof);
 
     for (unsigned int ik=0; ik<fit_result->floatParsFinal().getSize(); ik++){
       if (TString(static_cast<RooRealVar*>(fit_result->floatParsFinal().at(ik))->getTitle()).Contains("norm")) continue;
@@ -742,7 +743,7 @@ std::vector<std::vector<float>> FitHistBkgFunctions(std::vector<RooAbsPdf*> pdfs
     output.push_back(temp);
     cout<<">>>>> p-value "<<pvalue<<endl;
     pdfs[i]->plotOn(plot_frame,RooFit::LineColor(i+1),RooFit::Range("full"),RooFit::Name(names[i]));
-    leg->AddEntry(plot_frame->findObject(names[i]), Form(legs[i]+" (p: %1.2lf, #chi^2: %2.4lf)",pvalue, chi2/(nbin_data-n_param) ));
+    leg->AddEntry(plot_frame->findObject(names[i]), Form(legs[i]+" (p: %1.2lf, #chi^2: %2.4lf)",pvalue, chi2/(ndof) ));
     cout<<names[i]<<endl;
     pt->AddText(Form(legs[i]+" %3.4lf",pvalue));
     if (Print_details){
@@ -755,7 +756,6 @@ std::vector<std::vector<float>> FitHistBkgFunctions(std::vector<RooAbsPdf*> pdfs
   }
 
   dataset->plotOn(plot_frame,RooFit::Binning(nbin_data),RooFit::CutRange(plot_range),RooFit::Name("data") );
-  cout<<"name  "<<cfg_name+"_band_"+extra_name<<endl;
   save_plot(plot_frame,"m(e,#mu)",cfg_name+"_"+extra_name,leg,NULL,true,Logy);
   save_plot_and_band(plot_frame,dilep_mass,names,"m(e,#mu)",cfg_name+"_band_"+extra_name,leg,NULL,true,Logy);
   cout<<" ***************************************"<<endl;
@@ -770,7 +770,7 @@ FtestStruct HistFtest(std::vector<RooAbsPdf*> pdfs, std::vector<RooRealVar*> amp
                       vector<TString> names, std::vector<TString> legs,
                       int nbin_data, TString extra_name, float ftest_step,
                       float min_pvalue=-1, int print_level=0,
-                      bool force_inclusion = false){
+                      bool force_inclusion = false, bool force_standard_env = false){
 
   bool Print_details = 0;
   if (print_level) Print_details=true;
@@ -802,7 +802,19 @@ FtestStruct HistFtest(std::vector<RooAbsPdf*> pdfs, std::vector<RooRealVar*> amp
   vector<float> chis_pass_cut;
   vector<int> dofs_pass_cut;
   for (int i =0; i<chi2_dof.size(); i++){
-    if (pvalues[i]<min_pvalue) continue;
+    if(force_standard_env) { //enforce a specific envelop
+      if(extra_name.Contains("cheb")) { //Chebychev polynomials: Force first and second order
+        if(orders[i] != 1 && orders[i] != 2) continue;
+      }
+      if(extra_name.Contains("_exp")) { //Exponential sum: Force first and second order
+        if(orders[i] != 1 && orders[i] != 2) continue;
+      }
+      if(extra_name.Contains("plaw")) { //Power law sum: Force first order
+        if(orders[i] != 1) continue;
+      }
+    } else { //standard quality cut selection
+      if (pvalues[i]<min_pvalue) continue;
+    }
     orders_pass_cut.push_back(orders[i]);
     chis_pass_cut.push_back(chi2_dof[i][0]);
     dofs_pass_cut.push_back(chi2_dof[i][1]);
@@ -840,7 +852,7 @@ FtestStruct HistFtest(std::vector<RooAbsPdf*> pdfs, std::vector<RooRealVar*> amp
 
   //For each function with acceptable fit quality, check if it passes the F-test for information gain by increased function order
   for (int i =0; i<ftests_pass_cut.size(); i++){
-    if (ftests_pass_cut[i] > ftest_step) break;
+    if (ftests_pass_cut[i] > ftest_step && !force_standard_env) break;
     min_order=orders_pass_cut[i+1]; //store the best function (if higher order and passes the F-test, must be better)
     best_ftest=ftests_pass_cut[i];
     resultF.getAllOrder.push_back(orders_pass_cut[i+1]);
