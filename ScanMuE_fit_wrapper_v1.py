@@ -240,6 +240,7 @@ while (NextPoint):
   print "SR central",sr_center,"width",sr_width,"min",sr_min,"max",sr_max,"yield",sr_yld
 
   if(args.mass_point < 0 or cnt == args.mass_point):
+
     # create pdfs for mass point
     if not args.skip_fit:
       if args.component == "sgn" or args.component == "all":
@@ -248,6 +249,7 @@ while (NextPoint):
                   +args.name+"_mp"+str(cnt)+'",'
                   +str(min_mass)+','+str(max_mass)+','+str(sr_center)+','+str(sr_width)+','
                   +str(sr_yld)+','+shape_dc+',"'+args.outvar+'",'+do_sgn_syst+',"'+args.param_name+'")\'' + tail)
+
       if args.component == "bkg" or args.component == "all":
          tail = (' >| log/fit_bkg_%s_mp%i.log' % (args.name, cnt)) if args.log_files else ''
          os.system(script_head + 'root -l -b -q ScanMuE_fit_bkg_v'+args.ver+'.C\'("'+args.name+"_mp"+str(cnt)+'","'+args.data_file
