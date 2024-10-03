@@ -3,6 +3,7 @@ import os
 import argparse
 import ROOT as rt
 from array import array
+from signal_model import *
 from ScanMuE_wrapper_helper import *
 rt.gInterpreter.Declare('#include "SFBDT_weight_combined.h"')
 from multiprocessing import Process
@@ -54,6 +55,7 @@ parser.add_argument("--skip-bkg-altfits", dest="skip_bkg_altfits",default=False,
 parser.add_argument("--skip-dc", dest="skip_dc",default=False, action='store_true',help="Skip datacard creation")
 parser.add_argument("--mass-point", dest="mass_point",default=-1,type=int,help="Single mass point to process")
 parser.add_argument("--full-mass", dest="full_mass",default=False,action='store_true',help="Fit the entire mass distribution")
+parser.add_argument("--use-gaus", dest="use_gaus",default=False,action='store_true',help="Model the signal with a Gaussian instead of a Crystal Ball")
 parser.add_argument("--log-files", dest="log_files",default=False,action='store_true',help="Write individual mass point fits to log files")
 parser.add_argument("--dry-run", dest="dry_run",default=False,action='store_true',help="Don't execute script calls")
 
@@ -71,25 +73,45 @@ MaxMasspoints=-1 #X for debug; -1 for run
 sr_buffer = 1 #in signal width units
 region_buffer = 10 #in signal width units
 
-### MC signal mass points
-sgn_masspoints=["100","125","150","175","200","300","400","500"]
-sgn_masspoint_files={
-               "100":"Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM100_mcRun18.root",\
-               "125":"Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM125_mcRun18.root",\
-               "150":"Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM150_mcRun18.root",\
-               "175":"Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM175_mcRun18.root",\
-               "200":"Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM200_mcRun18.root",\
-               "300":"Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM300_mcRun18.root",\
-               "400":"Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM400_mcRun18.root",\
-               "500":"Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM500_mcRun18.root"}
-ndens={"100":99200.,"125":98400.,"150":90500.,"175":89900.,"200":96300.,"300":99700.,"400":97600.,"500":98700.}
-
-
-
 ### default path
 path="/eos/cms/store/cmst3/user/gkaratha/ZmuE_forBDT_v7_tuples/BDT_outputs_v7/Scan_Zprime/"
 figdir = "./FiguresScan/%s/" % (args.name)
 carddir = "./DatacardsScan/%s/" % (args.name)
+
+### MC signal mass points
+sgn_masspoints=["100","200","300","400","500"]
+signal_samples = {
+   "100" : {
+      "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM100_mcRun16.root", 94800, 2016, path),
+      "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM100_mcRun17.root", 97800, 2017, path),
+      "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM100_mcRun18.root", 99200, 2018, path),
+   },
+   "200" : {
+      "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM200_mcRun18.root", 96300, 2016, path),
+      "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM200_mcRun18.root", 96300, 2017, path),
+      "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM200_mcRun18.root", 96300, 2018, path),
+   },
+   "300" : {
+      "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM300_mcRun18.root", 99700, 2016, path),
+      "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM300_mcRun18.root", 99700, 2017, path),
+      "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM300_mcRun18.root", 99700, 2018, path),
+   },
+   "400" : {
+      "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM400_mcRun18.root", 97600, 2016, path),
+      "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM400_mcRun18.root", 97600, 2017, path),
+      "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM400_mcRun18.root", 97600, 2018, path),
+   },
+   "500" : {
+      "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM500_mcRun16.root", 81300, 2016, path),
+      "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM500_mcRun17.root", 97800, 2017, path),
+      "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM500_mcRun18.root", 98700, 2018, path),
+   },
+}
+
+ndens={"100":99200.,"125":98400.,"150":90500.,"175":89900.,"200":96300.,"300":99700.,"400":97600.,"500":98700.}
+
+
+
 
 if os.path.exists(carddir):
    os.system("rm -rI "+carddir)
@@ -139,7 +161,17 @@ rt.gROOT.SetBatch(True)
 #----------------------------------------------
 # Get the signal parameterization vs. mass
 #----------------------------------------------
-par_yield, par_width = mass_analysis(sgn_masspoints,path,sgn_masspoint_files, args.xgb_min, args.xgb_max, sf, ndens, lumis[args.year], figdir)
+signal_distributions = []
+cuts = sf+"*(Flag_met && Flag_muon && Flag_electron && "+args.xgb_min+"<=xgb && xgb<"+args.xgb_max+")"
+for mpoint in sgn_masspoints:
+  h = rt.TH1F("hmass_"+mpoint,"Signal mass distribution",1100,0,1100)
+  signal_distributions.append(signal_distribution(signal_samples[mpoint], h, "mass_ll", cuts, args.year))
+
+# Create a signal interpolation model
+masses = array('d')
+for mass in sgn_masspoints: masses.append(float(mass))
+signal_model = create_signal_interpolation(masses, signal_distributions, args.use_gaus, figdir)
+
 
 
 #----------------------------------------------
@@ -162,14 +194,27 @@ while (NextPoint):
   cnt+=1
   # calculate blind range and expected widths/yields for a mass
  # sr_width = round(par_width[0]+par_width[1]*sr_center+par_width[2]*sr_center*sr_center,2)
-  sr_width = sr_center*1./50.
-  sr_min = round(sr_center - sr_buffer*sr_width,2)
-  sr_max = round(sr_center + sr_buffer*sr_width,2)
-  sr_yld = round(par_yield[0] + par_yield[1]*sr_center + par_yield[2]*sr_center*sr_center,2)
-  min_mass = round(sr_center - region_buffer*sr_width,2) if not args.full_mass else  95.
-  max_mass = round(sr_center + region_buffer*sr_width,2) if not args.full_mass else 700.
-  if min_mass<95: min_mass=95.
-  
+  sr_approx_width = sr_center*(4./200.) # approximate as a linear function so it's stable between BDT categories where the width may vary
+  sig_mass = sr_center
+  sig_params = interpolate(signal_model, sig_mass)
+  sig_yield  = sig_params[0]
+  sig_mean   = sig_params[1]
+  sig_width  = sig_params[2]
+  sig_alpha1 = sig_params[3] if not args.use_gaus else 0.
+  sig_alpha2 = sig_params[4] if not args.use_gaus else 0.
+  sig_enne1  = sig_params[5] if not args.use_gaus else 0.
+  sig_enne2  = sig_params[6] if not args.use_gaus else 0.
+
+  sr_width = round(sig_width,2)
+  sr_min = round(sr_center - sr_buffer*sr_approx_width,2)
+  sr_max = round(sr_center + sr_buffer*sr_approx_width,2)
+  sr_yld = round(sig_yield,2)
+  cut_off_min =  95. # Don't use below 95 GeV due to Z->tautau contamination
+  cut_off_max = 700.
+  min_mass = round(sr_center - region_buffer*sr_approx_width,2) if not args.full_mass else cut_off_min
+  max_mass = round(sr_center + region_buffer*sr_approx_width,2) if not args.full_mass else cut_off_max
+  min_mass = max(cut_off_min, min_mass)
+  max_mass = min(cut_off_max, max_mass) 
   print "SR #",cnt," central",sr_center,"width",sr_width,"min",sr_min,"max",sr_max,"yield",sr_yld
 
   if(args.mass_point < 0 or cnt == args.mass_point):        
@@ -178,7 +223,11 @@ while (NextPoint):
        bkg_argument=''
        if args.component == "sgn" or args.component == "all":
           tail = (' >| log/fit_sgn_%s_mp%i.log' % (args.name, cnt)) if args.log_files else ''
-          sgn_argument= script_head + 'root -l -b -q ScanMuE_fit_sgn_v'+args.ver+'.C\'("'+args.name+"_mp"+str(cnt)+'",'+str(min_mass)+','+str(max_mass)+','+str(sr_center)+','+str(sr_width)+','+str(sr_yld)+','+shape_dc+',"'+args.outvar+'",'+do_sgn_syst+',"'+args.param_name+'","'+carddir+'/WorkspaceSGN/")\'' + tail
+          sig_line = '{%.4f, %.4f, %.4f, %.4f, %.4f, %.4f}' % (sig_mean, sig_width, sig_alpha1, sig_alpha2, sig_enne1, sig_enne2)
+          sgn_argument= script_head + 'root -l -b -q ScanMuE_fit_sgn_v'+args.ver+'.C\'("'+args.name+"_mp"+str(cnt)+'",' \
+           +str(min_mass)+','+str(max_mass)+','+sig_line+',' \
+           +str(sr_yld)+','+shape_dc+',"'+args.outvar+'",'+do_sgn_syst+',"'+args.param_name+'")\'' + tail
+
        if args.component == "bkg" or args.component == "all":    
           tail = (' >| log/fit_bkg_%s_mp%i.log' % (args.name, cnt)) if args.log_files else ''
           bkg_argument= script_head + 'root -l -b -q ScanMuE_fit_bkg_v'+args.ver+'.C\'("'+args.name+"_mp"+str(cnt)+'","'+args.data_file+'","'+args.xgb_min+'","'+args.xgb_max+'",'+str(min_mass)+','+str(max_mass)+','+str(sr_min)+','+str(sr_max)+','+unblind+','+shape_dc+',"'+args.outvar+'","'+args.param_name+'","'+carddir+'/WorkspaceBKG/")\'' + tail
@@ -186,8 +235,12 @@ while (NextPoint):
        jobs.append(job)
                      
        # Create a corresponding datacard
-    if not args.dry_run:
-       print_datacard(carddir, args.name, args.ver, str(cnt), args.param_name, sr_center)
+    cardname = carddir + "datacard_zprime_" + args.name + ("_mass-%.1f" % (sr_center)) + "_mp" + str(cnt) + ".txt"
+    sig_file = "WorkspaceScanSGN/workspace_scansgn_v" + args.ver + "_" + args.name + "_mp" + str(cnt) + ".root"
+    bkg_file = "WorkspaceScanBKG/workspace_scanbkg_v" + args.ver + "_" + args.name + "_mp" + str(cnt) + ".root"
+    if not args.dry_run and not args.skip_dc:
+       print_datacard(cardname, sig_file, bkg_file, args.param_name, sr_center)
+
 
   # next iteration mass and exit conditions
   sr_center = round(sr_center +args.scan_step*sr_width,2)
