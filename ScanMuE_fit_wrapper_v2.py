@@ -69,7 +69,7 @@ if len(unknown)>0:
    print "not found:",unknown,"exitting"
    exit()
 
-MaxMasspoints=-1 #X for debug; -1 for run
+MaxMasspoints=1 #X for debug; -1 for run
 sr_buffer = 1 #in signal width units
 region_buffer = 10 #in signal width units
 
@@ -114,17 +114,13 @@ ndens={"100":99200.,"125":98400.,"150":90500.,"175":89900.,"200":96300.,"300":99
 
 
 if os.path.exists(carddir):
-   os.system("rm -rI "+carddir)
+   os.system("rm -rI "+carddir+" "+figdir)
+
 
 os.system("[ ! -d %s ] && mkdir -p %s" % (figdir , figdir ))
 os.system("[ ! -d %s ] && mkdir -p %s" % (carddir, carddir))
 os.system("[ ! -d log ] && mkdir log")
 
-
-#if not os.path.exists(carddir+"WorkspaceScanBKG"):
-#   os.symlink("../../WorkspaceScanBKG", carddir+"WorkspaceScanBKG")
-#if not os.path.exists(carddir+"WorkspaceScanSGN"):
-#   os.symlink("../../WorkspaceScanSGN", carddir+"WorkspaceScanSGN")
    
 
 ### Data
@@ -224,26 +220,36 @@ while (NextPoint):
        if args.component == "sgn" or args.component == "all":
           tail = (' >| log/fit_sgn_%s_mp%i.log' % (args.name, cnt)) if args.log_files else ''
           sig_line = '{%.4f, %.4f, %.4f, %.4f, %.4f, %.4f}' % (sig_mean, sig_width, sig_alpha1, sig_alpha2, sig_enne1, sig_enne2)
+
           sgn_argument= script_head + 'root -l -b -q ScanMuE_fit_sgn_v'+args.ver+'.C\'("'+args.name+"_mp"+str(cnt)+'",' \
-           +str(min_mass)+','+str(max_mass)+','+sig_line+',' \
-           +str(sr_yld)+','+shape_dc+',"'+args.outvar+'",'+do_sgn_syst+',"'+args.param_name+'")\'' + tail
+           +str(min_mass)+','+str(max_mass)+','\
+           +sig_line+',' \
+           +str(sr_yld)+','+shape_dc+',"'\
+           +args.outvar+'",'+do_sgn_syst+',"'\
+           +args.param_name+'","'+carddir+'/WorkspaceSGN/")\'' + tail
 
        if args.component == "bkg" or args.component == "all":    
           tail = (' >| log/fit_bkg_%s_mp%i.log' % (args.name, cnt)) if args.log_files else ''
-          bkg_argument= script_head + 'root -l -b -q ScanMuE_fit_bkg_v'+args.ver+'.C\'("'+args.name+"_mp"+str(cnt)+'","'+args.data_file+'","'+args.xgb_min+'","'+args.xgb_max+'",'+str(min_mass)+','+str(max_mass)+','+str(sr_min)+','+str(sr_max)+','+unblind+','+shape_dc+',"'+args.outvar+'","'+args.param_name+'","'+carddir+'/WorkspaceBKG/")\'' + tail
+          bkg_argument= script_head + 'root -l -b -q ScanMuE_fit_bkg_v'+args.ver+'.C\'("'+args.name+"_mp"+str(cnt)+'","'\
+                        +args.data_file+'","'\
+                        +args.xgb_min+'","'+args.xgb_max+'",'+str(min_mass)+','\
+                        +str(max_mass)+','+str(sr_min)+','+str(sr_max)+','\
+                        +unblind+','+shape_dc+',"'+args.outvar+'","'\
+                        +args.param_name+'","'+carddir+'/WorkspaceBKG/")\''+tail
+
        job = Process(target = proc_unit, args=(sgn_argument,bkg_argument,))
        jobs.append(job)
                      
        # Create a corresponding datacard
     cardname = carddir + "datacard_zprime_" + args.name + ("_mass-%.1f" % (sr_center)) + "_mp" + str(cnt) + ".txt"
-    sig_file = "WorkspaceScanSGN/workspace_scansgn_v" + args.ver + "_" + args.name + "_mp" + str(cnt) + ".root"
-    bkg_file = "WorkspaceScanBKG/workspace_scanbkg_v" + args.ver + "_" + args.name + "_mp" + str(cnt) + ".root"
+    sig_file = "WorkspaceSGN/workspace_scansgn_v" + args.ver + "_" + args.name + "_mp" + str(cnt) + ".root"
+    bkg_file = "WorkspaceBKG/workspace_scanbkg_v" + args.ver + "_" + args.name + "_mp" + str(cnt) + ".root"
     if not args.dry_run and not args.skip_dc:
        print_datacard(cardname, sig_file, bkg_file, args.param_name, sr_center)
 
 
   # next iteration mass and exit conditions
-  sr_center = round(sr_center +args.scan_step*sr_width,2)
+  sr_center = round(sr_center +args.scan_step*sr_approx_width,2)
   if cnt>= MaxMasspoints and MaxMasspoints>0:
      print "Requested only",MaxMasspoints,"run"
      NextPoint=False

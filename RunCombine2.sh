@@ -46,12 +46,14 @@ fi
 if  [[ "${PROCESS}" == "limits" ]]
 then
    combine -M AsymptoticLimits param_datacard_${NAME}.root  -m 91 --saveWorkspace -n .bestfit_${NAME} $FROZENPARAM  $FLAGS
+   cp *.bestfit_${NAME}*.root ${ORGDIR}
 fi
 
 if  [[ "${PROCESS}" == "fit" ]]
 then
    combine -M MultiDimFit param_datacard_${NAME}.root -m 91 --saveWorkspace -n .bestfit_${NAME} $FROZENPARAM  $FLAGS --cminDefaultMinimizerStrategy 0 --X-rtd REMOVE_CONSTANT_ZERO_POINT=1 --X-rtd MINIMIZER_freezeDisassociatedParams --X-rtd MINIMIZER_multiMin_hideConstants --X-rtd MINIMIZER_multiMin_maskConstraints --X-rtd MINIMIZER_multiMin_maskChannels=2
-   echo "higgsCombine.bestfit_${NAME}.MultiDimFit.mH91.root has been created in Roofit folder - No need to move"
+   cp higgsCombine.bestfit_${NAME}.MultiDimFit.mH91.root ${ORGDIR}
+   echo "higgsCombine.bestfit_${NAME}.MultiDimFit.mH91.root has been created in Roofit folder and copied here - No need to move"
    echo "for plot run:"
    echo  "python multdimfit_plotter.py -f higgsCombine.bestfit_${NAME}.MultiDimFit.mH91.root -o ${NAME} --bin <bin1> --mllvar <lepm_11> (-v)" 
 fi

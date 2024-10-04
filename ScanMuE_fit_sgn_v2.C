@@ -15,9 +15,10 @@
 // Model the Z prime signal with a Crystal Ball or Gaussian distribution
 int ScanMuE_fit_sgn_v2(TString name="bin1_r2",
                        float min_mass=100, float max_mass=500,
-                       vector<float> signal_parameters = {}, //Signal shape parameters
-                       float expected_Nsgn=65, bool create_dc_input=true, TString outvar="mass_ll",
-                       bool syst_sgn=false, TString varname="bin", TString outdir="WorkspaceScanSGN/"){
+                       vector<float> signal_parameters = {}, //Shape parameters
+                       float expected_Nsgn=65, bool create_dc_input=true, 
+                       TString outvar="mass_ll", bool syst_sgn=false, 
+                       TString varname="bin", TString outdir="WorkspaceScanSGN/"){
 
   if(signal_parameters.size() != 6 && signal_parameters.size() != 2) {
     printf("%s: Error! Parameter vector does not have the correct size\n", __func__);
@@ -29,8 +30,8 @@ int ScanMuE_fit_sgn_v2(TString name="bin1_r2",
   if(outdir == "") outdir = "WorkspaceScanSGN/";
   if(!outdir.EndsWith("/")) outdir += "/";
   gSystem->Exec(Form("[ ! -d %s ] && mkdir -p %s", outdir.Data(), outdir.Data()));
-  figdir_ = "figures/" + name + "/";
-  figdir_.ReplaceAll("_mp", "/mp"); //put mass point fits within the same sub-directory of the base processing name
+  //figdir_ = "figures/" + name + "/";
+  //figdir_.ReplaceAll("_mp", "/mp"); //put mass point fits within the same sub-directory of the base processing name
   gSystem->Exec(Form("[ ! -d %s ] && mkdir -p %s", figdir_.Data(), figdir_.Data()));
 
   // Create the signal model
@@ -69,14 +70,15 @@ int ScanMuE_fit_sgn_v2(TString name="bin1_r2",
 
   auto sgn_frame = dilep_mass_out.frame(RooFit::Title(""));
   signal_pdf->plotOn(sgn_frame,RooFit::LineColor(kBlue),RooFit::Normalization(n_sgn.getVal(), RooAbsReal::NumEvent));
-  save_plot(sgn_frame,"m(#mu,e)","scansgn_v2_"+name);
+  cout<<outdir+"/scansgn_v2_"+name<<endl;
+  save_plot(sgn_frame,"m(#mu,e)",outdir+"/scansgn_v2_"+name);
 
   //free the energy scale uncertainties if being included
   if(use_energy_scale) {
     elec_ES_shift.setConstant(false);
     muon_ES_shift.setConstant(false);
   }
-
+ 
   if (create_dc_input){
     RooWorkspace *wspace_sgn = new RooWorkspace("ws_sgn","ws_sgn");
     wspace_sgn->import(*signal_pdf);

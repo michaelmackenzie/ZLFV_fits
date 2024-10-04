@@ -25,8 +25,8 @@ int ScanMuE_fit_bkg_v2(TString name="bin1_r2",
    if(outdir == "") outdir = "WorkspaceScanBKG/";
    if(!outdir.EndsWith("/")) outdir += "/";
    gSystem->Exec(Form("[ ! -d %s ] && mkdir -p %s", outdir.Data(), outdir.Data()));
-   figdir_ = "figures/" + name + "/";
-   figdir_.ReplaceAll("_mp", "/mp"); //put mass point fits within the same sub-directory of the base processing name
+//   figdir_ = "figures/" + name + "/";
+ //  figdir_.ReplaceAll("_mp", "/mp"); //put mass point fits within the same sub-directory of the base processing name
    gSystem->Exec(Form("[ ! -d %s ] && mkdir -p %s", figdir_.Data(), figdir_.Data()));
 
    /// bkg functions
@@ -225,7 +225,7 @@ int ScanMuE_fit_bkg_v2(TString name="bin1_r2",
    cout<<" Fit of best variables "<<endl;
    std::vector<std::vector<float>> final_results =  FitHistBkgFunctions(bkg_pdfs, bkg_ampl, dhist_bkg, dilep_mass,
                                                                         bkg_names, bkg_legs, nbin_data, unblind,
-                                                                        "scanbkg_v2_best_"+name, true,"cfit",true,unblind);
+                                                                        "scanbkg_v2_best_"+name, true,outdir+"/cfit",true,unblind);
 
    if (!create_dc_input)
    return 0;
