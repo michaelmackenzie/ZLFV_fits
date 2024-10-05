@@ -24,8 +24,10 @@ int plot_combine_fits(const char* file_name, double r_true = 0., TString out_nam
   tree->Draw("r >> htmp"/*, "fit_status == 0"*/);
   TH1* h = (TH1*) gDirectory->Get("htmp");
 
-  const double mean  = h->GetMean();
-  const double sigma = h->GetStdDev();
+  const double mean      = h->GetMean();
+  const double mean_err  = h->GetMeanError();
+  const double sigma     = h->GetStdDev();
+  const double sigma_err = h->GetStdDevError();
   delete h;
 
   //Initialize fit result histograms using the initial results
@@ -126,5 +128,8 @@ int plot_combine_fits(const char* file_name, double r_true = 0., TString out_nam
   if(out_name == "") {out_name = file_name; out_name.ReplaceAll(".root", ".png");}
   else if(!out_name.EndsWith(".png")) out_name += ".png";
   c->SaveAs(out_name.Data());
+
+  printf("Signal strength mean = %.3f +- %.3f, width = %.3f +- %.3f\n",
+         mean, mean_err, sigma, sigma_err);
   return 0;
 }

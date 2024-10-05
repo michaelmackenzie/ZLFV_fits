@@ -142,6 +142,33 @@ for year in ["2016", "2017", "2018"]:
     c.SaveAs(figdir+'eff_' + year + '.png')
 
 #--------------------------------------------------------------------
+# Plot the efficiencies for each mass
+#--------------------------------------------------------------------
+
+for index in range(len(sgn_masspoints)):
+    c = rt.TCanvas('c_yield', 'c_yield', 700, 500)
+    years = array('d', [2016, 2017, 2018])
+    years_errs = array('d', [0.5, 0.5, 0.5])
+    effs_by_year = array('d', [yields[year][index] for year in ["2016","2017","2018"]])
+    errs_by_year = array('d', [yerrs [year][index] for year in ["2016","2017","2018"]])
+    g = rt.TGraphErrors(len(years), years, effs_by_year , years_errs, errs_by_year)
+    g.SetMarkerStyle(20)
+    g.SetMarkerSize(0.8)
+    g.SetLineWidth(2)
+    g.SetTitle("Signal efficiency vs. year;;efficiency")
+    g.Draw("APE")
+    g.GetYaxis().SetRangeUser(0., 0.3)
+    xaxis = g.GetXaxis()
+    for ibin in [2016, 2017, 2018]:
+        b = xaxis.FindBin(ibin)
+        xaxis.SetBinLabel(b, str(ibin))
+    xaxis.LabelsOption("h")
+    xaxis.SetLabelSize(0.07)
+    c.Modified()
+    c.Update()
+    c.SaveAs(figdir+'eff_M' + sgn_masspoints[index] + '.png')
+
+#--------------------------------------------------------------------
 # Plot the efficiencies relative to 2018
 #--------------------------------------------------------------------
 
