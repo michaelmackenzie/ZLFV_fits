@@ -20,8 +20,9 @@ def proc_unit(sgn_argument, bkg_argument):
 #----------------------------------------------
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-o", dest="name",default="test", type=str,help="output root name")
+parser.add_argument("--name", "-o", dest="name",default="test", type=str,help="output root name")
 parser.add_argument("--data-file", dest="data_file",default="", type=str,help="data file")
+parser.add_argument("--selection", dest="selection",default="mutau_e", type=str,help="Selection to process")
 parser.add_argument("--xgb-min", dest="xgb_min",default="1", type=str,help="BDT score minimum for the category")
 parser.add_argument("--xgb-max", dest="xgb_max",default="-1", type=str,help="BDT score maximum for the category")
 parser.add_argument("--scan-min", dest="scan_min",default=130., type=float,help="Minimum mass hypothesis to scan")
@@ -35,6 +36,7 @@ parser.add_argument("--skip-correct", dest="skip_correct",default=False, action=
 parser.add_argument("--fit-version", dest="ver",default="2", type=str,help="fit version")
 parser.add_argument("--outvar", dest="outvar",default="mcol",type=str,help="Name out the output observable")
 parser.add_argument("--param-name", dest="param_name",default="bin",type=str,help="Name of the COMBINE category")
+parser.add_argument("--input", dest="input_path",default="trees", type=str,help="Tree directory")
 parser.add_argument("-j", "--nthreads", dest="nthreads",default=8,type=int,help="Number of threads to process using")
 parser.add_argument("--skip-fit", dest="skip_fit",default=False, action='store_true',help="fit skip")
 parser.add_argument("--skip-sgn-syst", dest="skip_sgn_syst",default=False, action='store_true',help="shape experiment")
@@ -56,14 +58,15 @@ if len(unknown)>0:
    print "not found:",unknown,"exitting"
    exit()
 
-args.name = "tau_" + args.name
+args.name = "tau_" + args.name + '_' + args.selection
 
 MaxMasspoints=-1 #X for debug; -1 for run
 
 ### default path
-path="/eos/user/m/mimacken/ZEMu/CMSSW_11_3_4/src/ZLFV_fits/trees/"
+if args.input_path[-1] != '/': args.input_path += '/'
+path="/eos/user/m/mimacken/ZEMu/CMSSW_11_3_4/src/ZLFV_fits/tau_studies/" + args.input_path
 figdir = "./figures/%s/" % (args.name)
-carddir = "./datacards/tau_%s/" % (args.name)
+carddir = "./datacards/%s/" % (args.name)
 os.system("[ ! -d %s ] && mkdir -p %s" % (figdir , figdir ))
 os.system("[ ! -d %s ] && mkdir -p %s" % (carddir, carddir))
 os.system("[ ! -d log ] && mkdir log")
@@ -80,17 +83,17 @@ sgn_masspoints=["91"]
 # Define the signal samples by mass and period
 signal_samples = {
    "91" : {
-      "2016" : sample("skim_ZMuTau-*_mutau_201*.root", -1, 2016, path, 91.),
-      "2017" : sample("skim_ZMuTau-*_mutau_201*.root", -1, 2017, path, 91.),
-      "2018" : sample("skim_ZMuTau-*_mutau_201*.root", -1, 2018, path, 91.),
+      "2016" : sample("skim_ZMuTau-*_%s_201*.root" % (args.selection), -1, 2016, path, 91.),
+      "2017" : sample("skim_ZMuTau-*_%s_201*.root" % (args.selection), -1, 2017, path, 91.),
+      "2018" : sample("skim_ZMuTau-*_%s_201*.root" % (args.selection), -1, 2018, path, 91.),
    },
 }
 
 ### Data
-data_files={"2016":"skim_SingleMuonRun2016*_mutau_2016.root",
-            "2017":"skim_SingleMuonRun2017*_mutau_2017.root",
-            "2018":"skim_SingleMuonRun2018*_mutau_2018.root",
-            "Run2":"skim_SingleMuonRun201*_mutau_201*.root"}
+data_files={"2016":"skim_SingleMuonRun2016*_%s_2016.root" % (args.selection),
+            "2017":"skim_SingleMuonRun2017*_%s_2017.root" % (args.selection),
+            "2018":"skim_SingleMuonRun2018*_%s_2018.root" % (args.selection),
+            "Run2":"skim_SingleMuonRun201*_%s_201*.root"  % (args.selection)}
 
 ### sf
 # Scale factors
