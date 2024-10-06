@@ -12,9 +12,9 @@ rt.gInterpreter.Declare('#include "SFBDT_weight_combined.h"')
 # Define a function to process the signal and background fitting calls
 def proc_unit(sgn_argument, bkg_argument):
     if sgn_argument !='':
-       os.system(sgn_argument)
+        os.system(sgn_argument)
     if bkg_argument != '':
-       os.system(bkg_argument)
+        os.system(bkg_argument)
 
 #----------------------------------------------
 # Read in the input parameters
@@ -58,8 +58,8 @@ args, unknown = parser.parse_known_args()
 
 ### check input flags
 if len(unknown)>0: 
-   print "not found:",unknown,"exitting"
-   exit()
+    print "not found:",unknown,"exiting"
+    exit()
 
 MaxMasspoints=-1 #X for debug; -1 for run
 
@@ -72,74 +72,73 @@ os.system("[ ! -d %s ] && mkdir -p %s" % (figdir , figdir ))
 os.system("[ ! -d %s ] && mkdir -p %s" % (carddir, carddir))
 os.system("[ ! -d log ] && mkdir log")
 if not os.path.exists(carddir+"WorkspaceScanBKG"):
-   os.symlink("../../WorkspaceScanBKG", carddir+"WorkspaceScanBKG")
+    os.symlink("../../WorkspaceScanBKG", carddir+"WorkspaceScanBKG")
 if not os.path.exists(carddir+"WorkspaceScanSGN"):
-   os.symlink("../../WorkspaceScanSGN", carddir+"WorkspaceScanSGN")
+    os.symlink("../../WorkspaceScanSGN", carddir+"WorkspaceScanSGN")
    
 
 ### MC signal mass points
 
-# sgn_masspoints=["200","400","600","800","1000"]
-# sgn_masspoints=["100","200","300","400","500","600","800","1000"]
+# sgn_masspoints=["100","125","150","175","200","300","400","500","600","800","1000"]
 sgn_masspoints=["100","125","150","175","200","300","400","500","600"]
 
 # Define the signal samples by mass and period
 signal_samples = {
-   "100" : {
-      "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM100_mcRun16.root", 94800, 2016, path),
-      "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM100_mcRun17.root", 97800, 2017, path),
-      "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM100_mcRun18.root", 99200, 2018, path),
-   },
-   "125" : {
-      "2016" : sample("Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM125_mcRun18.root", 98400, 2018, path),
-      "2017" : sample("Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM125_mcRun18.root", 98400, 2018, path),
-      "2018" : sample("Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM125_mcRun18.root", 98400, 2018, path),
-   },
-   "150" : {
-      "2016" : sample("Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM150_mcRun18.root", 90500, 2018, path),
-      "2017" : sample("Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM150_mcRun18.root", 90500, 2018, path),
-      "2018" : sample("Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM150_mcRun18.root", 90500, 2018, path),
-   },
-   "175" : {
-      "2016" : sample("Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM175_mcRun18.root", 89900, 2018, path),
-      "2017" : sample("Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM175_mcRun18.root", 89900, 2018, path),
-      "2018" : sample("Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM175_mcRun18.root", 89900, 2018, path),
-   },
-   "200" : {
-      "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM200_mcRun18.root", 96300, 2018, path),
-      "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM200_mcRun18.root", 96300, 2018, path),
-      "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM200_mcRun18.root", 96300, 2018, path),
-   },
-   "300" : {
-      "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM300_mcRun18.root", 99700, 2018, path),
-      "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM300_mcRun18.root", 99700, 2018, path),
-      "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM300_mcRun18.root", 99700, 2018, path),
-   },
-   "400" : {
-      "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM400_mcRun18.root", 97600, 2018, path),
-      "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM400_mcRun18.root", 97600, 2018, path),
-      "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM400_mcRun18.root", 97600, 2018, path),
-   },
-   "500" : {
-      "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM500_mcRun16.root", 81300, 2016, path),
-      "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM500_mcRun17.root", 97800, 2017, path),
-      "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM500_mcRun18.root", 98700, 2018, path),
-   },
-   "600" : {
-      "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM600_mcRun18.root", 97600, 2018, path),
-      "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM600_mcRun18.root", 97600, 2018, path),
-      "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM600_mcRun18.root", 97600, 2018, path),
-   },
-   "800" : {
-      "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM800_mcRun18.root", 97600, 2018, path),
-      "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM800_mcRun18.root", 97600, 2018, path),
-      "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM800_mcRun18.root", 97600, 2018, path),
-   },
-   "1000" : {
-      "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM1000_mcRun18.root", 97600, 2018, path),
-      "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM1000_mcRun18.root", 97600, 2018, path),
-      "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM1000_mcRun18.root", 97600, 2018, path),
-   },
+    "100" : {
+        "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM100_mcRun16.root", 94800, 2016, path),
+        "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM100_mcRun17.root", 97800, 2017, path),
+        "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM100_mcRun18.root", 99200, 2018, path),
+    },
+    "125" : {
+        "2016" : sample("Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM125_mcRun18.root", 98400, 2018, path),
+        "2017" : sample("Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM125_mcRun18.root", 98400, 2018, path),
+        "2018" : sample("Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM125_mcRun18.root", 98400, 2018, path),
+    },
+    "150" : {
+        "2016" : sample("Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM150_mcRun18.root", 90500, 2018, path),
+        "2017" : sample("Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM150_mcRun18.root", 90500, 2018, path),
+        "2018" : sample("Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM150_mcRun18.root", 90500, 2018, path),
+    },
+    "175" : {
+        "2016" : sample("Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM175_mcRun18.root", 89900, 2018, path),
+        "2017" : sample("Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM175_mcRun18.root", 89900, 2018, path),
+        "2018" : sample("Meas_fullAndSFAndGenParts_bdt_v7_emu_scan_sgnM175_mcRun18.root", 89900, 2018, path),
+    },
+    "200" : {
+        "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM200_mcRun18.root", 96300, 2018, path),
+        "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM200_mcRun18.root", 96300, 2018, path),
+        "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM200_mcRun18.root", 96300, 2018, path),
+    },
+    "300" : {
+        "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM300_mcRun18.root", 99700, 2018, path),
+        "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM300_mcRun18.root", 99700, 2018, path),
+        "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM300_mcRun18.root", 99700, 2018, path),
+    },
+    "400" : {
+        "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM400_mcRun18.root", 97600, 2018, path),
+        "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM400_mcRun18.root", 97600, 2018, path),
+        "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM400_mcRun18.root", 97600, 2018, path),
+    },
+    "500" : {
+        "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM500_mcRun16.root", 81300, 2016, path),
+        "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM500_mcRun17.root", 97800, 2017, path),
+        "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM500_mcRun18.root", 98700, 2018, path),
+    },
+    "600" : {
+        "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM600_mcRun18.root", 97600, 2018, path),
+        "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM600_mcRun18.root", 97600, 2018, path),
+        "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM600_mcRun18.root", 97600, 2018, path),
+    },
+    "800" : {
+        "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM800_mcRun18.root", 97600, 2018, path),
+        "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM800_mcRun18.root", 97600, 2018, path),
+        "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM800_mcRun18.root", 97600, 2018, path),
+    },
+    "1000" : {
+        "2016" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM1000_mcRun18.root", 97600, 2018, path),
+        "2017" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM1000_mcRun18.root", 97600, 2018, path),
+        "2018" : sample("Meas_fullAndSF_bdt_v7_emu_scan_sgnM1000_mcRun18.root", 97600, 2018, path),
+    },
 }
 
 ### Data
@@ -158,19 +157,14 @@ sf += "*PU_wt*PtZ_wt*Trg_wt*SFbtag_wt*JetPUIDWeight*PtSignal_wt*Prefire_wt"
 
 ### arange flags
 unblind="false"
-if args.unblind:
-   unblind="true"
+if args.unblind: unblind="true"
 shape_dc="true"
-if args.skip_shape_dc:
-   shape_dc="false"
+if args.skip_shape_dc: shape_dc="false"
 do_sgn_syst="true"
-if args.skip_sgn_syst:
-   do_sgn_syst="false"
+if args.skip_sgn_syst: do_sgn_syst="false"
 do_bkg_altfits="true"
-if args.skip_bkg_altfits:
-   do_bkg_altfits="false"
-if args.data_file=="":
-   args.data_file=path+data_files[args.year]
+if args.skip_bkg_altfits: do_bkg_altfits="false"
+if args.data_file=="": args.data_file=path+data_files[args.year]
 
 rt.gROOT.SetBatch(True)
 
@@ -195,8 +189,8 @@ if args.skip_mc_point != "":
 signal_distributions = []
 cuts = sf+"*(Flag_met && Flag_muon && Flag_electron && "+args.xgb_min+"<xgb && xgb<="+args.xgb_max+")"
 for mpoint in sgn_masspoints:
-  h = rt.TH1F("hmass_"+mpoint,"Signal mass distribution",1100,0,1100)
-  signal_distributions.append(signal_distribution(signal_samples[mpoint], h, "mass_ll", cuts, args.year, not args.skip_correct))
+    h = rt.TH1F("hmass_"+mpoint,"Signal mass distribution",1100,0,1100)
+    signal_distributions.append(signal_distribution(signal_samples[mpoint], h, "mass_ll", cuts, args.year, not args.skip_correct))
 
 # Create a signal interpolation model
 masses = array('d')
@@ -209,7 +203,7 @@ signal_model = create_signal_interpolation(masses, signal_distributions, args.us
 
 ###### main code ######
 if MaxMasspoints>0:
-   print "WILL PRODUCE",MaxMasspoints,"points"
+    print "WILL PRODUCE",MaxMasspoints,"points"
 NextPoint=True 
 
 # set intitial scan mass
@@ -221,59 +215,62 @@ jobs = []
 cnt=-1
 script_head = 'echo ' if args.dry_run else ''
 while (NextPoint):
-  cnt+=1
+    cnt+=1
 
-  # calculate blind range and expected widths/yields for a mass
-  sr_buffer = 1 #in signal width units
-  region_buffer = 10 #in signal width units
-  sr_approx_width = sr_center*(4./200.) # approximate as a linear function so it's stable between BDT categories where the width may vary
+    # calculate blind range and expected widths/yields for a mass
+    sr_buffer = 1 #in signal width units
+    region_buffer = 10 #in signal width units
+    sr_approx_width = sr_center*(4./200.) # approximate as a linear function so it's stable between BDT categories where the width may vary
 
-  # Get the signal model parameters
-  sig_mass = sr_center
-  sig_params = interpolate(signal_model, sig_mass)
-  sig_yield  = sig_params[0]
-  sig_mean   = sig_params[1]
-  sig_width  = sig_params[2]
-  sig_alpha1 = sig_params[3] if not args.use_gaus else 0.
-  sig_alpha2 = sig_params[4] if not args.use_gaus else 0.
-  sig_enne1  = sig_params[5] if not args.use_gaus else 0.
-  sig_enne2  = sig_params[6] if not args.use_gaus else 0.
+    # Get the signal model parameters
+    sig_mass = sr_center
+    sig_params = interpolate(signal_model, sig_mass)
+    sig_yield  = sig_params[0]
+    sig_mean   = sig_params[1]
+    sig_width  = sig_params[2]
+    sig_alpha1 = sig_params[3] if not args.use_gaus else 0.
+    sig_alpha2 = sig_params[4] if not args.use_gaus else 0.
+    sig_enne1  = sig_params[5] if not args.use_gaus else 0.
+    sig_enne2  = sig_params[6] if not args.use_gaus else 0.
 
-  # Define the search region using the signal width
-  sr_width = round(sig_width,2)
-  sr_min = round(sr_center - sr_buffer*sr_approx_width,2)
-  sr_max = round(sr_center + sr_buffer*sr_approx_width,2)
-  sr_yld = round(sig_yield,2)
-  cut_off_min = args.min_fit_mass # Don't use below 95 GeV due to Z->tautau contamination
-  cut_off_max = args.max_fit_mass
-  min_mass = round(sr_center - region_buffer*sr_approx_width,2) if not args.full_mass else cut_off_min
-  max_mass = round(sr_center + region_buffer*sr_approx_width,2) if not args.full_mass else cut_off_max
-  min_mass = max(cut_off_min, min_mass)
-  max_mass = min(cut_off_max, max_mass)
-  print "SR central",sr_center,"width",sr_width,"min",sr_min,"max",sr_max,"yield",sr_yld
+    # Define the search region using the signal width
+    sr_width = round(sig_width,2)
+    sr_min = round(sr_center - sr_buffer*sr_approx_width,2)
+    sr_max = round(sr_center + sr_buffer*sr_approx_width,2)
+    sr_yld = round(sig_yield,2)
+    cut_off_min = args.min_fit_mass # Don't use below 95 GeV due to Z->tautau contamination
+    cut_off_max = args.max_fit_mass
+    min_mass = round(sr_center - region_buffer*sr_approx_width,2) if not args.full_mass else cut_off_min
+    max_mass = round(sr_center + region_buffer*sr_approx_width,2) if not args.full_mass else cut_off_max
+    min_mass = max(cut_off_min, min_mass)
+    max_mass = min(cut_off_max, max_mass)
+    print "SR central",sr_center,"width",sr_width,"min",sr_min,"max",sr_max,"yield",sr_yld
 
-  if(args.mass_point < 0 or cnt == args.mass_point):
+    if(args.mass_point < 0 or cnt == args.mass_point):
+
     # create pdfs for mass point
     if not args.skip_fit:
-      sgn_argument = ''
-      bkg_argument = ''
-      if args.component == "sgn" or args.component == "all":
-        tail = (' >| log/fit_sgn_%s_mp%i.log' % (args.name, cnt)) if args.log_files else ''
-        if args.use_gaus: #Define the signal shape parameters (Gaussian or Crystal Ball)
-          sig_line = '{'+str(sr_center)+','+str(sr_width)+'}'
-        else:
-           sig_line = '{%.4f, %.4f, %.4f, %.4f, %.4f, %.4f}' % (sig_mean, sig_width, sig_alpha1, sig_alpha2, sig_enne1, sig_enne2)
-        sgn_argument = script_head + 'root -l -b -q ScanMuE_fit_sgn_v'+args.ver+'.C\'("' \
-           +args.name+"_mp"+str(cnt)+'",' \
-           +str(min_mass)+','+str(max_mass)+','+sig_line+',' \
-           +str(sr_yld)+','+shape_dc+',"'+args.outvar+'",'+do_sgn_syst+',"'+args.param_name+'")\'' + tail
-      if args.component == "bkg" or args.component == "all":
-        tail = (' >| log/fit_bkg_%s_mp%i.log' % (args.name, cnt)) if args.log_files else ''
-        bkg_argument = script_head + 'root -l -b -q ScanMuE_fit_bkg_v'+args.ver+'.C\'("'+args.name+"_mp"+str(cnt)+'","'+args.data_file \
-           +'","'+args.xgb_min+'","'+args.xgb_max+'",'+str(min_mass)+','+str(max_mass)+','+str(sr_min)+','+str(sr_max) \
-           +','+unblind+','+shape_dc+',"'+args.outvar+'","'+args.param_name+'")\'' + tail
-      job = Process(target = proc_unit, args=(sgn_argument,bkg_argument))
-      jobs.append(job)
+        sgn_argument = ''
+        bkg_argument = ''
+        if args.component == "sgn" or args.component == "all":
+            tail = (' >| log/fit_sgn_%s_mp%i.log' % (args.name, cnt)) if args.log_files else ''
+
+            if args.use_gaus: #Define the signal shape parameters (Gaussian or Crystal Ball)
+                sig_line = '{'+str(sr_center)+','+str(sr_width)+'}'
+            else:
+                sig_line = '{%.4f, %.4f, %.4f, %.4f, %.4f, %.4f}' % (sig_mean, sig_width, sig_alpha1, sig_alpha2, sig_enne1, sig_enne2)
+            sgn_argument = script_head + 'root -l -b -q ScanMuE_fit_sgn_v'+args.ver+'.C\'("' \
+                +args.name+"_mp"+str(cnt)+'",' \
+                +str(min_mass)+','+str(max_mass)+','+sig_line+',' \
+                +str(sr_yld)+','+shape_dc+',"'+args.outvar+'",'+do_sgn_syst+',"'+args.param_name+'")\'' + tail
+
+        if args.component == "bkg" or args.component == "all":
+            tail = (' >| log/fit_bkg_%s_mp%i.log' % (args.name, cnt)) if args.log_files else ''
+            bkg_argument = script_head + 'root -l -b -q ScanMuE_fit_bkg_v'+args.ver+'.C\'("'+args.name+"_mp"+str(cnt)+'","'+args.data_file \
+                +'","'+args.xgb_min+'","'+args.xgb_max+'",'+str(min_mass)+','+str(max_mass)+','+str(sr_min)+','+str(sr_max) \
+                +','+unblind+','+shape_dc+',"'+args.outvar+'","'+args.param_name+'")\'' + tail
+        job = Process(target = proc_unit, args=(sgn_argument,bkg_argument))
+        jobs.append(job)
 
 
     # Create a corresponding datacard
@@ -283,27 +280,27 @@ while (NextPoint):
     if not args.dry_run and not args.skip_dc: print_datacard(cardname, sig_file, bkg_file, args.param_name, sr_center)
 
 
-  # next iteration mass and exit conditions
-  sr_center = round(sr_center +args.scan_step*sr_approx_width,2)
-  if cnt>= MaxMasspoints and MaxMasspoints>0:
-     print "Requested only",MaxMasspoints,"run"
-     NextPoint=False
-  if sr_center >= args.scan_max:
-     NextPoint=False
+    # next iteration mass and exit conditions
+    sr_center = round(sr_center +args.scan_step*sr_approx_width,2)
+    if cnt>= MaxMasspoints and MaxMasspoints>0:
+        print "Requested only",MaxMasspoints,"run"
+        NextPoint=False
+    if sr_center >= args.scan_max:
+        NextPoint=False
   
   
 if args.nthreads < 1: args.nthreads = 1
 print("Parallel processing using %i threads" % (args.nthreads))
 for ithread in range(0,len(jobs),args.nthreads):
     nthread = args.nthreads+ithread
-    if (nthread>len(jobs)):
-       nthread=len(jobs)
+    if nthread > len(jobs):
+        nthread=len(jobs)
     print("Processing threads %i to %i out of %i jobs: %5.1f%% processed" % (ithread, nthread-1, len(jobs), (ithread*100./len(jobs))))
     for job in jobs[ithread:nthread]:
-      job.start()
+        job.start()
     for job in jobs[ithread:nthread]:    
-      job.join()
+        job.join()
 
-print "scannned",cnt+1,"points"
+print "Scannned",cnt+1,"points"
 
 

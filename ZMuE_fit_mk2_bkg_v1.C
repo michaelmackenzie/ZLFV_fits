@@ -27,7 +27,7 @@ int ZMuE_fit_mk2_bkg_v1(TString name="bin1_r2",
 
    //////////////////////////////////// configuration /////////////////////////
    gROOT->SetBatch(true);
-   TString ztt_file = "/afs/cern.ch/work/g/gkaratha/private/Analysis/DispJets/Analyzer/CMSSW_10_2_16_UL/src/PhysicsTools/NanoAODTools/plotter/ZMuE_plotting_and_cfg/BDT/Meas_fullAndSFAndGenDecay_bdt_v7_bkg_dy_mcRun2_extend.root";
+   TString ztt_file = "/eos/cms/store/cmst3/user/gkaratha//ZmuE_forBDT_v7_tuples/BDT_outputs_v7/Meas_fullAndSFAndGenDecay_bdt_v7_bkg_dy_mcRun2_extend.root";
 
 
    int min_gspol_order=1,max_gspol_order=3;
