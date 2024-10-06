@@ -8,7 +8,7 @@
 ///////////////////////////////// Main code ///////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 //////// mk2: seperating fit in components
-///////////// Continuous bkg component v1 
+///////////// Continuous bkg component v1
 //////////////////// + Same thing as v401 etc
 //////////////////// + Added Gauss&Expo
 //////////////////// + Added Gauss&Power
@@ -17,17 +17,17 @@
 
 
 
-int ZMuE_fit_mk2_bkg_v1(TString name="bin1_r2", 
+int ZMuE_fit_mk2_bkg_v1(TString name="bin1_r2",
     TString bkg_file="pseudo_data_from_MC_v2_r0.root",
-    TString xgbmin="0.3",TString xgbmax="0.7", bool create_dc_input=false, 
-    TString outvar="mass_ll", TString varname="bin", 
-    bool pseudodata_input=false, float pseudodata_norm=-1.0, 
+    TString xgbmin="0.3",TString xgbmax="0.7", bool create_dc_input=false,
+    TString outvar="mass_ll", TString varname="bin",
+    bool pseudodata_input=false, float pseudodata_norm=-1.0,
     bool histo_input=false, bool histo_toy=false, int add_orders_gspol=0,
     int add_orders_gsexp=0, int add_orders_gsplaw=0 ){
 
    //////////////////////////////////// configuration /////////////////////////
    gROOT->SetBatch(true);
-   TString ztt_file = "/eos/cms/store/cmst3/user/gkaratha//ZmuE_forBDT_v7_tuples/BDT_outputs_v7/Meas_fullAndSFAndGenDecay_bdt_v7_bkg_dy_mcRun2_extend.root";
+   TString ztt_file = "/eos/cms/store/cmst3/user/gkaratha/ZmuE_forBDT_v7_tuples/BDT_outputs_v7/Meas_fullAndSFAndGenDecay_bdt_v7_bkg_dy_mcRun2_extend.root";
 
 
    int min_gspol_order=1,max_gspol_order=3;
@@ -38,9 +38,9 @@ int ZMuE_fit_mk2_bkg_v1(TString name="bin1_r2",
    bool Fit_gsplaw=true;
    int min_cheb_order=3,max_cheb_order=5;
    bool Fit_cheb=true;
-   
-   
- 
+
+
+
    TString cuts = xgbmin+"<xgb && xgb<"+xgbmax+" && Flag_met && Flag_muon && Flag_electron"; // not add mass_ll here when run systematics
    TString tree_name="mytreefit";
    double  min_fit_range = 70.;
@@ -52,16 +52,16 @@ int ZMuE_fit_mk2_bkg_v1(TString name="bin1_r2",
    bool Bkg_only_fit_whole_region=false;
    int printout_levels=1; // 0: Print only final fits parameters, 1: Print all fits from F test tests
 
-   
+
 
    ///////////////////////////////////////////////////////////////////////////
    cout<<" \n ********************************************************** "<<endl;
    cout<<" ********************************************************** "<<endl;
    cout<<" ***ZMuE mk2 fit v1: bkg part ***Output name:"+name<<endl;
    cout<<" ********************************************************** "<<endl;
-   
+
    if (!Verbose) RooMsgService::instance().setGlobalKillBelow(RooFit::FATAL);
-   
+
 
    // read trees
    RooRealVar dilep_mass("mass_ll","m(e,#mu)", 110., min_fit_range , max_fit_range, "GeV/c^{2}");
@@ -84,11 +84,11 @@ int ZMuE_fit_mk2_bkg_v1(TString name="bin1_r2",
 
    TH1F * hmcext_ztt = new TH1F("hmcext_ztt","",100,50,150);
    ccdy->Draw("mass_ll>>hmcext_ztt",xgbmin+"<xgb && xgb<"+xgbmax+" && IsGen_Ztt==1");
- 
+
    RooRealVar mll_mc_extd("mass_ll","m(e,#mu)", 70., 50, 80, "GeV/c^{2}");
    mll_mc_extd.setBins(30);
    RooDataHist dhistext_ztt("dhistext_ztt","",RooArgSet(mll_mc_extd),hmcext_ztt);
-   
+
    RooRealVar * ztt_gs_mu= new RooRealVar("ztt_gs_mu_"+varname,"ztt_gs_mu_"+varname,60,50,69); //69
    RooRealVar * ztt_gs_wd = new RooRealVar("ztt_gs_wd_"+varname,"ztt_gs_wd_"+varname,11,5,20);
 
@@ -99,7 +99,7 @@ int ZMuE_fit_mk2_bkg_v1(TString name="bin1_r2",
 
    ///// fit
    RooFitResult * ztt_gs_result = ztt_gs_epdf.fitTo(dhistext_ztt,RooFit::Extended(1),RooFit::Save(),RooFit::PrintLevel(-1));
-   
+
    print_details (ztt_gs_result);
 
    auto ext_ztt_frame = mll_mc_extd.frame();
@@ -109,7 +109,7 @@ int ZMuE_fit_mk2_bkg_v1(TString name="bin1_r2",
    save_plot_and_band(ext_ztt_frame,mll_mc_extd,{"ztt_gs_pdf"},"m(e,#mu)","mk2bkg_ztt_gauss_band_"+name);
 
 
-    
+
    ////// get bkg dataset
    cout<<"\n *********************** Background fit ********************** "<<endl;
 
@@ -128,7 +128,7 @@ int ZMuE_fit_mk2_bkg_v1(TString name="bin1_r2",
    } else {
      TChain * cc = new TChain(tree_name);
      cc->Add(bkg_file);
-     if (pseudodata_norm>0) 
+     if (pseudodata_norm>0)
        cc->Draw("mass_ll>>hbkg",TString(std::to_string(pseudodata_norm))+"*NormGen_wt*( !IsZmm  && !IsZee && "+cuts+" )");
      else
        cc->Draw("mass_ll>>hbkg","NormGen_wt*( !IsZmm  && !IsZee && "+cuts+" )");
@@ -145,7 +145,7 @@ int ZMuE_fit_mk2_bkg_v1(TString name="bin1_r2",
    }
 
 
-   /////// gaus + polynomial 
+   /////// gaus + polynomial
    std::vector<RooAbsPdf*> bkg_gs_pol_pdfs;
    std::vector<RooRealVar*> bkg_gs_pol_ampl;
    std::vector<TString> bkg_gs_pol_names;
@@ -216,7 +216,7 @@ int ZMuE_fit_mk2_bkg_v1(TString name="bin1_r2",
      gs_plaw_Ftest =  HistFtest(bkg_gs_plaw_pdfs, bkg_gs_plaw_ampl,  dhist_bkg, dilep_mass, bkg_gs_plaw_orders, bkg_gs_plaw_names, bkg_gs_plaw_legs, nbin_data, "mk2bkg_v1_gausplaw_"+name, 0.05,0.01,printout_levels);
      cout<<" ************************ No Z->mumu Ftest Gauss + Power law end ************************ "<<endl;
    }
-   
+
 
   /////// chebychev
    std::vector<RooAbsPdf*> bkg_cheb_pdfs;
@@ -259,7 +259,7 @@ int ZMuE_fit_mk2_bkg_v1(TString name="bin1_r2",
         bkg_legs.push_back("Gauss+Polynomial "+sord);
      }
    }
-   
+
    if (gs_exp_Ftest.success) {
      for (int i=0; i<gs_exp_Ftest.getAllOrder.size(); i++){
         int iord =gs_exp_Ftest.getAllOrder[i];
@@ -270,7 +270,7 @@ int ZMuE_fit_mk2_bkg_v1(TString name="bin1_r2",
         bkg_legs.push_back("Gauss+Expo "+sord);
      }
    }
-   
+
    if (gs_plaw_Ftest.success) {
      for (int i=0; i<gs_plaw_Ftest.getAllOrder.size(); i++){
         int iord =gs_plaw_Ftest.getAllOrder[i];
@@ -325,14 +325,14 @@ int ZMuE_fit_mk2_bkg_v1(TString name="bin1_r2",
 
    int nstartFNC2=nstartFNC1;
    if (gs_exp_Ftest.success) {
-     for (int i=0; i<gs_exp_Ftest.getAllOrder.size(); i++){   
+     for (int i=0; i<gs_exp_Ftest.getAllOrder.size(); i++){
        std::vector<float> param;
        for(int j=2; j<final_results[i+nstartFNC1].size(); j++)
           param.push_back(final_results[i+nstartFNC1][j]);
        TString sord (std::to_string(gs_exp_Ftest.getAllOrder[i]));
        models_out.add( *(CreateGaussExpo( "bkg_gsexp"+sord+"_pdf_"+varname, gs_exp_Ftest.getAllOrder[i], dilep_mass_out,ztt_gs_mu,ztt_gs_wd,param)) );
-       nstartFNC2+=1;   
-     }  
+       nstartFNC2+=1;
+     }
      for( int iord =gs_exp_Ftest.getBestOrder+1; iord<gs_exp_Ftest.getBestOrder+add_orders_gsexp+1; iord++){
        TString sord (std::to_string(iord));
        models_out.add( *(CreateGaussExpo( "bkg_gsexp"+sord+"_pdf_"+varname, iord, dilep_mass_out,ztt_gs_mu,ztt_gs_wd)) );
@@ -341,14 +341,14 @@ int ZMuE_fit_mk2_bkg_v1(TString name="bin1_r2",
 
    int nstartFNC3=nstartFNC2;
    if (gs_plaw_Ftest.success) {
-     for (int i=0; i<gs_plaw_Ftest.getAllOrder.size(); i++){   
+     for (int i=0; i<gs_plaw_Ftest.getAllOrder.size(); i++){
        std::vector<float> param;
        for(int j=2; j<final_results[i+nstartFNC2].size(); j++)
           param.push_back(final_results[i+nstartFNC2][j]);
        TString sord (std::to_string(gs_plaw_Ftest.getAllOrder[i]));
        models_out.add( *(CreateGaussPower( "bkg_gsplaw"+sord+"_pdf_"+varname, gs_plaw_Ftest.getAllOrder[i], dilep_mass_out,ztt_gs_mu,ztt_gs_wd,param)) );
        nstartFNC3+=1;
-     }  
+     }
     for( int iord =gs_plaw_Ftest.getBestOrder+1; iord<gs_plaw_Ftest.getBestOrder+add_orders_gsplaw+1; iord++){
        TString sord (std::to_string(iord));
        models_out.add( *(CreateGaussPower( "bkg_gsplaw"+sord+"_pdf_"+varname, iord, dilep_mass_out,ztt_gs_mu,ztt_gs_wd)) );
@@ -358,14 +358,14 @@ int ZMuE_fit_mk2_bkg_v1(TString name="bin1_r2",
 
    int nstartFNC4=nstartFNC3;
    if (cheb_Ftest.success) {
-     for (int i=0; i<cheb_Ftest.getAllOrder.size(); i++){   
+     for (int i=0; i<cheb_Ftest.getAllOrder.size(); i++){
        std::vector<float> param;
        for(int j=2; j<final_results[i+nstartFNC3].size(); j++)
           param.push_back(final_results[i+nstartFNC3][j]);
        TString sord (std::to_string(cheb_Ftest.getAllOrder[i]));
        models_out.add( *(CreateChebychev( "bkg_cheb"+sord+"_pdf_"+varname, cheb_Ftest.getAllOrder[i], dilep_mass_out)) );
        nstartFNC4+=1;
-     }  
+     }
    /* for( int iord =gs_plaw_Ftest.getBestOrder+1; iord<gs_plaw_Ftest.getBestOrder+add_orders_gsplaw+1; iord++){
        TString sord (std::to_string(iord));
        models_out.add( *(CreateGaussPower( "bkg_gsplaw"+sord+"_pdf_"+varname, iord, dilep_mass_out,ztt_gs_mu,ztt_gs_wd)) );
@@ -373,12 +373,12 @@ int ZMuE_fit_mk2_bkg_v1(TString name="bin1_r2",
    }
 
    RooMultiPdf multipdf("multipdf_"+varname, "", cat, models_out);
-   RooRealVar norm_out("multipdf_"+varname+"_norm","",dhist_bkg->sumEntries(),0.5*dhist_bkg->sumEntries(),10*dhist_bkg->sumEntries());  
-    
+   RooRealVar norm_out("multipdf_"+varname+"_norm","",dhist_bkg->sumEntries(),0.5*dhist_bkg->sumEntries(),10*dhist_bkg->sumEntries());
+
    wspace->import(cat);
    wspace->import(multipdf);
    wspace->import(norm_out);
-   wspace->writeToFile("workspace_mk2bkg_v1_"+name+".root"); // write outputt   
+   wspace->writeToFile("workspace_mk2bkg_v1_"+name+".root"); // write outputt
 
  return 0;
-} 
+}
