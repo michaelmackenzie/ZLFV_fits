@@ -69,7 +69,7 @@ if len(unknown)>0:
    print "not found:",unknown,"exitting"
    exit()
 
-MaxMasspoints=1 #X for debug; -1 for run
+MaxMasspoints=-1 #X for debug; -1 for run
 sr_buffer = 1 #in signal width units
 region_buffer = 10 #in signal width units
 

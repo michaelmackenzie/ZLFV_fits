@@ -770,7 +770,7 @@ FtestStruct HistFtest(std::vector<RooAbsPdf*> pdfs, std::vector<RooRealVar*> amp
                       vector<TString> names, std::vector<TString> legs,
                       int nbin_data, TString extra_name, float ftest_step,
                       float min_pvalue=-1, int print_level=0,
-                      bool force_inclusion = false, bool force_standard_env = false){
+                      bool force_inclusion = false, bool force_standard_env = false,TString cfg="./"){
 
   bool Print_details = 0;
   if (print_level) Print_details=true;
@@ -780,7 +780,7 @@ FtestStruct HistFtest(std::vector<RooAbsPdf*> pdfs, std::vector<RooRealVar*> amp
   //Fit each function to the sidebands and evalueate the chi^2 and N(dof)
   std::vector<std::vector<float>> chi2_dof = FitHistBkgFunctions(pdfs, ampls, dataset, dilep_mass, names, legs, nbin_data,
                                                                  false, //use or don't use the signal region in the fit
-                                                                 extra_name,Print_details,"ftest");
+                                                                 extra_name,Print_details,cfg+"ftest");
 
   //Evaluate the p-values for each function as well as the F-test p-value for increasing the function order
   std::vector<float> pvalues;

@@ -46,7 +46,6 @@ fi
 if  [[ "${PROCESS}" == "limits" ]]
 then
    combine -M AsymptoticLimits param_datacard_${NAME}.root  -m 91 --saveWorkspace -n .bestfit_${NAME} $FROZENPARAM  $FLAGS
-   cp *.bestfit_${NAME}*.root ${ORGDIR}
 fi
 
 if  [[ "${PROCESS}" == "fit" ]]
