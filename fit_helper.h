@@ -153,7 +153,8 @@ double get_manual_subrange_chisquare(RooRealVar& obs, RooAbsPdf* pdf, RooDataSet
 
 double get_manual_subrange_chisquare(RooRealVar& obs, RooAbsPdf* pdf, RooDataHist& data,
 				     const char* range = nullptr, const char* norm_range = nullptr,
-				     bool norm_skip = true, int* nbins = nullptr, bool IsPseudodata=false) {
+				     bool norm_skip = true, int* nbins = nullptr, bool IsPseudodata=false,
+                                     const int verbose = 0) {
   TH1* htmp_pdf  = pdf->createHistogram("htmp_chisq_pdf" , obs);
   TH1* htmp_data = data.createHistogram("htmp_chisq_data", obs);
   if(htmp_pdf->GetNbinsX() != htmp_data->GetNbinsX()) {
@@ -171,6 +172,7 @@ double get_manual_subrange_chisquare(RooRealVar& obs, RooAbsPdf* pdf, RooDataHis
   const int bin_norm_hi = (xmin_norm < xmax_norm) ? htmp_data->GetXaxis()->FindBin(xmax_norm) : (norm_skip) ? -1 : htmp_data->GetNbinsX();
   double pdf_norm = 0.;
   double data_norm = 0.;
+  if(verbose) cout << __func__ << ": Evaluating for PDF = " << pdf->GetName() << " and range " << ((range) ? range : "NONE") << endl;
   for(int ibin = 1; ibin <= htmp_data->GetNbinsX(); ++ibin) {
     bool in_norm = ibin >= bin_norm_lo && ibin <= bin_norm_hi;
     if(norm_skip && in_norm) continue; //if given a range to skip
@@ -179,7 +181,9 @@ double get_manual_subrange_chisquare(RooRealVar& obs, RooAbsPdf* pdf, RooDataHis
     const double ndata = htmp_data->GetBinContent(ibin); //observed N(events)
     pdf_norm  += npdf;
     data_norm += ndata;
-   // cout << "Norm Bin " << ibin << " (" << htmp_data->GetBinLowEdge(ibin) << " - " << htmp_data->GetBinLowEdge(ibin) + htmp_data->GetBinWidth(ibin) << "): Data = " << ndata << " PDF = " << npdf  << endl;
+    if(verbose) cout << "Norm Bin " << ibin << " (" << htmp_data->GetBinLowEdge(ibin)
+                     << " - " << htmp_data->GetBinLowEdge(ibin) + htmp_data->GetBinWidth(ibin)
+                     << "): Data = " << ndata << " PDF = " << npdf  << endl;
   }
   if(pdf_norm <= 0.) {
     cout << __func__ << ": PDF normalization is non-positive!\n";
@@ -188,17 +192,19 @@ double get_manual_subrange_chisquare(RooRealVar& obs, RooAbsPdf* pdf, RooDataHis
     return -1.;
   }
   htmp_pdf->Scale(data_norm / pdf_norm);
-// cout << __func__ << ": Scaling PDF:\n" << "#### Data norm = " << data_norm << endl << "#### PDF norm = " << pdf_norm << endl << "#### Scaling the PDF histogram by " << data_norm / pdf_norm << endl;
+  if(verbose) cout << __func__ << ": Scaling PDF:\n" << "#### Data norm = " << data_norm << endl
+                   << "#### PDF norm = " << pdf_norm << endl << "#### Scaling the PDF histogram by "
+                   << data_norm / pdf_norm << endl;
 
   const double xmin = obs.getMin(range);
   const double xmax = obs.getMax(range);
-  // cout << __func__ << ": Using observable range " << xmin << " - " << xmax << endl;
+  if(verbose) cout << __func__ << ": Using observable range " << xmin << " - " << xmax << endl;
 
   double chisq = 0.;
   const int bin_lo = max(1, htmp_data->GetXaxis()->FindBin(xmin));
   const int bin_hi = min(htmp_data->GetNbinsX(), htmp_data->GetXaxis()->FindBin(xmax));
-  // cout << __func__ << ": Hist binning corresponds to " << htmp_data->GetBinLowEdge(bin_lo)
-  //      << " - " << htmp_data->GetXaxis()->GetBinUpEdge(bin_hi) << " (widths = " << htmp_data->GetBinWidth(1) << ")" << endl;
+  if(verbose) cout << __func__ << ": Hist binning corresponds to " << htmp_data->GetBinLowEdge(bin_lo)
+                   << " - " << htmp_data->GetXaxis()->GetBinUpEdge(bin_hi) << " (widths = " << htmp_data->GetBinWidth(1) << ")" << endl;
   for(int ibin = bin_lo; ibin <= bin_hi; ++ibin) {
     const double x_data = htmp_data->GetBinCenter(ibin);
     const double x_pdf  = htmp_pdf ->GetBinCenter(ibin);
@@ -210,15 +216,15 @@ double get_manual_subrange_chisquare(RooRealVar& obs, RooAbsPdf* pdf, RooDataHis
 
     const double ndata = htmp_data->GetBinContent(ibin);
     const double val  = ndata - npdf;
-    //cout<<"val "<<val<<" error "<<error<<" npdf "<<npdf<<endl;
     const double sigma = val*val / ((IsPseudodata) ? error*error : (npdf <= 0. ? 1.e-5 : npdf));
-   // const double sigma = val*val/(error*error);
     chisq += sigma;
 
- //     cout << "Bin " << ibin << " (" << htmp_data->GetBinLowEdge(ibin) << " - "<< htmp_data->GetBinLowEdge(ibin) + htmp_data->GetBinWidth(ibin) << "): Data = " << ndata << " PDF = " << npdf<< " --> sigma = " << sigma << endl;
+    if(verbose) cout << "Bin " << ibin << " (" << htmp_data->GetBinLowEdge(ibin)
+                     << " - "<< htmp_data->GetBinLowEdge(ibin) + htmp_data->GetBinWidth(ibin)
+                     << "): Data = " << ndata << " PDF = " << npdf<< " --> sigma = " << sigma << endl;
     }
 
-//  cout << __func__ << ": Total chi^2 = " << chisq << " / " << bin_hi - bin_lo+1 << " bins\n";
+  if(verbose) cout << __func__ << ": Total chi^2 = " << chisq << " / " << bin_hi - bin_lo+1 << " bins\n";
   if(nbins) *nbins = bin_hi - bin_lo+1;
   delete htmp_pdf;
   delete htmp_data;
@@ -253,11 +259,12 @@ double get_chi_squared(RooRealVar& obs, RooAbsPdf* pdf, RooDataHist& data, bool 
 		       int& nbins, int n_param, bool ReturnNorm=true, bool IsPseudodata=false){
 
     if(!unblind) {
+      const int verbose = 0; //for viewing debug printout of chi^2 evaluation
       nbins = 0; //count of total bins used
       int nbin_running = 0; //bins used in a single subrange
-      double chi_sq = get_manual_subrange_chisquare(obs, pdf, data, "left", "sr", true, &nbin_running, IsPseudodata);
+      double chi_sq = get_manual_subrange_chisquare(obs, pdf, data, "left", "sr", true, &nbin_running, IsPseudodata, verbose);
       nbins += nbin_running;
-      chi_sq += get_manual_subrange_chisquare(obs, pdf, data, "right","sr", true, &nbin_running, IsPseudodata);
+      chi_sq += get_manual_subrange_chisquare(obs, pdf, data, "right","sr", true, &nbin_running, IsPseudodata, verbose);
       nbins += nbin_running;
       cout<<">>>> chi2: "<<chi_sq<<" bins "<<nbins<<" n_param "<<n_param<<" chi2/ndof "<<chi_sq/(nbins - (n_param))<<endl;
       if (ReturnNorm) chi_sq/=(nbins - n_param);

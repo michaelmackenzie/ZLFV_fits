@@ -30,6 +30,7 @@ bool fix_initialization_ = true; //switch to apply the initialization fix, remov
    histo_input      : Use the input background histograms rather than a tree
    histo_toy        : Replace the data/MC with a toy dataset
    add_orders_gsX   : Add additional orders or the function family (polynomial, exponential, power law)
+   add_zmumu        : Add the Z->mumu PDF to the parametric PDF to fit the data
 **/
 int ZMuE_fit_mk2_bkg_v1(TString name="bin1_r2",
     TString bkg_file="pseudo_data_from_MC_v2_r0.root",
@@ -37,7 +38,7 @@ int ZMuE_fit_mk2_bkg_v1(TString name="bin1_r2",
     TString outvar="mass_ll", TString varname="bin",
     bool pseudodata_input=false, float pseudodata_norm=-1.0,
     bool histo_input=false, bool histo_toy=false, int add_orders_gspol=0,
-    int add_orders_gsexp=0, int add_orders_gsplaw=0 ){
+    int add_orders_gsexp=0, int add_orders_gsplaw=0, bool add_zmumu = false ){
 
    //////////////////////////////////// configuration /////////////////////////
    gROOT->SetBatch(true);
@@ -83,9 +84,9 @@ int ZMuE_fit_mk2_bkg_v1(TString name="bin1_r2",
    dilep_mass.setBins(nbin_data);
    dilep_mass_out.setBins(nbin_data);
 
-   dilep_mass.setRange("left",min_fit_range, blind_min); //70,88
-   dilep_mass.setRange("right",blind_max, max_fit_range); //94,110
-   dilep_mass.setRange("sr",blind_min,blind_max); //88,94
+   dilep_mass.setRange("left",min_fit_range, blind_min-1.e-3); //70,86
+   dilep_mass.setRange("right",blind_max+1.e-3, max_fit_range); //96,110
+   dilep_mass.setRange("sr",blind_min+1.e-3,blind_max-1.e-3); //88,94
    dilep_mass.setRange("full",min_fit_range, max_fit_range);
 
 
@@ -169,6 +170,30 @@ int ZMuE_fit_mk2_bkg_v1(TString name="bin1_r2",
      dhist_bkg = new RooDataHist("dhist_bkg","dhist_bkg",dilep_mass,* dhist_bkg_toy);
    }
 
+   const double ndata = dhist_bkg->sumEntries();
+
+   // Retrieve the Z->mumu PDF if requested
+   RooAbsPdf* zmumu_pdf = nullptr;
+   double nzmumu = 0.;
+   RooRealVar* zmumu_frac = nullptr;
+   if(add_zmumu) {
+     auto f_zmm = TFile::Open("workspace_mk2zmm_v1_"+name+".root", "READ");
+     if(!f_zmm) return -1;
+     auto ws_zmm = (RooWorkspace*) f_zmm->Get("workspace_zmm");
+     nzmumu = ((RooRealVar*) ws_zmm->var("zmm_dcb_pdf_"+name+"_norm"))->getVal();
+     zmumu_frac = new RooRealVar("zmumu_frac", "Z->#mu#mu PDF normalization", nzmumu/ndata);
+     zmumu_frac->setConstant(true);
+     cout << "--- Using a Z->mumu normalization of " << nzmumu << endl;
+
+     //Re-create the Z->mumu PDF, using the observable here
+     zmumu_pdf = new RooDoubleCrystalBall("zmumu_pdf", "Z->#mu#mu PDF", dilep_mass,
+                                          *((RooRealVar*) ws_zmm->var("zmm_dcb_mean_" + name)),
+                                          *((RooRealVar*) ws_zmm->var("zmm_dcb_sigma_" + name)),
+                                          *((RooRealVar*) ws_zmm->var("zmm_dcb_a1_" + name)),
+                                          *((RooRealVar*) ws_zmm->var("zmm_dcb_n1_" + name)),
+                                          *((RooRealVar*) ws_zmm->var("zmm_dcb_a2_" + name)),
+                                          *((RooRealVar*) ws_zmm->var("zmm_dcb_n2_" + name)));
+   }
 
    /////// gaus + polynomial
    std::vector<RooAbsPdf*> bkg_gs_pol_pdfs;
@@ -179,8 +204,12 @@ int ZMuE_fit_mk2_bkg_v1(TString name="bin1_r2",
 
    for (int iorder=min_gspol_order; iorder<max_gspol_order+1; iorder++){
       TString sorder(std::to_string(iorder));
-      bkg_gs_pol_pdfs.push_back(CreateGaussPolynomial( "gauss_pol"+sorder+"_pdf", iorder, dilep_mass,ztt_gs_mu,ztt_gs_wd));
-      bkg_gs_pol_ampl.push_back(new RooRealVar("gauss_pol"+sorder+"_pdf_norm", "gauss_pol"+sorder+"_pdf_norm",dhist_bkg->sumEntries(),0,2*dhist_bkg->sumEntries()));
+      RooAbsPdf* pdf = CreateGaussPolynomial( "gauss_pol"+sorder+"_pdf", iorder, dilep_mass,ztt_gs_mu,ztt_gs_wd);
+      if(add_zmumu) {
+        pdf = new RooAddPdf("wrapped_" + TString(pdf->GetName()), "Wrapped PDF", RooArgList(*zmumu_pdf,*pdf), RooArgList(*zmumu_frac));
+      }
+      bkg_gs_pol_pdfs.push_back(pdf);
+      bkg_gs_pol_ampl.push_back(new RooRealVar("gauss_pol"+sorder+"_pdf_norm", "gauss_pol"+sorder+"_pdf_norm",ndata, 0., 2.*ndata));
       bkg_gs_pol_names.push_back("gauss_pol"+sorder+"_"+name);
       bkg_gs_pol_legs.push_back("Gauss+Polynomial "+sorder);
       bkg_gs_pol_orders.push_back(iorder);
@@ -204,8 +233,12 @@ int ZMuE_fit_mk2_bkg_v1(TString name="bin1_r2",
 
    for (int iorder=min_gsexp_order; iorder<max_gsexp_order+1; iorder++){
       TString sorder(std::to_string(iorder));
-      bkg_gs_exp_pdfs.push_back(CreateGaussExpo( "gauss_exp"+sorder+"_pdf", iorder, dilep_mass,ztt_gs_mu,ztt_gs_wd));
-      bkg_gs_exp_ampl.push_back(new RooRealVar("gauss_exp"+sorder+"_pdf_norm", "gauss_exp"+sorder+"_pdf_norm",dhist_bkg->sumEntries(),0,2*dhist_bkg->sumEntries()));
+      RooAbsPdf* pdf = CreateGaussExpo( "gauss_exp"+sorder+"_pdf", iorder, dilep_mass,ztt_gs_mu,ztt_gs_wd);
+      if(add_zmumu) {
+        pdf = new RooAddPdf("wrapped_" + TString(pdf->GetName()), "Wrapped PDF", RooArgList(*zmumu_pdf,*pdf), RooArgList(*zmumu_frac));
+      }
+      bkg_gs_exp_pdfs.push_back(pdf);
+      bkg_gs_exp_ampl.push_back(new RooRealVar("gauss_exp"+sorder+"_pdf_norm", "gauss_exp"+sorder+"_pdf_norm",ndata, 0., 2.*ndata));
       bkg_gs_exp_names.push_back("gauss_exp"+sorder+"_"+name);
       bkg_gs_exp_legs.push_back("Gauss+Expo "+sorder);
       bkg_gs_exp_orders.push_back(iorder);
@@ -228,8 +261,12 @@ int ZMuE_fit_mk2_bkg_v1(TString name="bin1_r2",
 
    for (int iorder=min_gsplaw_order; iorder<max_gsplaw_order+1; iorder++){
       TString sorder(std::to_string(iorder));
-      bkg_gs_plaw_pdfs.push_back(CreateGaussPower( "gauss_plaw"+sorder+"_pdf", iorder, dilep_mass,ztt_gs_mu,ztt_gs_wd));
-      bkg_gs_plaw_ampl.push_back(new RooRealVar("gauss_plaw"+sorder+"_pdf_norm", "gauss_plaw"+sorder+"_pdf_norm",dhist_bkg->sumEntries(),0,2*dhist_bkg->sumEntries()));
+      RooAbsPdf* pdf = CreateGaussPower( "gauss_plaw"+sorder+"_pdf", iorder, dilep_mass,ztt_gs_mu,ztt_gs_wd);
+      if(add_zmumu) {
+        pdf = new RooAddPdf("wrapped_" + TString(pdf->GetName()), "Wrapped PDF", RooArgList(*zmumu_pdf,*pdf), RooArgList(*zmumu_frac));
+      }
+      bkg_gs_plaw_pdfs.push_back(pdf);
+      bkg_gs_plaw_ampl.push_back(new RooRealVar("gauss_plaw"+sorder+"_pdf_norm", "gauss_plaw"+sorder+"_pdf_norm",ndata, 0., 2.*ndata));
       bkg_gs_plaw_names.push_back("gauss_plaw"+sorder+"_"+name);
       bkg_gs_plaw_legs.push_back("Gauss+Power law "+sorder);
       bkg_gs_plaw_orders.push_back(iorder);
@@ -252,8 +289,12 @@ int ZMuE_fit_mk2_bkg_v1(TString name="bin1_r2",
 
    for (int iorder=min_cheb_order; iorder<max_cheb_order+1; iorder++){
       TString sorder(std::to_string(iorder));
-      bkg_cheb_pdfs.push_back(CreateChebychev( "cheb"+sorder+"_pdf", iorder, dilep_mass));
-      bkg_cheb_ampl.push_back(new RooRealVar("cheb"+sorder+"_pdf_norm", "cheb"+sorder+"_pdf_norm",dhist_bkg->sumEntries(),0,2*dhist_bkg->sumEntries()));
+      RooAbsPdf* pdf = CreateChebychev( "cheb"+sorder+"_pdf", iorder, dilep_mass);
+      if(add_zmumu) {
+        pdf = new RooAddPdf("wrapped_" + TString(pdf->GetName()), "Wrapped PDF", RooArgList(*zmumu_pdf,*pdf), RooArgList(*zmumu_frac));
+      }
+      bkg_cheb_pdfs.push_back(pdf);
+      bkg_cheb_ampl.push_back(new RooRealVar("cheb"+sorder+"_pdf_norm", "cheb"+sorder+"_pdf_norm",ndata, 0., 2.*ndata));
       bkg_cheb_names.push_back("cheb"+sorder+"_"+name);
       bkg_cheb_legs.push_back("Chebychev "+sorder);
       bkg_cheb_orders.push_back(iorder);
@@ -279,7 +320,7 @@ int ZMuE_fit_mk2_bkg_v1(TString name="bin1_r2",
         int iord =gs_pol_Ftest.getAllOrder[i];
         TString sord(std::to_string(iord));
         bkg_pdfs.push_back(CreateGaussPolynomial( varname+"_gspol"+sord+"_pdf", iord, dilep_mass,ztt_gs_mu,ztt_gs_wd));
-        bkg_ampl.push_back(new RooRealVar(varname+"_gspol"+sord+"_pdf_norm", varname+"_gspol"+sord+"_pdf_norm",dhist_bkg->sumEntries(),0,2*dhist_bkg->sumEntries()));
+        bkg_ampl.push_back(new RooRealVar(varname+"_gspol"+sord+"_pdf_norm", varname+"_gspol"+sord+"_pdf_norm",ndata, 0., 2.*ndata));
         bkg_names.push_back(varname+"_gspol"+sord+"_pdf");
         bkg_legs.push_back("Gauss+Polynomial "+sord);
      }
@@ -287,7 +328,7 @@ int ZMuE_fit_mk2_bkg_v1(TString name="bin1_r2",
        for( int iord =gs_pol_Ftest.getBestOrder+1; iord<gs_pol_Ftest.getBestOrder+add_orders_gspol+1; iord++){
          TString sord (std::to_string(iord));
          bkg_pdfs.push_back(CreateGaussPolynomial( varname+"_gspol"+sord+"_pdf", iord, dilep_mass,ztt_gs_mu,ztt_gs_wd));
-         bkg_ampl.push_back(new RooRealVar(varname+"_gspol"+sord+"_pdf_norm", varname+"_gspol"+sord+"_pdf_norm",dhist_bkg->sumEntries(),0,2*dhist_bkg->sumEntries()));
+         bkg_ampl.push_back(new RooRealVar(varname+"_gspol"+sord+"_pdf_norm", varname+"_gspol"+sord+"_pdf_norm",ndata, 0., 2.*ndata));
          bkg_names.push_back(varname+"_gspol"+sord+"_pdf");
          bkg_legs.push_back("Gauss+Polynomial "+sord);
        }
@@ -299,7 +340,7 @@ int ZMuE_fit_mk2_bkg_v1(TString name="bin1_r2",
         int iord =gs_exp_Ftest.getAllOrder[i];
         TString sord(std::to_string(iord));
         bkg_pdfs.push_back(CreateGaussExpo( varname+"_gsexp"+sord+"_pdf", iord, dilep_mass,ztt_gs_mu,ztt_gs_wd));
-        bkg_ampl.push_back(new RooRealVar(varname+"_gsexp"+sord+"_pdf_norm", varname+"_gsexp"+sord+"_pdf_norm",dhist_bkg->sumEntries(),0,2*dhist_bkg->sumEntries()));
+        bkg_ampl.push_back(new RooRealVar(varname+"_gsexp"+sord+"_pdf_norm", varname+"_gsexp"+sord+"_pdf_norm",ndata, 0., 2.*ndata));
         bkg_names.push_back(varname+"_gsexp"+sord+"_pdf");
         bkg_legs.push_back("Gauss+Expo "+sord);
      }
@@ -307,7 +348,7 @@ int ZMuE_fit_mk2_bkg_v1(TString name="bin1_r2",
        for( int iord =gs_exp_Ftest.getBestOrder+1; iord<gs_exp_Ftest.getBestOrder+add_orders_gsexp+1; iord++){
          TString sord (std::to_string(iord));
          bkg_pdfs.push_back(CreateGaussExpo( varname+"_gsexp"+sord+"_pdf", iord, dilep_mass,ztt_gs_mu,ztt_gs_wd));
-         bkg_ampl.push_back(new RooRealVar(varname+"_gsexp"+sord+"_pdf_norm", varname+"_gsexp"+sord+"_pdf_norm",dhist_bkg->sumEntries(),0,2*dhist_bkg->sumEntries()));
+         bkg_ampl.push_back(new RooRealVar(varname+"_gsexp"+sord+"_pdf_norm", varname+"_gsexp"+sord+"_pdf_norm",ndata, 0., 2.*ndata));
          bkg_names.push_back(varname+"_gsexp"+sord+"_pdf");
          bkg_legs.push_back("Gauss+Expo "+sord);
        }
@@ -319,7 +360,7 @@ int ZMuE_fit_mk2_bkg_v1(TString name="bin1_r2",
         int iord =gs_plaw_Ftest.getAllOrder[i];
         TString sord(std::to_string(iord));
         bkg_pdfs.push_back(CreateGaussPower( varname+"_gsplaw"+sord+"_pdf", iord, dilep_mass,ztt_gs_mu,ztt_gs_wd));
-        bkg_ampl.push_back(new RooRealVar(varname+"_gsplaw"+sord+"_pdf_norm", varname+"_gsplaw"+sord+"_pdf_norm",dhist_bkg->sumEntries(),0,2*dhist_bkg->sumEntries()));
+        bkg_ampl.push_back(new RooRealVar(varname+"_gsplaw"+sord+"_pdf_norm", varname+"_gsplaw"+sord+"_pdf_norm",ndata, 0., 2.*ndata));
         bkg_names.push_back(varname+"_gsplaw"+sord+"_pdf");
         bkg_legs.push_back("Gauss+Power "+sord);
      }
@@ -327,7 +368,7 @@ int ZMuE_fit_mk2_bkg_v1(TString name="bin1_r2",
        for( int iord =gs_plaw_Ftest.getBestOrder+1; iord<gs_plaw_Ftest.getBestOrder+add_orders_gsplaw+1; iord++){
          TString sord (std::to_string(iord));
          bkg_pdfs.push_back(CreateGaussPower( varname+"_gsplaw"+sord+"_pdf", iord, dilep_mass,ztt_gs_mu,ztt_gs_wd));
-         bkg_ampl.push_back(new RooRealVar(varname+"_gsplaw"+sord+"_pdf_norm", varname+"_gsplaw"+sord+"_pdf_norm",dhist_bkg->sumEntries(),0,2*dhist_bkg->sumEntries()));
+         bkg_ampl.push_back(new RooRealVar(varname+"_gsplaw"+sord+"_pdf_norm", varname+"_gsplaw"+sord+"_pdf_norm",ndata, 0., 2.*ndata));
          bkg_names.push_back(varname+"_gsplaw"+sord+"_pdf");
          bkg_legs.push_back("Gauss+Power "+sord);
        }
@@ -340,7 +381,7 @@ int ZMuE_fit_mk2_bkg_v1(TString name="bin1_r2",
         int iord =cheb_Ftest.getAllOrder[i];
         TString sord(std::to_string(iord));
         bkg_pdfs.push_back(CreateChebychev( varname+"_cheb"+sord+"_pdf", iord, dilep_mass));
-        bkg_ampl.push_back(new RooRealVar(varname+"_cheb"+sord+"_pdf_norm", varname+"_cheb"+sord+"_pdf_norm",dhist_bkg->sumEntries(),0,2*dhist_bkg->sumEntries()));
+        bkg_ampl.push_back(new RooRealVar(varname+"_cheb"+sord+"_pdf_norm", varname+"_cheb"+sord+"_pdf_norm",ndata, 0., 2.*ndata));
         bkg_names.push_back(varname+"_cheb"+sord+"_pdf");
         bkg_legs.push_back("Chebychev "+sord);
      }

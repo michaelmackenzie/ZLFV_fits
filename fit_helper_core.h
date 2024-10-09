@@ -194,11 +194,10 @@ RooChebychev * CreateChebychev( TString name, int order, RooRealVar& dilep_mass,
    RooArgList param_list;
    std::vector<RooRealVar*> bkg_params;
    for (int i=0; i<order; i++){
-     float def=0,min=-3.0,max=3.0;
-     if (i==0)
-       def=-1,min=-5.0,max=5.0;
-     else if (i==1) def=0.6;
-     else if (i==2) def=-0.2;
+     float def=0.,min=-3.0,max=3.0;
+     if (i==0)      def=-1,min=-5.0,max=5.0;
+     else if (i==1) def=0.6,min=-3.0,max=3.0;
+     else if (i==2) def=-0.2,min=-1.,max=1.0;
      if (parameters.size()>0)
         def= parameters[i];
      bkg_params.push_back(new RooRealVar(name+"_"+TString(to_string(i)), name+"_"+TString(to_string(i)), def,min,max));
@@ -722,13 +721,13 @@ std::vector<std::vector<float>> FitHistBkgFunctions(std::vector<RooAbsPdf*> pdfs
 
     RooFitResult * fit_result = epdf.fitTo(*dataset,RooFit::Extended(1),RooFit::Save(),RooFit::PrintLevel(-1),RooFit::Range(fit_range));
     if (Print_details) print_details (fit_result);
-    int n_param = fit_result->floatParsFinal().getSize();
+    int n_param = count_pdf_params(pdfs[i])+1; //fit_result->floatParsFinal().getSize();
     auto chi2_frame = dilep_mass.frame();
     dataset->plotOn(chi2_frame,RooFit::Name("data"));
     pdfs[i]->plotOn(chi2_frame,RooFit::Range("full"));
     //FIXME: Should the chi^2 and N(DOF) only consider the sidebands, not the full range?
     int nbins_used; //set by the chi^2 call
-    float chi2 = get_chi_squared(dilep_mass, pdfs[i], *dataset, true || Unblind_data_sr, nbins_used, n_param, false, false);
+    float chi2 = get_chi_squared(dilep_mass, pdfs[i], *dataset, Unblind_data_sr, nbins_used, n_param, false, false);
     const int ndof = max(1, nbins_used - n_param); //force positive N(dof) to avoid division by 0
     // RooChi2Var chi("chi", "chi", *pdfs[i], *dataset, RooFit::Range("full"));
     // float chi2 = chi.getVal();//chi2_frame->chiSquare(nbin_data-1);
