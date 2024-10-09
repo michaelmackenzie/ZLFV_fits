@@ -48,6 +48,37 @@ TLatex * CMS_lumi(bool IsData){
 }
 
 
+//-----------------------------------------------------------------------------------------------------------------------------------
+// Count free PDF params
+int count_pdf_params(RooAbsPdf* pdf) {
+  int nfree = 0;
+  auto vars = pdf->getVariables();
+  auto itr = vars->createIterator();
+  auto var = itr->Next();
+  while(var) {
+    if(!((RooAbsReal*) var)->isConstant()) ++nfree;
+    var = itr->Next();
+  }
+  return max(nfree-1,0); //remove the observable from counting
+}
+
+//-----------------------------------------------------------------------------------------------------------------------------------
+// List of PDF parameters, optionally sorted alphabetically
+list<RooRealVar*> list_pdf_params(RooAbsPdf* pdf, RooRealVar& obs, bool sorted = false) {
+  auto vars = pdf->getVariables();
+  auto itr = vars->createIterator();
+  auto var = itr->Next();
+  list<RooRealVar*> results;
+  while(var) {
+    TString name = var->GetName();
+    if(name != obs.GetName()) results.push_back((RooRealVar*) var);
+    var = itr->Next();
+  }
+  if(sorted) {
+    results.sort([](const RooRealVar* a, const RooRealVar* b) { return std::string(a->GetName()) < std::string(b->GetName()); });
+  }
+  return results;
+}
 
 double get_manual_subrange_chisquare(RooRealVar& obs, RooAbsPdf* pdf, RooDataSet& data,
 				     const char* range = nullptr, const char* norm_range = nullptr,

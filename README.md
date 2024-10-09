@@ -40,17 +40,59 @@ ls -lt pseudo_data_*.root | head -n 1
 The total model is built using [ZMuE_fit_mk2_wrapper_v1.py](ZMuE_fit_mk2_wrapper_v1.py).
 The Z->e+mu search uses three exclusive BDT score-defined categories: 0.3-0.7, 0.7-0.9, and 0.9-1.0.
 
+Running with fits to the data:
 ```
-#FIXME: Currently signal systematics, Z->mumu MC, and background MC are not in a publicly visible location
+OUTDIR="zemu_data/"
+[ ! -d ${OUTDIR} ] && mkdir ${OUTDIR}
+
 MCFILE="pseudo_data_from_MC_v2_r0_ZmmR1.25_updateID.root"
-DATAFILE="/eos/cms/store/cmst3/user/gkaratha/ZmuE_forBDT_v7_tuples/BDT_outputs_v7/Meas_fullAndSF_bdt_v7_signal_mcRun1*.root"
+DATAFILE="/eos/cms/store/cmst3/user/gkaratha/ZmuE_forBDT_v7_tuples/BDT_outputs_v7/Meas_full_bdt_v7_data_emu_Run1*.root"
+# FIXME: ZMuE_fit_mk2_datagen_v1.C attempts to use the background fit file for an MC dataset, which fails on data
+python ZMuE_fit_mk2_wrapper_v1.py -o bin1 --fit-version 1 --skip-sgn-syst --zmm-file ${MCFILE} --bkg-file "${DATAFILE}" --xgb-min 0.3 --xgb-max 0.7 --param-name bin1 --outvar lepm_11 --create-shape-dc
+python ZMuE_fit_mk2_wrapper_v1.py -o bin2 --fit-version 1 --skip-sgn-syst --zmm-file ${MCFILE} --bkg-file "${DATAFILE}" --xgb-min 0.7 --xgb-max 0.9 --param-name bin2 --outvar lepm_12 --create-shape-dc
+python ZMuE_fit_mk2_wrapper_v1.py -o bin3 --fit-version 1 --skip-sgn-syst --zmm-file ${MCFILE} --bkg-file "${DATAFILE}" --xgb-min 0.9 --xgb-max 1.1 --param-name bin3 --outvar lepm_13 --create-shape-dc
+
+mv *mk2*_bin?.png ${OUTDIR}
+mv *mk2*_bin?.root ${OUTDIR}
+# Copy the corresponding COMBINE cards
+cp /eos/cms/store/group/phys_smp/ZLFV/datacards/zemu/*.txt ${OUTDIR}
+```
+Running with fits to the MC:
+```
+OUTDIR="zemu_mc/"
+[ ! -d ${OUTDIR} ] && mkdir ${OUTDIR}
+
+MCFILE="pseudo_data_from_MC_v2_r0_ZmmR1.25_updateID.root"
 python ZMuE_fit_mk2_wrapper_v1.py -o bin1 --fit-version 1 --skip-sgn-syst --zmm-file ${MCFILE} --bkg-file ${MCFILE} --xgb-min 0.3 --xgb-max 0.7 --param-name bin1 --outvar lepm_11 --create-shape-dc
 python ZMuE_fit_mk2_wrapper_v1.py -o bin2 --fit-version 1 --skip-sgn-syst --zmm-file ${MCFILE} --bkg-file ${MCFILE} --xgb-min 0.7 --xgb-max 0.9 --param-name bin2 --outvar lepm_12 --create-shape-dc
 python ZMuE_fit_mk2_wrapper_v1.py -o bin3 --fit-version 1 --skip-sgn-syst --zmm-file ${MCFILE} --bkg-file ${MCFILE} --xgb-min 0.9 --xgb-max 1.1 --param-name bin3 --outvar lepm_13 --create-shape-dc
-python ZMuE_fit_mk2_wrapper_v1.py -o bin3 --fit-version 1 --skip-sgn-syst --zmm-file ${MCFILE} --bkg-file ${DATAFILE} --xgb-min 0.9 --xgb-max 1.1 --param-name bin3 --outvar lepm_13 --create-shape-dc
-[ ! -d zemu ] && mkdir zemu
-mv *mk2*_bin?.png zemu/
-mv *mk2*_bin?.root zemu/
+
+mv *mk2*_bin?.png ${OUTDIR}
+mv *mk2*_bin?.root ${OUTDIR}
+# Copy the corresponding COMBINE cards
+cp /eos/cms/store/group/phys_smp/ZLFV/datacards/zemu/*.txt ${OUTDIR}
+```
+
+Running with the smoothed templates:
+```
+OUTDIR="zemu_embed/"
+[ ! -d ${OUTDIR} ] && mkdir ${OUTDIR}
+
+python CreatePseudoData_from_EmbedTH1.py
+mv ctmpl_embed*.png ${OUTDIR}/
+
+DATAFILE="/eos/cms/store/cmst3/user/gkaratha/ZmuE_forBDT_v7_tuples/BDT_outputs_v7/Meas_fullAndSF_bdt_v7_signal_mcRun1*.root"
+FITARGS="--run-histo --histo-toy --add-pol-order 1 --add-exp-order 1 --add-plaw-order 1"
+MCFILE="template_zemu_embed_v3_bin1.root"
+python ZMuE_fit_mk2_wrapper_v1.py -o bin1 --fit-version 1 --skip-sgn-syst ${FITARGS} --zmm-file ${MCFILE} --bkg-file ${MCFILE} --xgb-min 0.3 --xgb-max 0.7 --param-name bin1 --outvar lepm_11 --create-shape-dc
+MCFILE="template_zemu_embed_v3_bin2.root"
+python ZMuE_fit_mk2_wrapper_v1.py -o bin2 --fit-version 1 --skip-sgn-syst ${FITARGS} --zmm-file ${MCFILE} --bkg-file ${MCFILE} --xgb-min 0.7 --xgb-max 0.9 --param-name bin2 --outvar lepm_12 --create-shape-dc
+MCFILE="template_zemu_embed_v3_bin3.root"
+python ZMuE_fit_mk2_wrapper_v1.py -o bin3 --fit-version 1 --skip-sgn-syst ${FITARGS} --zmm-file ${MCFILE} --bkg-file ${MCFILE} --xgb-min 0.9 --xgb-max 1.1 --param-name bin3 --outvar lepm_13 --create-shape-dc
+mv *mk2*_bin?.png ${OUTDIR}
+mv *mk2*_bin?.root ${OUTDIR}
+# Copy the corresponding COMBINE cards
+cp /eos/cms/store/group/phys_smp/ZLFV/datacards/zemu/*.txt ${OUTDIR}
 ```
 
 ## Z prime scan

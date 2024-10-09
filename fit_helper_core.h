@@ -354,8 +354,8 @@ RooAddPdf * CreateGaussPolynomial( TString name, int order, RooRealVar& dilep_ma
    RooArgList param_list;
    std::vector<RooRealVar*> bkg_params;
    for (int i=0; i<order; i++){
-     if (i==0)
-       def=0.06,min=-3.0,max=3.0;
+     if (i==0) def=0.06,min=-3.0,max=3.0;
+     else      def=0.00,min=-0.1,max=0.1;
      if (parameters.size()>0) def= parameters[i];
      bkg_params.push_back(new RooRealVar(name+"_b"+TString(to_string(i)), name+"_b"+TString(to_string(i)), def,min,max));
      param_list.add(*bkg_params[i]);
@@ -404,8 +404,8 @@ RooAddPdf * CreateGaussExpo( TString name, int order, RooRealVar& dilep_mass, Ro
         float c_def = 1./order;
         if (parameters.size())
           c_def = parameters[i-1];
-        RooRealVar * bkg_sumplaw_c = new RooRealVar(name+"_c"+TString(to_string(i)), name+"_c"+TString(to_string(i)),c_def, 0, 1.);
-        coefs.push_back(bkg_sumplaw_c);
+        RooRealVar * bkg_sumexp_c = new RooRealVar(name+"_c"+TString(to_string(i)), name+"_c"+TString(to_string(i)),c_def, 0, 1.);
+        coefs.push_back(bkg_sumexp_c);
         coef_list.add(*coefs[i]);
      }
   }
