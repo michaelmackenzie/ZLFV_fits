@@ -226,7 +226,7 @@ int ScanMuE_fit_bkg_v2(TString name="bin1_r2",
 
   //////////// fit here
   cout<<" Fit of best variables "<<endl;
-  TString fig_tag = (mmackenz) ? outdir + "/cfit" : "cfit";
+  TString fig_tag = "cfit";
   std::vector<std::vector<float>> final_results =  FitHistBkgFunctions(bkg_pdfs, bkg_ampl, dhist_bkg, dilep_mass,
                                                                        bkg_names, bkg_legs, nbin_data, unblind,
                                                                        "scanbkg_v2_best_"+name, true,fig_tag,true,unblind);

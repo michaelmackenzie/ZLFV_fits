@@ -24,7 +24,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-o", dest="name",default="test", type=str,help="output root name")
 parser.add_argument("--data-file", dest="data_file",default="", type=str,help="data file")
 parser.add_argument("--xgb-min", dest="xgb_min",default="0.70", type=str,help="BDT score minimum for the category")
-parser.add_argument("--xgb-max", dest="xgb_max",default="1.01", type=str,help="BDT score maximum for the category")
+parser.add_argument("--xgb-max", dest="xgb_max",default="1.00", type=str,help="BDT score maximum for the category")
 parser.add_argument("--scan-min", dest="scan_min",default=110., type=float,help="Minimum mass hypothesis to scan")
 parser.add_argument("--scan-max", dest="scan_max",default=500., type=float,help="Maximum mass hypothesis to scan")
 parser.add_argument("--min-fit-mass", dest="min_fit_mass",default=95., type=float,help="Minimum mass used in the fits")
@@ -187,15 +187,17 @@ if args.skip_mc_point != "":
 
 # Get the signal mass distribution for each Z prime MC sample
 signal_distributions = []
-cuts = sf+"*(Flag_met && Flag_muon && Flag_electron && "+args.xgb_min+"<xgb && xgb<="+args.xgb_max+")"
+cuts = sf+"*(Flag_met && Flag_muon && Flag_electron && "+args.xgb_min+"<=xgb && xgb<"+args.xgb_max+")"
 for mpoint in sgn_masspoints:
     h = rt.TH1F("hmass_"+mpoint,"Signal mass distribution",1100,0,1100)
     signal_distributions.append(signal_distribution(signal_samples[mpoint], h, "mass_ll", cuts, args.year, not args.skip_correct))
+    print signal_samples[mpoint]["2018"]
 
 # Create a signal interpolation model
 masses = array('d')
 for mass in sgn_masspoints: masses.append(float(mass))
 signal_model = create_signal_interpolation(masses, signal_distributions, args.use_gaus, figdir)
+exit()
 
 #----------------------------------------------
 # Perform the signal scan at all mass points
@@ -214,6 +216,7 @@ jobs = []
 
 cnt=-1
 script_head = 'echo ' if args.dry_run else ''
+
 while (NextPoint):
     cnt+=1
 
@@ -233,7 +236,7 @@ while (NextPoint):
     sig_enne1  = sig_params[5] if not args.use_gaus else 0.
     sig_enne2  = sig_params[6] if not args.use_gaus else 0.
 
-    # Define the search region using the signal width
+    # Define the search region using the approximate signal width
     sr_width = round(sig_width,2)
     sr_min = round(sr_center - sr_buffer*sr_approx_width,2)
     sr_max = round(sr_center + sr_buffer*sr_approx_width,2)
@@ -246,38 +249,38 @@ while (NextPoint):
     max_mass = min(cut_off_max, max_mass)
     print "SR central",sr_center,"width",sr_width,"min",sr_min,"max",sr_max,"yield",sr_yld
 
+    # Check if this mass point should be processed
     if(args.mass_point < 0 or cnt == args.mass_point):
+        # create pdfs for the mass point
+        if not args.skip_fit:
+            sgn_argument = ''
+            bkg_argument = ''
+            if args.component == "sgn" or args.component == "all":
+                tail = (' >| log/fit_sgn_%s_mp%i.log' % (args.name, cnt)) if args.log_files else ''
 
-    # create pdfs for mass point
-    if not args.skip_fit:
-        sgn_argument = ''
-        bkg_argument = ''
-        if args.component == "sgn" or args.component == "all":
-            tail = (' >| log/fit_sgn_%s_mp%i.log' % (args.name, cnt)) if args.log_files else ''
+                if args.use_gaus: #Define the signal shape parameters (Gaussian or Crystal Ball)
+                    sig_line = '{'+str(sr_center)+','+str(sr_width)+'}'
+                else:
+                    sig_line = '{%.4f, %.4f, %.4f, %.4f, %.4f, %.4f}' % (sig_mean, sig_width, sig_alpha1, sig_alpha2, sig_enne1, sig_enne2)
+                sgn_argument = script_head + 'root -l -b -q ScanMuE_fit_sgn_v'+args.ver+'.C\'("' \
+                    +args.name+"_mp"+str(cnt)+'",' \
+                    +str(min_mass)+','+str(max_mass)+','+sig_line+',' \
+                    +str(sr_yld)+','+shape_dc+',"'+args.outvar+'",'+do_sgn_syst+',"'+args.param_name+'")\'' + tail
 
-            if args.use_gaus: #Define the signal shape parameters (Gaussian or Crystal Ball)
-                sig_line = '{'+str(sr_center)+','+str(sr_width)+'}'
-            else:
-                sig_line = '{%.4f, %.4f, %.4f, %.4f, %.4f, %.4f}' % (sig_mean, sig_width, sig_alpha1, sig_alpha2, sig_enne1, sig_enne2)
-            sgn_argument = script_head + 'root -l -b -q ScanMuE_fit_sgn_v'+args.ver+'.C\'("' \
-                +args.name+"_mp"+str(cnt)+'",' \
-                +str(min_mass)+','+str(max_mass)+','+sig_line+',' \
-                +str(sr_yld)+','+shape_dc+',"'+args.outvar+'",'+do_sgn_syst+',"'+args.param_name+'")\'' + tail
-
-        if args.component == "bkg" or args.component == "all":
-            tail = (' >| log/fit_bkg_%s_mp%i.log' % (args.name, cnt)) if args.log_files else ''
-            bkg_argument = script_head + 'root -l -b -q ScanMuE_fit_bkg_v'+args.ver+'.C\'("'+args.name+"_mp"+str(cnt)+'","'+args.data_file \
-                +'","'+args.xgb_min+'","'+args.xgb_max+'",'+str(min_mass)+','+str(max_mass)+','+str(sr_min)+','+str(sr_max) \
-                +','+unblind+','+shape_dc+',"'+args.outvar+'","'+args.param_name+'")\'' + tail
-        job = Process(target = proc_unit, args=(sgn_argument,bkg_argument))
-        jobs.append(job)
+            if args.component == "bkg" or args.component == "all":
+                tail = (' >| log/fit_bkg_%s_mp%i.log' % (args.name, cnt)) if args.log_files else ''
+                bkg_argument = script_head + 'root -l -b -q ScanMuE_fit_bkg_v'+args.ver+'.C\'("'+args.name+"_mp"+str(cnt)+'","'+args.data_file \
+                    +'","'+args.xgb_min+'","'+args.xgb_max+'",'+str(min_mass)+','+str(max_mass)+','+str(sr_min)+','+str(sr_max) \
+                    +','+unblind+','+shape_dc+',"'+args.outvar+'","'+args.param_name+'")\'' + tail
+            job = Process(target = proc_unit, args=(sgn_argument,bkg_argument))
+            jobs.append(job)
 
 
-    # Create a corresponding datacard
-    cardname = carddir + "datacard_zprime_" + args.name + ("_mass-%.1f" % (sr_center)) + "_mp" + str(cnt) + ".txt"
-    sig_file = "WorkspaceScanSGN/workspace_scansgn_v" + args.ver + "_" + args.name + "_mp" + str(cnt) + ".root"
-    bkg_file = "WorkspaceScanBKG/workspace_scanbkg_v" + args.ver + "_" + args.name + "_mp" + str(cnt) + ".root"
-    if not args.dry_run and not args.skip_dc: print_datacard(cardname, sig_file, bkg_file, args.param_name, sr_center)
+        # Create a corresponding datacard
+        cardname = carddir + "datacard_zprime_" + args.name + ("_mass-%.1f" % (sr_center)) + "_mp" + str(cnt) + ".txt"
+        sig_file = "WorkspaceScanSGN/workspace_scansgn_v" + args.ver + "_" + args.name + "_mp" + str(cnt) + ".root"
+        bkg_file = "WorkspaceScanBKG/workspace_scanbkg_v" + args.ver + "_" + args.name + "_mp" + str(cnt) + ".root"
+        if not args.dry_run and not args.skip_dc: print_datacard(cardname, sig_file, bkg_file, args.param_name, sr_center)
 
 
     # next iteration mass and exit conditions

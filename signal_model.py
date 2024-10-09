@@ -21,7 +21,7 @@ class sample:
         self.mass_ = mass
 
     def __repr__(self):
-        return "Sample:\n file = %s\n n_gen = %i\n year = %i\n base_path = %s\n" % (self.file_path_, self.n_gen_, self.year_, self.base_path_)
+        return "Sample:\n file = %s\n n_gen = %i\n year = %i\n base_path = %s\n mass = %.1f\n" % (self.file_path_, self.n_gen_, self.year_, self.base_path_, self.mass_)
 
 #----------------------------------------------------------------------------------------
 # Retrieve the signal distribution, properly weighing each year's component
