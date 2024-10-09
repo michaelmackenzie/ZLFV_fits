@@ -33,6 +33,10 @@ These can be retrieved using [CreatePseudoData_from_MC_v2.py](CreatePseudoData_f
 ```
 python CreatePseudoData_from_MC_v2.py
 ls -lt pseudo_data_*.root | head -n 1
+
+# Get the smoothed templates
+cp /afs/cern.ch/user/m/mimacken/public/forGeorge/zemu_smoothed_embed_v03_1?.root ./
+rename "zemu_smoothed_embed_v03_1" "template_zemu_embed_v3_bin" zemu_smoothed_embed_v03_1?.root
 ```
 
 ### Build the model
@@ -56,7 +60,10 @@ mv *mk2*_bin?.png ${OUTDIR}
 mv *mk2*_bin?.root ${OUTDIR}
 # Copy the corresponding COMBINE cards
 cp /eos/cms/store/group/phys_smp/ZLFV/datacards/zemu/*.txt ${OUTDIR}
+# Copy the signal workspaces with the correct systematics
+cp /eos/cms/store/group/phys_smp/ZLFV/datacards/zemu/workspace_mk2sgn_v1_*.root ${OUTDIR}
 ```
+
 Running with fits to the MC:
 ```
 OUTDIR="zemu_mc/"
@@ -71,15 +78,14 @@ mv *mk2*_bin?.png ${OUTDIR}
 mv *mk2*_bin?.root ${OUTDIR}
 # Copy the corresponding COMBINE cards
 cp /eos/cms/store/group/phys_smp/ZLFV/datacards/zemu/*.txt ${OUTDIR}
+# Copy the signal workspaces with the correct systematics
+cp /eos/cms/store/group/phys_smp/ZLFV/datacards/zemu/workspace_mk2sgn_v1_*.root ${OUTDIR}
 ```
 
 Running with the smoothed templates:
 ```
 OUTDIR="zemu_embed/"
 [ ! -d ${OUTDIR} ] && mkdir ${OUTDIR}
-
-python CreatePseudoData_from_EmbedTH1.py
-mv ctmpl_embed*.png ${OUTDIR}/
 
 DATAFILE="/eos/cms/store/cmst3/user/gkaratha/ZmuE_forBDT_v7_tuples/BDT_outputs_v7/Meas_fullAndSF_bdt_v7_signal_mcRun1*.root"
 FITARGS="--run-histo --histo-toy --add-pol-order 1 --add-exp-order 1 --add-plaw-order 1"
@@ -93,6 +99,12 @@ mv *mk2*_bin?.png ${OUTDIR}
 mv *mk2*_bin?.root ${OUTDIR}
 # Copy the corresponding COMBINE cards
 cp /eos/cms/store/group/phys_smp/ZLFV/datacards/zemu/*.txt ${OUTDIR}
+# Copy the signal workspaces with the correct systematics
+cp /eos/cms/store/group/phys_smp/ZLFV/datacards/zemu/workspace_mk2sgn_v1_*.root ${OUTDIR}
+
+
+python CreatePseudoData_from_EmbedTH1.py
+mv ctmpl_embed*.png ${OUTDIR}/
 ```
 
 ## Z prime scan
@@ -114,9 +126,9 @@ The Z prime scan searches for a narrow resonance in the e-mu data using the Z->e
 MINMASS=110
 MAXMASS=500
 MINBDT=0.70
-MAXBDT=1.01
+MAXBDT=1.00
 NAME=bdt_0d7_1d0_v01
-time python ScanMuE_fit_wrapper_v1.py -o ${NAME} --scan-min ${MINMASS} --scan-max ${MAXMASS} --xgb-min ${MINBDT} --xgb-max ${MAXBDT} --log-files --scan-step 1 [-j N]
+time python ScanMuE_fit_wrapper_v2.py -o ${NAME} --scan-min ${MINMASS} --scan-max ${MAXMASS} --xgb-min ${MINBDT} --xgb-max ${MAXBDT} --log-files --scan-step 1 [-j N]
 ls -l datacards/${NAME}/datacard_zprime_${NAME}_mass-*_mp*.txt | head -n 2
 ls -l WorkspaceScanSGN/workspace_scansgn_v2_${NAME}_mp*.root | head -n 2
 ls -l WorkspaceScanBKG/workspace_scanbkg_v2_${NAME}_mp*.root | head -n 2
@@ -144,8 +156,8 @@ This assumes the nominal scan is already processed on data with corresponding CO
 
 ```
 # Fit the data in the entire mass range for toy generation (only needed once, all toys can be generated from this initial fit)
-python ScanMuE_fit_wrapper_v1.py -o bdt_0d3_0d7_LEE --full-mass --scan-min 300 --scan-max 300.1 --scan-step 1 --xgb-min 0.30 --xgb-max 0.70 --param-name bin1 --component bkg
-python ScanMuE_fit_wrapper_v1.py -o bdt_0d7_1d0_LEE --full-mass --scan-min 300 --scan-max 300.1 --scan-step 1 --xgb-min 0.70 --xgb-max 1.01 --param-name bin2 --component bkg
+python ScanMuE_fit_wrapper_v2.py -o bdt_0d3_0d7_LEE --full-mass --scan-min 300 --scan-max 300.1 --scan-step 1 --xgb-min 0.30 --xgb-max 0.70 --param-name bin1 --component bkg
+python ScanMuE_fit_wrapper_v2.py -o bdt_0d7_1d0_LEE --full-mass --scan-min 300 --scan-max 300.1 --scan-step 1 --xgb-min 0.70 --xgb-max 1.01 --param-name bin2 --component bkg
 
 # Generate a single toy dataset for each BDT region
 python create_toy.py --fit-file WorkspaceScanBKG/workspace_scanbkg_v2_bdt_0d3_0d7_LEE_mp0.root -o toy_0d3_0d7 --toy 2 --param bin1 --seed 90
