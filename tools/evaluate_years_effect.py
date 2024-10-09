@@ -99,8 +99,8 @@ yerrs  = {"2016": array('d'), "2017": array('d'), "2018": array('d')}
 # Scale factors
 sf="Muon_RecoID_wt*Muon_ID_wt*Muon_IsoID_wt*Muon_dxydz_wt"
 sf += "*Electron_RecoID_wt*Electron_ID_wt*Electron_IsoID_wt*Electron_dxydz_wt"
-sf += "*PU_wt*PtZ_wt*Trg_wt*SFbtag_wt*JetPUIDWeight*PtSignal_wt*Prefire_wt"
-# sf += "*MixZ_wt*(SFBDT_weight_Zmumu(xgb)/2.+SFBDT_weight_Zee(xgb)/2.)" # LFV Z-specific weights
+sf += "*PU_wt*Trg_wt*SFbtag_wt*JetPUIDWeight*PtSignal_wt*Prefire_wt"
+# sf += "*PtZ_wt*MixZ_wt*(SFBDT_weight_Zmumu(xgb)/2.+SFBDT_weight_Zee(xgb)/2.)" # LFV Z-specific weights
 
 cuts = sf + "*(Flag_met && Flag_muon && Flag_electron)"
 if xgb_min < xgb_max: cuts += " && (xgb > %.2f && xgb <= %.2f)" % (xgb_min, xgb_max)
@@ -172,6 +172,7 @@ for index in range(len(sgn_masspoints)):
 # Plot the efficiencies relative to 2018
 #--------------------------------------------------------------------
 
+corrs = []
 for year in ["2016", "2017"]:
     y    = array('d')
     yerr = array('d')
@@ -188,4 +189,8 @@ for year in ["2016", "2017"]:
     g.Draw("APE")
     g.GetYaxis().SetRangeUser(0.8, 1.1)
     c.SaveAs(figdir+'rel_eff_' + year + '.png')
+    corrs.append(y)
     print year, y
+
+for index in range(len(corrs[0])):
+    print "Average correction %i: %.3f" % (index, (corrs[0][index]+corrs[1][index])/2.)

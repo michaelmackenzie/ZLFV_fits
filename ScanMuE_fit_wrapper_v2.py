@@ -59,6 +59,7 @@ parser.add_argument("-j", "--nthreads", dest="nthreads",default=8,type=int,help=
 parser.add_argument("--skip-fit", dest="skip_fit",default=False, action='store_true',help="fit skip")
 parser.add_argument("--skip-sgn-syst", dest="skip_sgn_syst",default=False, action='store_true',help="shape experiment")
 parser.add_argument("--skip-bkg-altfits", dest="skip_bkg_altfits",default=False, action='store_true',help="shape experiment")
+parser.add_argument("--no-scales", dest="no_scales",default=False, action='store_true',help="Ignore signal scale factors")
 parser.add_argument("--skip-dc", dest="skip_dc",default=False, action='store_true',help="Skip datacard creation")
 parser.add_argument("--mass-point", dest="mass_point",default=-1,type=int,help="Single mass point to process")
 parser.add_argument("--full-mass", dest="full_mass",default=False,action='store_true',help="Fit the entire mass distribution")
@@ -185,9 +186,11 @@ lumis={"2016":36.33,"2017":41.48,"2018":59.83,
 # Scale factors
 sf="Muon_RecoID_wt*Muon_ID_wt*Muon_IsoID_wt*Muon_dxydz_wt"
 sf += "*Electron_RecoID_wt*Electron_ID_wt*Electron_IsoID_wt*Electron_dxydz_wt"
-sf += "*PU_wt*PtZ_wt*Trg_wt*SFbtag_wt*JetPUIDWeight*PtSignal_wt*Prefire_wt"
-# sf += "*MixZ_wt*(SFBDT_weight_Zmumu(xgb)/2.+SFBDT_weight_Zee(xgb)/2.)" # LFV Z-specific weights
+sf += "*PU_wt*Trg_wt*SFbtag_wt*JetPUIDWeight*PtSignal_wt*Prefire_wt"
+# sf += "*PtZ_wt*MixZ_wt*(SFBDT_weight_Zmumu(xgb)/2.+SFBDT_weight_Zee(xgb)/2.)" # LFV Z-specific weights
 
+if args.no_scales:
+    sf="1"
 
 ### arange flags
 unblind="false"

@@ -47,7 +47,7 @@ def signal_distribution(sample_map, h, var, cuts, period = "Run2", correct_sampl
             if is_high_score and p == "2016": ratio = 0.923 + (0.874 - 0.923)/(500. - 100.)*(mass - 100.)
             if is_high_score and p == "2017": ratio = 0.928 + (0.940 - 0.928)/(500. - 100.)*(mass - 100.)
             if is_low_score  and p == "2016": ratio = 0.939 + (0.907 - 0.939)/(500. - 100.)*(mass - 100.)
-            if is_low_score  and p == "2017": ratio = 0.984 + (0.984 - 0.949)/(500. - 100.)*(mass - 100.)
+            if is_low_score  and p == "2017": ratio = 0.984 + (0.949 - 0.984)/(500. - 100.)*(mass - 100.)
             scale *= ratio
         htmp.Scale(scale)
         h.Add(htmp)
