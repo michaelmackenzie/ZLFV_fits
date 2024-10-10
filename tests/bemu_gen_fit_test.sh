@@ -169,7 +169,7 @@ if [[ "${SKIPFITS}" == "" ]]; then
         ${HEAD} combine -d ${GENCARD} -M GenerateOnly --saveToys -t ${NGEN} -n .${OUTNAME} --genBinnedChannels lepm_13,lepm_12,lepm_11,lepm_10 -s ${SEED} ${GENARG}
 
         # Create binned data to fit
-        ${HEAD} root.exe -q -b -l "${CMSSW_BASE}/src/CLFVAnalysis/Roostats/convert_unbinned_to_binned.C(\"higgsCombine.${OUTNAME}.GenerateOnly.mH120.${SEED}.root\", \"higgsCombine.${OUTNAME}_binned.GenerateOnly.mH120.${SEED}.root\")"
+        ${HEAD} root.exe -q -b -l "${CMSSW_BASE}/src/ZLFV_fits/tools/convert_unbinned_to_binned.C(\"higgsCombine.${OUTNAME}.GenerateOnly.mH120.${SEED}.root\", \"higgsCombine.${OUTNAME}_binned.GenerateOnly.mH120.${SEED}.root\")"
 
         # Fit the toy data
         if [[ "${MULTIDIM}" == "" ]]; then
@@ -195,9 +195,9 @@ if [[ "${SKIPFITS}" == "" ]]; then
 
     #Merge the output fitDiagnostics files
     if [[ "${MULTIDIM}" == "" ]]; then
-        ${HEAD} ${CMSSW_BASE}/src/CLFVAnalysis/Roostats/haddfitdiag.py "fitDiagnostics.${OUTNAME}${TAG}.root" ${OUTPUTLIST}
+        ${HEAD} ${CMSSW_BASE}/src/ZLFV_fits/tools/haddfitdiag.py "fitDiagnostics.${OUTNAME}${TAG}.root" ${OUTPUTLIST}
     else
-        ${HEAD} ${CMSSW_BASE}/src/CLFVAnalysis/Roostats/haddfitdiag.py "higgsCombine.${OUTNAME}${TAG}.MultiDimFit.root" ${OUTPUTLIST}
+        ${HEAD} ${CMSSW_BASE}/src/ZLFV_fits/tools/haddfitdiag.py "higgsCombine.${OUTNAME}${TAG}.MultiDimFit.root" ${OUTPUTLIST}
     fi
 
     #Clean up the output

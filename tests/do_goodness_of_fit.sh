@@ -130,7 +130,7 @@ for ALGO in "saturated" "KS" "AD"; do
         done
         echo "Merging output files..."
         TOYFILE="higgsCombine.${ALGO}${TAG}.GoodnessOfFit.mH120.root"
-        ${CMSSW_BASE}/src/CLFVAnalysis/Roostats/haddfitdiag.py ${TOYFILE} ${OUTPUTLIST}
+        ${CMSSW_BASE}/src/ZLFV_fits/tools/haddfitdiag.py ${TOYFILE} ${OUTPUTLIST}
         rm ${OUTPUTLIST}
     fi
 
@@ -140,7 +140,7 @@ for ALGO in "saturated" "KS" "AD"; do
     elif [ ! -f ${TOYFILE} ]; then
         echo "${TOYFILE} not found!"
     else
-        root.exe -q -b "${CMSSW_BASE}/src/CLFVAnalysis/Roostats/tools/plot_goodness_of_fit.C(\"${OBSFILE}\", \"${TOYFILE}\", \"_${ALGO}${TAG}\")"
+        root.exe -q -b "${CMSSW_BASE}/src/ZLFV_fits/tools/plot_goodness_of_fit.C(\"${OBSFILE}\", \"${TOYFILE}\", \"_${ALGO}${TAG}\")"
     fi
 done
 

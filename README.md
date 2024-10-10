@@ -107,6 +107,43 @@ python CreatePseudoData_from_EmbedTH1.py
 mv ctmpl_embed*.png ${OUTDIR}/
 ```
 
+### MC closure tests
+
+The MC closure test evaluates how well the parametric background model is able to describe the background shapes taken from simulations.
+
+Creating the MC datacards:
+```
+# Histogram templates directly
+python tools/make_mc_template.py --min-mass 70 --max-mass 110 --set 11 --signal zemu --mass 91 --tag v01 --use-hists
+python tools/make_mc_template.py --min-mass 70 --max-mass 110 --set 12 --signal zemu --mass 91 --tag v01 --use-hists
+python tools/make_mc_template.py --min-mass 70 --max-mass 110 --set 13 --signal zemu --mass 91 --tag v01 --use-hists
+
+# Re-fit the templates first
+python tools/make_mc_template.py --min-mass 70 --max-mass 110 --set 11 --signal zemu --mass 91 --tag v02
+python tools/make_mc_template.py --min-mass 70 --max-mass 110 --set 12 --signal zemu --mass 91 --tag v02
+python tools/make_mc_template.py --min-mass 70 --max-mass 110 --set 13 --signal zemu --mass 91 --tag v02
+
+# Re-fit the templates first, output parametric PDFs
+python tools/make_mc_template.py --min-mass 70 --max-mass 110 --set 11 --signal zemu --mass 91 --tag v03 --use-pdfs
+python tools/make_mc_template.py --min-mass 70 --max-mass 110 --set 12 --signal zemu --mass 91 --tag v03 --use-pdfs
+python tools/make_mc_template.py --min-mass 70 --max-mass 110 --set 13 --signal zemu --mass 91 --tag v03 --use-pdfs
+```
+
+Testing the bias:
+```
+# Using the MC template histograms directly (appears to be biased due to TF1 vs. RooFit fit results)
+OUTDIR="zemu_embed"
+time tests/mc_template_bias.sh templates/zemu/datacard_zemu_mc_template_v01_11_mass-91.00.txt ${OUTDIR}/datacard_prm_v5_bin1.txt ${OUTDIR}_mc_set_11_v01 1000
+time tests/mc_template_bias.sh templates/zemu/datacard_zemu_mc_template_v01_12_mass-91.00.txt ${OUTDIR}/datacard_prm_v5_bin2.txt ${OUTDIR}_mc_set_12_v01 1000
+time tests/mc_template_bias.sh templates/zemu/datacard_zemu_mc_template_v01_13_mass-91.00.txt ${OUTDIR}/datacard_prm_v5_bin3.txt ${OUTDIR}_mc_set_13_v01 1000
+
+# Using re-fit templates with output parametric fits:
+OUTDIR="zemu_embed"
+time tests/mc_template_bias.sh templates/zemu/datacard_zemu_mc_template_v03_11_mass-91.00.txt ${OUTDIR}/datacard_prm_v5_bin1.txt ${OUTDIR}_mc_set_11_v03 1000
+time tests/mc_template_bias.sh templates/zemu/datacard_zemu_mc_template_v03_12_mass-91.00.txt ${OUTDIR}/datacard_prm_v5_bin2.txt ${OUTDIR}_mc_set_12_v03 1000
+time tests/mc_template_bias.sh templates/zemu/datacard_zemu_mc_template_v03_13_mass-91.00.txt ${OUTDIR}/datacard_prm_v5_bin3.txt ${OUTDIR}_mc_set_13_v03 1000
+```
+
 ## Z prime scan
 
 The Z prime scan searches for a narrow resonance in the e-mu data using the Z->e+mu analysis framework and BDT.
