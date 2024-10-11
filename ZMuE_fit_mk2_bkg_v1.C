@@ -52,7 +52,7 @@ int ZMuE_fit_mk2_bkg_v1(TString name="bin1_r2",
    int min_gsplaw_order=1,max_gsplaw_order=3;
    bool Fit_gsplaw=true;
    int min_cheb_order=3,max_cheb_order=5;
-   bool Fit_cheb=true;
+   bool Fit_cheb=false; //Turned off due to MC closure biases
 
 
 

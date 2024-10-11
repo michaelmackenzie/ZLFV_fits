@@ -122,7 +122,7 @@ do
     then
         HEAD="echo"
     else
-        echo "Arguments aren't configured correctly!"
+        echo "Arguments aren't configured correctly! ARG=${var}"
         Help
         exit
     fi

@@ -131,17 +131,39 @@ python tools/make_mc_template.py --min-mass 70 --max-mass 110 --set 13 --signal 
 
 Testing the bias:
 ```
-# Using the MC template histograms directly (appears to be biased due to TF1 vs. RooFit fit results)
-OUTDIR="zemu_embed"
-time tests/mc_template_bias.sh templates/zemu/datacard_zemu_mc_template_v01_11_mass-91.00.txt ${OUTDIR}/datacard_prm_v5_bin1.txt ${OUTDIR}_mc_set_11_v01 1000
-time tests/mc_template_bias.sh templates/zemu/datacard_zemu_mc_template_v01_12_mass-91.00.txt ${OUTDIR}/datacard_prm_v5_bin2.txt ${OUTDIR}_mc_set_12_v01 1000
-time tests/mc_template_bias.sh templates/zemu/datacard_zemu_mc_template_v01_13_mass-91.00.txt ${OUTDIR}/datacard_prm_v5_bin3.txt ${OUTDIR}_mc_set_13_v01 1000
-
 # Using re-fit templates with output parametric fits:
-OUTDIR="zemu_embed"
-time tests/mc_template_bias.sh templates/zemu/datacard_zemu_mc_template_v03_11_mass-91.00.txt ${OUTDIR}/datacard_prm_v5_bin1.txt ${OUTDIR}_mc_set_11_v03 1000
-time tests/mc_template_bias.sh templates/zemu/datacard_zemu_mc_template_v03_12_mass-91.00.txt ${OUTDIR}/datacard_prm_v5_bin2.txt ${OUTDIR}_mc_set_12_v03 1000
-time tests/mc_template_bias.sh templates/zemu/datacard_zemu_mc_template_v03_13_mass-91.00.txt ${OUTDIR}/datacard_prm_v5_bin3.txt ${OUTDIR}_mc_set_13_v03 1000
+time ./tests/mc_template_bias.sh templates/zemu/datacard_zemu_mc_template_v03_11_mass-91.00.txt datacard_prm_v5_bin1.txt zemu_mc_set_11_v03 1000
+time ./tests/mc_template_bias.sh templates/zemu/datacard_zemu_mc_template_v03_12_mass-91.00.txt datacard_prm_v5_bin2.txt zemu_mc_set_12_v03 1000
+time ./tests/mc_template_bias.sh templates/zemu/datacard_zemu_mc_template_v03_13_mass-91.00.txt datacard_prm_v5_bin3.txt zemu_mc_set_13_v03 1000
+```
+
+### Self-closure tests
+
+The self-closure test evaluates how well the parametric background model is able to close when generating pseudo-data using each background PDF considered.
+
+Testing the bias:
+```
+time ./tests/self_bias.sh datacard_prm_v5_bin1.txt bin1 6 zemu_self_set_11_v01 500
+time ./tests/self_bias.sh datacard_prm_v5_bin2.txt bin2 6 zemu_self_set_12_v01 500
+time ./tests/self_bias.sh datacard_prm_v5_bin3.txt bin3 6 zemu_self_set_13_v01 500
+```
+
+### Inspecting the background envelope
+
+The background is modeled in part with an envelope of parametric functions. The likelihood curve for each function and the
+overall envelope is a useful study of the effect of each function in the uncertainty.
+
+Plotting the envelope:
+```
+# Scanning each BDT region separately:
+./tests/make_envelope_plot.sh datacard_prm_v5_bin1.txt --cat 1 --rrange 5 --obs --npoints 50 --tag _zemu_v01 --maxpdfs 6
+./tests/make_envelope_plot.sh datacard_prm_v5_bin2.txt --cat 2 --rrange 3 --obs --npoints 50 --tag _zemu_v01 --maxpdfs 6
+./tests/make_envelope_plot.sh datacard_prm_v5_bin3.txt --cat 3 --rrange 3 --obs --npoints 50 --tag _zemu_v01 --maxpdfs 6
+
+# Scanning each BDT region envelope under the combined BDT region fit:
+./tests/make_envelope_plot.sh datacard_prm_v5_total.txt --cat 1 --rrange 2 --obs --npoints 20 --tag _zemu_combined_v01 --maxpdfs 6
+./tests/make_envelope_plot.sh datacard_prm_v5_total.txt --cat 2 --rrange 2 --obs --npoints 20 --tag _zemu_combined_v01 --maxpdfs 6
+./tests/make_envelope_plot.sh datacard_prm_v5_total.txt --cat 3 --rrange 2 --obs --npoints 20 --tag _zemu_combined_v01 --maxpdfs 6
 ```
 
 ## Z prime scan
