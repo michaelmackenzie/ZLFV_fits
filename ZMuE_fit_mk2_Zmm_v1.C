@@ -97,20 +97,46 @@ int ZMuE_fit_mk2_Zmm_v1(TString name="bin1_r2",
    }
 
    /// fit ds crystal ball on Z->mm fakes
-   RooRealVar* zmm_dcb_mean   = new RooRealVar("zmm_dcb_mean_"+varname , "zmm_dcb_mean_"+varname  , 84.4, 70., 90.);
-   RooRealVar* zmm_dcb_sigma  = new RooRealVar("zmm_dcb_sigma_"+varname, "zmm_dcb_sigma_"+varname , 4.48,  3., 10.);
-   RooRealVar* zmm_dcb_a1 = new RooRealVar("zmm_dcb_a1_"+varname, "zmm_dcb_a1_"+varname, 1.22, 0.5,  5.);
-   RooRealVar* zmm_dcb_a2 = new RooRealVar("zmm_dcb_a2_"+varname, "zmm_dcb_a2_"+varname, 1.78, 0.5,  5.);
-   RooRealVar* zmm_dcb_n1  = new RooRealVar("zmm_dcb_n1_"+varname, "zmm_dcb_n1_"+varname , 1.5, 0., 10.);
-   RooRealVar* zmm_dcb_n2  = new RooRealVar("zmm_dcb_n2_"+varname , "zmm_dcb_n2_"+varname , 9.14, 0., 10.);
+   RooRealVar* zmm_dcb_mean   = new RooRealVar("zmm_dcb_mean_" +varname, "zmm_dcb_mean_" +varname, 84.4, 70., 90.);
+   RooRealVar* zmm_dcb_sigma  = new RooRealVar("zmm_dcb_sigma_"+varname, "zmm_dcb_sigma_"+varname, 4.48, 3.0, 10.);
+   RooRealVar* zmm_dcb_a1     = new RooRealVar("zmm_dcb_a1_"   +varname, "zmm_dcb_a1_"   +varname, 1.22, 0.5,  5.);
+   RooRealVar* zmm_dcb_a2     = new RooRealVar("zmm_dcb_a2_"   +varname, "zmm_dcb_a2_"   +varname, 1.78, 0.5,  5.);
+   RooRealVar* zmm_dcb_n1     = new RooRealVar("zmm_dcb_n1_"   +varname, "zmm_dcb_n1_"   +varname, 1.50, 0.0, 10.);
+   RooRealVar* zmm_dcb_n2     = new RooRealVar("zmm_dcb_n2_"   +varname, "zmm_dcb_n2_"   +varname, 9.14, 0.0, 10.);
 
    RooDoubleCrystalBall zmm_dcb_pdf("zmm_dcb_pdf", "zmm_dcb_pdf", dilep_mass, *zmm_dcb_mean, *zmm_dcb_sigma, *zmm_dcb_a1, *zmm_dcb_n1, *zmm_dcb_a2, *zmm_dcb_n2);
    RooRealVar zmm_dcb_pdf_norm("zmm_dcb_pdf_norm" , "zmm_dcb_pdf_norm" , 100, 0, 10000000.);
    RooAddPdf zmm_dcb_epdf("zmm_dcb_epdf","zmm_dcb_epdf",RooArgList(zmm_dcb_pdf),RooArgList(zmm_dcb_pdf_norm));
 
-   RooFitResult * zmm_fit_result = zmm_dcb_epdf.fitTo(*dhist_zmm, RooFit::Extended(1),RooFit::Save(),RooFit::Range(min_fit_range , max_fit_range),RooFit::PrintLevel(-1));
+   const bool use_prefit_values = false; //whether to use the measured values in data+MC or fit the MC template
+   if(use_prefit_values) {
+     if(name == "bin1") {
+       zmm_dcb_a1   ->setVal(2.66389);
+       zmm_dcb_a2   ->setVal(1.8816 );
+       zmm_dcb_n1   ->setVal(7.68765);
+       zmm_dcb_n2   ->setVal(1.32167);
+       zmm_dcb_mean ->setVal(80.1551);
+       zmm_dcb_sigma->setVal(6.99746);
+     } else if(name == "bin2") {
+       zmm_dcb_a1   ->setVal(0.338576);
+       zmm_dcb_a2   ->setVal(2.02017 );
+       zmm_dcb_n1   ->setVal(9.99993 );
+       zmm_dcb_n2   ->setVal(0.87032 );
+       zmm_dcb_mean ->setVal(82.6755 );
+       zmm_dcb_sigma->setVal(4.8871  );
+     } else {
+       zmm_dcb_a1   ->setVal(1.01191    );
+       zmm_dcb_a2   ->setVal(3.09625    );
+       zmm_dcb_n1   ->setVal(0.674509   );
+       zmm_dcb_n2   ->setVal(5.16282e-05);
+       zmm_dcb_mean ->setVal(84.0391    );
+       zmm_dcb_sigma->setVal(5.03815    );
+     }
+   } else {
+     RooFitResult * zmm_fit_result = zmm_dcb_epdf.fitTo(*dhist_zmm, RooFit::Extended(1),RooFit::Save(),RooFit::Range(min_fit_range , max_fit_range),RooFit::PrintLevel(-1));
+     print_details (zmm_fit_result);
+   }
 
-   print_details (zmm_fit_result);
    auto zmm_frame = dilep_mass.frame();
    dhist_zmm->plotOn(zmm_frame,RooFit::Binning(nbin_data),RooFit::Name("data"));
    zmm_dcb_pdf.plotOn(zmm_frame,RooFit::Name("zmm_dcb_pdf"));
