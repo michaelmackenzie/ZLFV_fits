@@ -4,12 +4,13 @@
 
 Help() {
     echo "Testing Z->emu fit results"
-    echo "Usage: ./test_zemu_limits.sh <card>"
+    echo "Usage: ./test_zemu_limits.sh <card> [d to skip debug]"
 }
 
 CARD=$1
-RMIN=-5
-RMAX=5
+SKIPDEBUG=$2
+RMIN=-8
+RMAX=8
 
 if [[ "${CARD}" == "" ]]; then
     Help
@@ -83,27 +84,39 @@ fi
 DOSCAN=""
 # Flag to add discrete index cycling flag: Doesn't work well with the combined fit
 DOCYCLE="d"
+DOTOTALCYCLE=""
 # Flag to add pre-fit arguments to all fits
 DOPREFIT="d"
+# Flag to increase precision
+PRECISE="d"
 
 if [[ "${PREFIT}" != "" ]]; then
-    ARGUMENTS="${ARGUMENTS} --cminApproxPreFitTolerance 0.1 --cminPreScan --cminPreFit 1"
+    ARGUMENTS="${ARGUMENTS} --cminApproxPreFitTolerance 0.01 --cminPreScan --cminPreFit 1"
 fi
-if [[ "${DOCYCLE}" != "" ]]; then
+if [[ "${DOCYCLE}" != "" ]] && [[ "${CARD}" != *"total"* ]]; then
     ARGUMENTS="${ARGUMENTS} --cminRunAllDiscreteCombinations"
+elif [[ "${DOTOTALCYCLE}" != "" ]] && [[ "${CARD}" == *"total"* ]]; then
+    ARGUMENTS="${ARGUMENTS} --cminRunAllDiscreteCombinations"
+fi
+LIMARGS=""
+if [[ "${PRECISE}" != "" ]]; then
+    ARGUMENTS="${ARGUMENTS} --cminDefaultMinimizerTolerance 0.001 --cminDiscreteMinTol 0.0001"
+    LIMARGS="${LIMARGS} --rAbsAcc 0.0005 --rRelAcc 0.0005"
 fi
 
 echo "Performing original fits"
-combine -d ${CARD} ${ARGUMENTS}
+combine -d ${CARD} ${ARGUMENTS} ${LIMARGS}
 combine -d ${CARD} -M FitDiagnostics ${ARGUMENTS}
 if [[ "${DOSCAN}" != "" ]]; then
     combine -d ${CARD} -M MultiDimFit ${ARGUMENTS} --saveNLL --setParameterRanges r=-1,1 -n .original_${NAME} --algo grid --points 10
 fi
 
-exit
+if [[ "${SKIPDEBUG}" != "" ]]; then
+    exit
+fi
 
 echo "Performing updated fits"
-combine -d ${CARD} ${ARGUMENTS} ${PARAMS} --setParameterRanges ${ARGRANGES}  --cminApproxPreFitTolerance 0.1 --cminPreScan --cminPreFit 1
+combine -d ${CARD} ${ARGUMENTS} ${LIMARGS} ${PARAMS} --setParameterRanges ${ARGRANGES}  --cminApproxPreFitTolerance 0.1 --cminPreScan --cminPreFit 1
 combine -d ${CARD} -M FitDiagnostics ${ARGUMENTS} ${PARAMS} --setParameterRanges ${ARGRANGES}  --cminApproxPreFitTolerance 0.1 --cminPreScan --cminPreFit 1
 if [[ "${DOSCAN}" != "" ]]; then
     combine -d ${CARD} -M MultiDimFit ${ARGUMENTS} ${PARAMS} --saveNLL --setParameterRanges r=-1,1 -n .updated_${NAME} --algo grid --points 10

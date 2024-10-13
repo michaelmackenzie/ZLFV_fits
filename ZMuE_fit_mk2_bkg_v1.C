@@ -2,8 +2,6 @@
 #include "fit_helper.h"
 #include "fit_helper_core.h"
 
-bool fix_initialization_ = true; //switch to apply the initialization fix, remove when validated
-
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////// Main code ///////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
@@ -47,6 +45,7 @@ int ZMuE_fit_mk2_bkg_v1(TString name="bin1_r2",
 
    int min_gspol_order=1,max_gspol_order=3;
    bool Fit_gspol=true;
+   bool gspol_cheb=true; //use RooChebychev vs. RooPolynomial addition to the Gaussian
    int min_gsexp_order=1,max_gsexp_order=3;
    bool Fit_gsexp=true;
    int min_gsplaw_order=1,max_gsplaw_order=3;
@@ -64,7 +63,7 @@ int ZMuE_fit_mk2_bkg_v1(TString name="bin1_r2",
    double blind_max = 96.;
    int nbin_data = 80;
    bool Verbose=false; // RooFit verbosity
-   bool Bkg_only_fit_whole_region=false;
+   bool Bkg_only_fit_whole_region=true; //use the signal region or not
    int printout_levels=1; // 0: Print only final fits parameters, 1: Print all fits from F test tests
 
 
@@ -204,7 +203,7 @@ int ZMuE_fit_mk2_bkg_v1(TString name="bin1_r2",
 
    for (int iorder=min_gspol_order; iorder<max_gspol_order+1; iorder++){
       TString sorder(std::to_string(iorder));
-      RooAbsPdf* pdf = CreateGaussPolynomial( "gauss_pol"+sorder+"_pdf", iorder, dilep_mass,ztt_gs_mu,ztt_gs_wd);
+      RooAbsPdf* pdf = (gspol_cheb) ? CreateGaussChebychev( "gauss_pol"+sorder+"_pdf", iorder, dilep_mass,ztt_gs_mu,ztt_gs_wd) : CreateGaussPolynomial( "gauss_pol"+sorder+"_pdf", iorder, dilep_mass,ztt_gs_mu,ztt_gs_wd);
       if(add_zmumu) {
         pdf = new RooAddPdf("wrapped_" + TString(pdf->GetName()), "Wrapped PDF", RooArgList(*zmumu_pdf,*pdf), RooArgList(*zmumu_frac));
       }
@@ -220,7 +219,8 @@ int ZMuE_fit_mk2_bkg_v1(TString name="bin1_r2",
    gs_pol_Ftest.success=false;
    if (Fit_gspol) {
       cout<<" ************************ No Z->mumu Ftest Gauss + Poly begin ************************ "<<endl;
-      gs_pol_Ftest =  HistFtest(bkg_gs_pol_pdfs, bkg_gs_pol_ampl,  dhist_bkg, dilep_mass, bkg_gs_pol_orders, bkg_gs_pol_names, bkg_gs_pol_legs, nbin_data,"mk2bkg_v1_gauspol_"+name, 0.05,0.01,printout_levels);
+      gs_pol_Ftest =  HistFtest(bkg_gs_pol_pdfs, bkg_gs_pol_ampl,  dhist_bkg, dilep_mass, bkg_gs_pol_orders, bkg_gs_pol_names, bkg_gs_pol_legs,
+                                nbin_data,"mk2bkg_v1_gauspol_"+name, 0.05,0.01,printout_levels, false, false, "", Bkg_only_fit_whole_region);
       cout<<" ************************ No Z->mumu Ftest Gauss + Poly end ************************ "<<endl;
    }
 
@@ -248,7 +248,8 @@ int ZMuE_fit_mk2_bkg_v1(TString name="bin1_r2",
    FtestStruct gs_exp_Ftest;
    if (Fit_gsexp) {
       cout<<" ************************ No Z->mumu Ftest Gauss + Expo begin ************************ "<<endl;
-      gs_exp_Ftest =  HistFtest(bkg_gs_exp_pdfs, bkg_gs_exp_ampl,  dhist_bkg, dilep_mass, bkg_gs_exp_orders, bkg_gs_exp_names, bkg_gs_exp_legs, nbin_data, "mk2bkg_v1_gausexp_"+name, 0.05,0.01,printout_levels);
+      gs_exp_Ftest =  HistFtest(bkg_gs_exp_pdfs, bkg_gs_exp_ampl,  dhist_bkg, dilep_mass, bkg_gs_exp_orders, bkg_gs_exp_names, bkg_gs_exp_legs,
+                                nbin_data, "mk2bkg_v1_gausexp_"+name, 0.05,0.01,printout_levels, false, false, "", Bkg_only_fit_whole_region);
       cout<<" ************************ No Z->mumu Ftest Gauss + Expo end ************************ "<<endl;
    }
 
@@ -275,7 +276,8 @@ int ZMuE_fit_mk2_bkg_v1(TString name="bin1_r2",
    FtestStruct gs_plaw_Ftest;
    if (Fit_gsplaw){
      cout<<" ************************ No Z->mumu Ftest Gauss + Power law begin ************************ "<<endl;
-     gs_plaw_Ftest =  HistFtest(bkg_gs_plaw_pdfs, bkg_gs_plaw_ampl,  dhist_bkg, dilep_mass, bkg_gs_plaw_orders, bkg_gs_plaw_names, bkg_gs_plaw_legs, nbin_data, "mk2bkg_v1_gausplaw_"+name, 0.05,0.01,printout_levels);
+     gs_plaw_Ftest =  HistFtest(bkg_gs_plaw_pdfs, bkg_gs_plaw_ampl,  dhist_bkg, dilep_mass, bkg_gs_plaw_orders, bkg_gs_plaw_names, bkg_gs_plaw_legs,
+                                nbin_data, "mk2bkg_v1_gausplaw_"+name, 0.05,0.01,printout_levels, false, false, "", Bkg_only_fit_whole_region);
      cout<<" ************************ No Z->mumu Ftest Gauss + Power law end ************************ "<<endl;
    }
 
@@ -304,7 +306,8 @@ int ZMuE_fit_mk2_bkg_v1(TString name="bin1_r2",
    FtestStruct cheb_Ftest;
    if (Fit_cheb){
      cout<<" ************************ No Z->mumu Ftest Chebychev begin ************************ "<<endl;
-     cheb_Ftest =  HistFtest(bkg_cheb_pdfs, bkg_cheb_ampl,  dhist_bkg, dilep_mass, bkg_cheb_orders, bkg_cheb_names, bkg_cheb_legs, nbin_data, "mk2bkg_v1_cheb_"+name, 0.05,0.01,printout_levels);
+     cheb_Ftest =  HistFtest(bkg_cheb_pdfs, bkg_cheb_ampl,  dhist_bkg, dilep_mass, bkg_cheb_orders, bkg_cheb_names, bkg_cheb_legs,
+                             nbin_data, "mk2bkg_v1_cheb_"+name, 0.05,0.01,printout_levels, false, false, "", Bkg_only_fit_whole_region);
      cout<<" ************************ No Z->mumu Ftest Chebychev end ************************ "<<endl;
    }
 
@@ -319,19 +322,17 @@ int ZMuE_fit_mk2_bkg_v1(TString name="bin1_r2",
      for (int i=0; i<gs_pol_Ftest.getAllOrder.size(); i++){
         int iord =gs_pol_Ftest.getAllOrder[i];
         TString sord(std::to_string(iord));
-        bkg_pdfs.push_back(CreateGaussPolynomial( varname+"_gspol"+sord+"_pdf", iord, dilep_mass,ztt_gs_mu,ztt_gs_wd));
+        bkg_pdfs.push_back((gspol_cheb) ? CreateGaussChebychev( varname+"_gspol"+sord+"_pdf", iord, dilep_mass,ztt_gs_mu,ztt_gs_wd) : CreateGaussPolynomial( varname+"_gspol"+sord+"_pdf", iord, dilep_mass,ztt_gs_mu,ztt_gs_wd));
         bkg_ampl.push_back(new RooRealVar(varname+"_gspol"+sord+"_pdf_norm", varname+"_gspol"+sord+"_pdf_norm",ndata, 0., 2.*ndata));
         bkg_names.push_back(varname+"_gspol"+sord+"_pdf");
         bkg_legs.push_back("Gauss+Polynomial "+sord);
      }
-     if(fix_initialization_) {
-       for( int iord =gs_pol_Ftest.getBestOrder+1; iord<gs_pol_Ftest.getBestOrder+add_orders_gspol+1; iord++){
-         TString sord (std::to_string(iord));
-         bkg_pdfs.push_back(CreateGaussPolynomial( varname+"_gspol"+sord+"_pdf", iord, dilep_mass,ztt_gs_mu,ztt_gs_wd));
-         bkg_ampl.push_back(new RooRealVar(varname+"_gspol"+sord+"_pdf_norm", varname+"_gspol"+sord+"_pdf_norm",ndata, 0., 2.*ndata));
-         bkg_names.push_back(varname+"_gspol"+sord+"_pdf");
-         bkg_legs.push_back("Gauss+Polynomial "+sord);
-       }
+     for( int iord =gs_pol_Ftest.getBestOrder+1; iord<gs_pol_Ftest.getBestOrder+add_orders_gspol+1; iord++){
+       TString sord (std::to_string(iord));
+       bkg_pdfs.push_back((gspol_cheb) ? CreateGaussChebychev( varname+"_gspol"+sord+"_pdf", iord, dilep_mass,ztt_gs_mu,ztt_gs_wd) : CreateGaussPolynomial( varname+"_gspol"+sord+"_pdf", iord, dilep_mass,ztt_gs_mu,ztt_gs_wd));
+       bkg_ampl.push_back(new RooRealVar(varname+"_gspol"+sord+"_pdf_norm", varname+"_gspol"+sord+"_pdf_norm",ndata, 0., 2.*ndata));
+       bkg_names.push_back(varname+"_gspol"+sord+"_pdf");
+       bkg_legs.push_back("Gauss+Polynomial "+sord);
      }
    }
 
@@ -344,14 +345,12 @@ int ZMuE_fit_mk2_bkg_v1(TString name="bin1_r2",
         bkg_names.push_back(varname+"_gsexp"+sord+"_pdf");
         bkg_legs.push_back("Gauss+Expo "+sord);
      }
-     if(fix_initialization_) {
-       for( int iord =gs_exp_Ftest.getBestOrder+1; iord<gs_exp_Ftest.getBestOrder+add_orders_gsexp+1; iord++){
-         TString sord (std::to_string(iord));
-         bkg_pdfs.push_back(CreateGaussExpo( varname+"_gsexp"+sord+"_pdf", iord, dilep_mass,ztt_gs_mu,ztt_gs_wd));
-         bkg_ampl.push_back(new RooRealVar(varname+"_gsexp"+sord+"_pdf_norm", varname+"_gsexp"+sord+"_pdf_norm",ndata, 0., 2.*ndata));
-         bkg_names.push_back(varname+"_gsexp"+sord+"_pdf");
-         bkg_legs.push_back("Gauss+Expo "+sord);
-       }
+     for( int iord =gs_exp_Ftest.getBestOrder+1; iord<gs_exp_Ftest.getBestOrder+add_orders_gsexp+1; iord++){
+       TString sord (std::to_string(iord));
+       bkg_pdfs.push_back(CreateGaussExpo( varname+"_gsexp"+sord+"_pdf", iord, dilep_mass,ztt_gs_mu,ztt_gs_wd));
+       bkg_ampl.push_back(new RooRealVar(varname+"_gsexp"+sord+"_pdf_norm", varname+"_gsexp"+sord+"_pdf_norm",ndata, 0., 2.*ndata));
+       bkg_names.push_back(varname+"_gsexp"+sord+"_pdf");
+       bkg_legs.push_back("Gauss+Expo "+sord);
      }
    }
 
@@ -364,14 +363,12 @@ int ZMuE_fit_mk2_bkg_v1(TString name="bin1_r2",
         bkg_names.push_back(varname+"_gsplaw"+sord+"_pdf");
         bkg_legs.push_back("Gauss+Power "+sord);
      }
-     if(fix_initialization_) {
-       for( int iord =gs_plaw_Ftest.getBestOrder+1; iord<gs_plaw_Ftest.getBestOrder+add_orders_gsplaw+1; iord++){
-         TString sord (std::to_string(iord));
-         bkg_pdfs.push_back(CreateGaussPower( varname+"_gsplaw"+sord+"_pdf", iord, dilep_mass,ztt_gs_mu,ztt_gs_wd));
-         bkg_ampl.push_back(new RooRealVar(varname+"_gsplaw"+sord+"_pdf_norm", varname+"_gsplaw"+sord+"_pdf_norm",ndata, 0., 2.*ndata));
-         bkg_names.push_back(varname+"_gsplaw"+sord+"_pdf");
-         bkg_legs.push_back("Gauss+Power "+sord);
-       }
+     for( int iord =gs_plaw_Ftest.getBestOrder+1; iord<gs_plaw_Ftest.getBestOrder+add_orders_gsplaw+1; iord++){
+       TString sord (std::to_string(iord));
+       bkg_pdfs.push_back(CreateGaussPower( varname+"_gsplaw"+sord+"_pdf", iord, dilep_mass,ztt_gs_mu,ztt_gs_wd));
+       bkg_ampl.push_back(new RooRealVar(varname+"_gsplaw"+sord+"_pdf_norm", varname+"_gsplaw"+sord+"_pdf_norm",ndata, 0., 2.*ndata));
+       bkg_names.push_back(varname+"_gsplaw"+sord+"_pdf");
+       bkg_legs.push_back("Gauss+Power "+sord);
      }
    }
 
@@ -390,7 +387,8 @@ int ZMuE_fit_mk2_bkg_v1(TString name="bin1_r2",
 
    //////////// fit here
    cout<<" Fit of best variables "<<endl;
-   std::vector<std::vector<float>> final_results =  FitHistBkgFunctions(bkg_pdfs, bkg_ampl, dhist_bkg, dilep_mass, bkg_names, bkg_legs, nbin_data, true, "mk2bkg_v1_best_"+name, true);
+   std::vector<std::vector<float>> final_results =  FitHistBkgFunctions(bkg_pdfs, bkg_ampl, dhist_bkg, dilep_mass, bkg_names, bkg_legs,
+                                                                        nbin_data, Bkg_only_fit_whole_region, "mk2bkg_v1_best_"+name, true);
 
    //////////////////// create bkg workspace ////////////////////////
    if (!create_dc_input)
@@ -407,20 +405,16 @@ int ZMuE_fit_mk2_bkg_v1(TString name="bin1_r2",
        TString sord (std::to_string(gs_pol_Ftest.getAllOrder[i]));
        for(int j=2; j<final_results[i].size(); j++) //poly parameters are naturally sorted alphabetically
           param.push_back(final_results[i][j]);
-       models_out.add( *(CreateGaussPolynomial( "bkg_gspol"+sord+"_pdf_"+varname, gs_pol_Ftest.getAllOrder[i], dilep_mass_out,ztt_gs_mu,ztt_gs_wd, param)) );
+       models_out.add( *((gspol_cheb) ? CreateGaussChebychev( "bkg_gspol"+sord+"_pdf_"+varname, gs_pol_Ftest.getAllOrder[i], dilep_mass_out,ztt_gs_mu,ztt_gs_wd, param) : CreateGaussPolynomial( "bkg_gspol"+sord+"_pdf_"+varname, gs_pol_Ftest.getAllOrder[i], dilep_mass_out,ztt_gs_mu,ztt_gs_wd, param)) );
        nstartFNC1+=1;
      }
      for( int iord =gs_pol_Ftest.getBestOrder+1; iord<gs_pol_Ftest.getBestOrder+add_orders_gspol+1; iord++){
        TString sord (std::to_string(iord));
-       if(fix_initialization_) {
-         std::vector<float> param;
-         const int index = gs_pol_Ftest.getAllOrder.size() + (iord - gs_pol_Ftest.getBestOrder) - 1;
-         for(int j=2; j<final_results[index].size(); j++) param.push_back(final_results[index][j]); //poly parameters are naturally sorted alphabetically
-         nstartFNC1+=1;
-         models_out.add( *(CreateGaussPolynomial( "bkg_gspol"+sord+"_pdf_"+varname, iord, dilep_mass_out,ztt_gs_mu,ztt_gs_wd, param)) );
-       } else {
-         models_out.add( *(CreateGaussPolynomial( "bkg_gspol"+sord+"_pdf_"+varname, iord, dilep_mass_out,ztt_gs_mu,ztt_gs_wd)) );
-       }
+       std::vector<float> param;
+       const int index = gs_pol_Ftest.getAllOrder.size() + (iord - gs_pol_Ftest.getBestOrder) - 1;
+       for(int j=2; j<final_results[index].size(); j++) param.push_back(final_results[index][j]); //poly parameters are naturally sorted alphabetically
+       nstartFNC1+=1;
+       models_out.add( *((gspol_cheb) ? CreateGaussChebychev( "bkg_gspol"+sord+"_pdf_"+varname, iord, dilep_mass_out,ztt_gs_mu,ztt_gs_wd, param) : CreateGaussPolynomial( "bkg_gspol"+sord+"_pdf_"+varname, iord, dilep_mass_out,ztt_gs_mu,ztt_gs_wd, param)) );
      }
    }
 
@@ -428,44 +422,33 @@ int ZMuE_fit_mk2_bkg_v1(TString name="bin1_r2",
    if (gs_exp_Ftest.success) {
      for (int i=0; i<gs_exp_Ftest.getAllOrder.size(); i++){
        TString sord (std::to_string(gs_exp_Ftest.getAllOrder[i]));
-       if(fix_initialization_) {
-         const int index = i + nstartFNC1;
-         auto pdf = CreateGaussExpo("bkg_gsexp"+sord+"_pdf_"+varname, gs_exp_Ftest.getAllOrder[i], dilep_mass_out,ztt_gs_mu,ztt_gs_wd);
-         //get list of parameters in alphabetical order to match the results vector
-         auto var_list = list_pdf_params(pdf, dilep_mass_out, true);
-         int i_res = 2;
-         for (auto const& var : var_list) {
-           var->setVal(final_results[index][i_res]);
-           var->Print();
-           ++i_res;
-         }
-         models_out.add( *pdf );
-       } else {
-         std::vector<float> param;
-         for(int j=2; j<final_results[i+nstartFNC1].size(); j++)
-           param.push_back(final_results[i+nstartFNC1][j]);
-         models_out.add( *(CreateGaussExpo( "bkg_gsexp"+sord+"_pdf_"+varname, gs_exp_Ftest.getAllOrder[i], dilep_mass_out,ztt_gs_mu,ztt_gs_wd,param)) );
+       const int index = i + nstartFNC1;
+       auto pdf = CreateGaussExpo("bkg_gsexp"+sord+"_pdf_"+varname, gs_exp_Ftest.getAllOrder[i], dilep_mass_out,ztt_gs_mu,ztt_gs_wd);
+       //get list of parameters in alphabetical order to match the results vector
+       auto var_list = list_pdf_params(pdf, dilep_mass_out, true);
+       int i_res = 2;
+       for (auto const& var : var_list) {
+         var->setVal(final_results[index][i_res]);
+         var->Print();
+         ++i_res;
        }
+       models_out.add( *pdf );
        nstartFNC2+=1;
      }
      for( int iord =gs_exp_Ftest.getBestOrder+1; iord<gs_exp_Ftest.getBestOrder+add_orders_gsexp+1; iord++){
        TString sord (std::to_string(iord));
-       if(fix_initialization_) {
-         const int index = gs_exp_Ftest.getAllOrder.size() + (iord - gs_exp_Ftest.getBestOrder) - 1 + nstartFNC1;
-         auto pdf = CreateGaussExpo( "bkg_gsexp"+sord+"_pdf_"+varname, iord, dilep_mass_out,ztt_gs_mu,ztt_gs_wd);
-         //get list of parameters in alphabetical order to match the results vector
-         auto var_list = list_pdf_params(pdf, dilep_mass_out, true);
-         int i_res = 2;
-         for (auto const& var : var_list) {
-           var->setVal(final_results[index][i_res]);
-           var->Print();
-           ++i_res;
-         }
-         models_out.add( *pdf );
-         nstartFNC2+=1;
-       } else {
-         models_out.add( *(CreateGaussExpo( "bkg_gsexp"+sord+"_pdf_"+varname, iord, dilep_mass_out,ztt_gs_mu,ztt_gs_wd)) );
+       const int index = gs_exp_Ftest.getAllOrder.size() + (iord - gs_exp_Ftest.getBestOrder) - 1 + nstartFNC1;
+       auto pdf = CreateGaussExpo( "bkg_gsexp"+sord+"_pdf_"+varname, iord, dilep_mass_out,ztt_gs_mu,ztt_gs_wd);
+       //get list of parameters in alphabetical order to match the results vector
+       auto var_list = list_pdf_params(pdf, dilep_mass_out, true);
+       int i_res = 2;
+       for (auto const& var : var_list) {
+         var->setVal(final_results[index][i_res]);
+         var->Print();
+         ++i_res;
        }
+       models_out.add( *pdf );
+       nstartFNC2+=1;
      }
    }
 
@@ -473,44 +456,33 @@ int ZMuE_fit_mk2_bkg_v1(TString name="bin1_r2",
    if (gs_plaw_Ftest.success) {
      for (int i=0; i<gs_plaw_Ftest.getAllOrder.size(); i++){
        TString sord (std::to_string(gs_plaw_Ftest.getAllOrder[i]));
-       if(fix_initialization_) {
-         const int index = i + nstartFNC2;
-         auto pdf = CreateGaussPower( "bkg_gsplaw"+sord+"_pdf_"+varname, gs_plaw_Ftest.getAllOrder[i], dilep_mass_out,ztt_gs_mu,ztt_gs_wd);
-         //get list of parameters in alphabetical order to match the results vector
-         auto var_list = list_pdf_params(pdf, dilep_mass_out, true);
-         int i_res = 2;
-         for (auto const& var : var_list) {
-           var->setVal(final_results[index][i_res]);
-           var->Print();
-           ++i_res;
-         }
-         models_out.add( *pdf );
-       } else {
-         std::vector<float> param;
-         for(int j=2; j<final_results[i+nstartFNC2].size(); j++)
-           param.push_back(final_results[i+nstartFNC2][j]);
-         models_out.add( *(CreateGaussPower( "bkg_gsplaw"+sord+"_pdf_"+varname, gs_plaw_Ftest.getAllOrder[i], dilep_mass_out,ztt_gs_mu,ztt_gs_wd,param)) );
+       const int index = i + nstartFNC2;
+       auto pdf = CreateGaussPower( "bkg_gsplaw"+sord+"_pdf_"+varname, gs_plaw_Ftest.getAllOrder[i], dilep_mass_out,ztt_gs_mu,ztt_gs_wd);
+       //get list of parameters in alphabetical order to match the results vector
+       auto var_list = list_pdf_params(pdf, dilep_mass_out, true);
+       int i_res = 2;
+       for (auto const& var : var_list) {
+         var->setVal(final_results[index][i_res]);
+         var->Print();
+         ++i_res;
        }
+       models_out.add( *pdf );
        nstartFNC3+=1;
      }
     for( int iord =gs_plaw_Ftest.getBestOrder+1; iord<gs_plaw_Ftest.getBestOrder+add_orders_gsplaw+1; iord++){
        TString sord (std::to_string(iord));
-       if(fix_initialization_) {
-         const int index = gs_plaw_Ftest.getAllOrder.size() + (iord - gs_plaw_Ftest.getBestOrder) - 1 + nstartFNC2;
-         auto pdf = CreateGaussPower( "bkg_gsplaw"+sord+"_pdf_"+varname, iord, dilep_mass_out,ztt_gs_mu,ztt_gs_wd);
-         //get list of parameters in alphabetical order to match the results vector
-         auto var_list = list_pdf_params(pdf, dilep_mass_out, true);
-         int i_res = 2;
-         for (auto const& var : var_list) {
-           var->setVal(final_results[index][i_res]);
-           var->Print();
-           ++i_res;
-         }
-         models_out.add( *pdf );
-         nstartFNC3+=1;
-       } else {
-         models_out.add( *(CreateGaussPower( "bkg_gsplaw"+sord+"_pdf_"+varname, iord, dilep_mass_out,ztt_gs_mu,ztt_gs_wd)) );
+       const int index = gs_plaw_Ftest.getAllOrder.size() + (iord - gs_plaw_Ftest.getBestOrder) - 1 + nstartFNC2;
+       auto pdf = CreateGaussPower( "bkg_gsplaw"+sord+"_pdf_"+varname, iord, dilep_mass_out,ztt_gs_mu,ztt_gs_wd);
+       //get list of parameters in alphabetical order to match the results vector
+       auto var_list = list_pdf_params(pdf, dilep_mass_out, true);
+       int i_res = 2;
+       for (auto const& var : var_list) {
+         var->setVal(final_results[index][i_res]);
+         var->Print();
+         ++i_res;
        }
+       models_out.add( *pdf );
+       nstartFNC3+=1;
      }
    }
 
@@ -522,11 +494,7 @@ int ZMuE_fit_mk2_bkg_v1(TString name="bin1_r2",
        for(int j=2; j<final_results[i+nstartFNC3].size(); j++)
           param.push_back(final_results[i+nstartFNC3][j]);
        TString sord (std::to_string(cheb_Ftest.getAllOrder[i]));
-       if(fix_initialization_) {
-         models_out.add( *(CreateChebychev( "bkg_cheb"+sord+"_pdf_"+varname, cheb_Ftest.getAllOrder[i], dilep_mass_out, param)) );
-       } else {
-         models_out.add( *(CreateChebychev( "bkg_cheb"+sord+"_pdf_"+varname, cheb_Ftest.getAllOrder[i], dilep_mass_out)) );
-       }
+       models_out.add( *(CreateChebychev( "bkg_cheb"+sord+"_pdf_"+varname, cheb_Ftest.getAllOrder[i], dilep_mass_out, param)) );
        nstartFNC4+=1;
      }
    }

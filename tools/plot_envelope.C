@@ -1,5 +1,5 @@
 //plot envelope for Z->e+mu fit
-bool remove_zero_point_ = true;
+bool remove_zero_point_ = false;
 
 int plot_envelope(const int set = 13, vector<TString> files = {}, const char* tag = "",
                   const bool george = false, const bool obs = false,
@@ -115,6 +115,10 @@ int plot_envelope(const int set = 13, vector<TString> files = {}, const char* ta
       for(int ipoint = 0; ipoint < g->GetN(); ++ipoint) {
         g->SetPoint(ipoint, g->GetX()[ipoint], g->GetY()[ipoint] - min_val);
       }
+      g = graphs_best[igraph];
+      for(int ipoint = 0; ipoint < g->GetN(); ++ipoint) {
+        g->SetPoint(ipoint, g->GetX()[ipoint], g->GetY()[ipoint] - min_val);
+      }
     }
     max_val = max_val - min_val;
     min_val = 0.;
@@ -194,13 +198,14 @@ int plot_envelope(const int set = 13, vector<TString> files = {}, const char* ta
       TLine* line = new TLine(x, min_val-buffer, x, y+min_val);
       line->SetLineWidth(2);
       line->SetLineStyle(kDashed);
-      line->SetLineColor(kBlack);
+      line->SetLineColor(kBlue);
       line->Draw("same");
       cout << "Found 1 sigma edge at r = " << x << " ( " << y_prev << " - " << y << ")\n";
     }
   }
 
-  tot->SetTitle("Envelope;r;NLL");
+  if(remove_zero_point_) tot->SetTitle("Envelope;r;2*#Deltaln(L)");
+  else                   tot->SetTitle("Envelope;r;2*ln(L)");
   c->SaveAs(Form("envelope_%i%s.png", set, tag));
   return 0;
 }

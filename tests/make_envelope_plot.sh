@@ -119,18 +119,16 @@ ARGRANGES=" --setParameterRanges r=${RMIN},${RMAX}"
 ARGUMENTS="--algo grid --cminDefaultMinimizerStrategy 0 --saveNLL -m 125 --X-rtd REMOVE_CONSTANT_ZERO_POINT=1"
 ARGUMENTS="${ARGUMENTS} --X-rtd MINIMIZER_freezeDisassociatedParams --X-rtd MINIMIZER_multiMin_hideConstant --X-rtd MINIMIZER_multiMin_maskConstraints"
 ARGUMENTS="${ARGUMENTS} --cminApproxPreFitTolerance 0.1 --cminPreScan --cminPreFit 1 --X-rtd MINIMIZER_multiMin_maskChannels=2"
-if [[ "${CARD}" != *"total"* ]]; then
-    ARGUMENTS="${ARGUMENTS} --cminRunAllDiscreteCombinations"
-fi
+ARGUMENTS="${ARGUMENTS} --cminDefaultMinimizerTolerance 0.001 --cminDiscreteMinTol 0.0001"
 ARGUMENTS="${ARGUMENTS} --rMin ${RMIN} --rMax ${RMAX}"
 
 #Generate a toy dataset if needed
 if [[ "${PLOTONLY}" == "" ]]; then
     if [[ "${OBS}" == "" ]]; then
         if [[ "${DRYRUN}" == "" ]]; then
-            combine -M GenerateOnly -d ${CARD} -t 1 -m 91 -s ${SEED} -n _env_${CAT} --saveToys
+            combine -M GenerateOnly -d ${CARD} -t 1 -m 91 -s ${SEED} -n _env_${CAT}${TAG} --saveToys
         fi
-        TOYDATA=higgsCombine_env_${CAT}.GenerateOnly.mH91.${SEED}.root
+        TOYDATA=higgsCombine_env_${CAT}${TAG}.GenerateOnly.mH91.${SEED}.root
         ls -l ${TOYDATA}
         TOYARG="--toysFile=${TOYDATA} -t -1"
         TOYTAG=".${SEED}"
@@ -146,12 +144,12 @@ for (( PDF=0; PDF<${MAXPDFS}; PDF++ )); do
     CATVAR="pdfindex_bin${CAT}"
 
     if [[ "${PLOTONLY}" == "" ]]; then
-        echo combine -M MultiDimFit -d ${CARD} ${ARGUMENTS} ${ARGRANGES} --points ${NPOINTS} ${TOYARG} --setParameters ${CATVAR}=${PDF} --freezeParameters "${CATVAR}" -n "_env_${CAT}_cat_${PDF}"
+        echo combine -M MultiDimFit -d ${CARD} ${ARGUMENTS} ${ARGRANGES} --points ${NPOINTS} ${TOYARG} --setParameters ${CATVAR}=${PDF} --freezeParameters "${CATVAR}" -n "_env_${CAT}_cat_${PDF}${TAG}"
         if [[ "${DRYRUN}" == "" ]] ; then
-            combine -M MultiDimFit -d ${CARD} ${ARGUMENTS} ${ARGRANGES} --points ${NPOINTS} ${TOYARG} --setParameters ${CATVAR}=${PDF} --freezeParameters "${CATVAR}" -n "_env_${CAT}_cat_${PDF}"
+            combine -M MultiDimFit -d ${CARD} ${ARGUMENTS} ${ARGRANGES} --points ${NPOINTS} ${TOYARG} --setParameters ${CATVAR}=${PDF} --freezeParameters "${CATVAR}" -n "_env_${CAT}_cat_${PDF}${TAG}"
         fi
     fi
-    OUTFILE="higgsCombine_env_${CAT}_cat_${PDF}.MultiDimFit.mH125${TOYTAG}.root"
+    OUTFILE="higgsCombine_env_${CAT}_cat_${PDF}${TAG}.MultiDimFit.mH125${TOYTAG}.root"
     if [ ! -f ${OUTFILE} ]; then
         echo "File ${OUTFILE} not found!"
     fi
@@ -163,13 +161,16 @@ for (( PDF=0; PDF<${MAXPDFS}; PDF++ )); do
 done
 
 # Perform the total envelope fit
+if [[ "${CARD}" != *"total"* ]]; then
+    ARGUMENTS="${ARGUMENTS} --cminRunAllDiscreteCombinations"
+fi
 if [[ "${PLOTONLY}" == "" ]]; then
-    echo combine -M MultiDimFit -d ${CARD} ${ARGUMENTS} ${ARGRANGES} --points ${NPOINTS} -n "_env_${CAT}_tot" ${TOYARG}
+    echo combine -M MultiDimFit -d ${CARD} ${ARGUMENTS} ${ARGRANGES} --points ${NPOINTS} -n "_env_${CAT}_tot${TAG}" ${TOYARG}
     if [[ "${DRYRUN}" == "" ]]; then
-        combine -M MultiDimFit -d ${CARD} ${ARGUMENTS} ${ARGRANGES} --points ${NPOINTS} -n "_env_${CAT}_tot" ${TOYARG}
+        combine -M MultiDimFit -d ${CARD} ${ARGUMENTS} ${ARGRANGES} --points ${NPOINTS} -n "_env_${CAT}_tot${TAG}" ${TOYARG}
     fi
 fi
-OUTFILE="higgsCombine_env_${CAT}_tot.MultiDimFit.mH125${TOYTAG}.root"
+OUTFILE="higgsCombine_env_${CAT}_tot${TAG}.MultiDimFit.mH125${TOYTAG}.root"
 if [ ! -f ${OUTFILE} ]; then
     echo "File ${OUTFILE} not found!"
     break

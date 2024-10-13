@@ -49,11 +49,13 @@ Running with fits to the data:
 OUTDIR="zemu_data/"
 [ ! -d ${OUTDIR} ] && mkdir ${OUTDIR}
 
-MCFILE="pseudo_data_from_MC_v2_r0_ZmmR1.25_updateID.root"
 DATAFILE="/eos/cms/store/cmst3/user/gkaratha/ZmuE_forBDT_v7_tuples/BDT_outputs_v7/Meas_full_bdt_v7_data_emu_Run1*.root"
 # FIXME: ZMuE_fit_mk2_datagen_v1.C attempts to use the background fit file for an MC dataset, which fails on data
+MCFILE="template_zemu_embed_v3_bin1.root"
 python ZMuE_fit_mk2_wrapper_v1.py -o bin1 --fit-version 1 --skip-sgn-syst --zmm-file ${MCFILE} --bkg-file "${DATAFILE}" --xgb-min 0.3 --xgb-max 0.7 --param-name bin1 --outvar lepm_11 --create-shape-dc
+MCFILE="template_zemu_embed_v3_bin2.root"
 python ZMuE_fit_mk2_wrapper_v1.py -o bin2 --fit-version 1 --skip-sgn-syst --zmm-file ${MCFILE} --bkg-file "${DATAFILE}" --xgb-min 0.7 --xgb-max 0.9 --param-name bin2 --outvar lepm_12 --create-shape-dc
+MCFILE="template_zemu_embed_v3_bin3.root"
 python ZMuE_fit_mk2_wrapper_v1.py -o bin3 --fit-version 1 --skip-sgn-syst --zmm-file ${MCFILE} --bkg-file "${DATAFILE}" --xgb-min 0.9 --xgb-max 1.1 --param-name bin3 --outvar lepm_13 --create-shape-dc
 
 mv *mk2*_bin?.png ${OUTDIR}
@@ -87,7 +89,6 @@ Running with the smoothed templates:
 OUTDIR="zemu_embed/"
 [ ! -d ${OUTDIR} ] && mkdir ${OUTDIR}
 
-DATAFILE="/eos/cms/store/cmst3/user/gkaratha/ZmuE_forBDT_v7_tuples/BDT_outputs_v7/Meas_fullAndSF_bdt_v7_signal_mcRun1*.root"
 FITARGS="--run-histo --histo-toy --add-pol-order 1 --add-exp-order 1 --add-plaw-order 1"
 MCFILE="template_zemu_embed_v3_bin1.root"
 python ZMuE_fit_mk2_wrapper_v1.py -o bin1 --fit-version 1 --skip-sgn-syst ${FITARGS} --zmm-file ${MCFILE} --bkg-file ${MCFILE} --xgb-min 0.3 --xgb-max 0.7 --param-name bin1 --outvar lepm_11 --create-shape-dc
@@ -105,6 +106,19 @@ cp /eos/cms/store/group/phys_smp/ZLFV/datacards/zemu/workspace_mk2sgn_v1_*.root 
 
 python CreatePseudoData_from_EmbedTH1.py
 mv ctmpl_embed*.png ${OUTDIR}/
+```
+
+### Testing the measurement results
+
+Evaluating the best-fit branching fraction and the limits on it:
+
+```
+cd zemu_embed/
+
+../tests/test_zemu_limits.sh datacard_prm_units_v5_bin1.txt d
+../tests/test_zemu_limits.sh datacard_prm_units_v5_bin2.txt d
+../tests/test_zemu_limits.sh datacard_prm_units_v5_bin3.txt d
+../tests/test_zemu_limits.sh datacard_prm_units_v5_total.txt d
 ```
 
 ### MC closure tests
