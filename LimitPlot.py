@@ -5,7 +5,7 @@ import sys
 sys.path.insert(1, '/afs/cern.ch/work/g/gkaratha/private/Analysis/DispJets/Analyzer/CMSSW_10_2_16_UL/src/PhysicsTools/NanoAODTools/plotter/ZMuE_plotting_and_cfg/BDT/')
 from tdrstyle import *
 from cms_lumi import *
-from Plot_helper import *
+# from Plot_helper import *
 ROOT.gROOT.SetBatch(True)
 
 
@@ -14,16 +14,28 @@ categories=array('f',[1,2,3,4])
 labels=["BDT bin1","BDT bin2","BDT bin3","All BDT bins"]
 name="limits"
 
-## old
+# --------------------- v01 results ---------------------------------
 #expected.
-r_exp_low_2sigma=[1.2638,0.6188,0.6236,0.4255]
-r_exp_low_1sigma=[1.7639, 0.8093,0.8286,0.5568]
-r_exp_central=[2.7188, 1.0703,1.1484,0.7617]
-r_exp_high_1sigma=[3.6832, 1.7785,2.2013,1.0502]
-r_exp_high_2sigma=[4.9188,2.8280,3.1392,1.4706]
+# r_exp_low_2sigma=[1.2638,0.6188,0.6236,0.4255]
+# r_exp_low_1sigma=[1.7639, 0.8093,0.8286,0.5568]
+# r_exp_central=[2.7188, 1.0703,1.1484,0.7617]
+# r_exp_high_1sigma=[3.6832, 1.7785,2.2013,1.0502]
+# r_exp_high_2sigma=[4.9188,2.8280,3.1392,1.4706]
+# #observed
+# #r_obs_central=[2.2886, 1.2077,1.3957,0.7938] #data
+# r_obs_central=[2.7188, 1.0703,1.1484,0.7617] #asimov
+
+# --------------------- v02 results ---------------------------------
+#expected
+BF = 1.e-7
+name = "limits_v02"
+r_exp_low_2sigma =[5.0476 , 1.6259, 1.6326, 1.0971]
+r_exp_low_1sigma =[6.2942 , 2.1153, 2.1655, 1.4465]
+r_exp_central    =[8.2469 , 2.8867, 3.0055, 2.0398]
+r_exp_high_1sigma=[10.7739, 4.1165, 4.2020, 2.8418]
+r_exp_high_2sigma=[13.7387, 5.4799, 5.6508, 3.8478]
 #observed
-#r_obs_central=[2.2886, 1.2077,1.3957,0.7938] #data
-r_obs_central=[2.7188, 1.0703,1.1484,0.7617] #asimov
+r_obs_central    =[5.7365 , 3.1833, 3.0038, 1.9198]
 
 ## upd
 #r_exp_low_2sigma = [1.2602, 0.6130, 0.6299, 0.4244]
