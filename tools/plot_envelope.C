@@ -1,5 +1,5 @@
 //plot envelope for Z->e+mu fit
-bool remove_zero_point_ = false;
+bool remove_zero_point_ = true;
 
 int plot_envelope(const int set = 13, vector<TString> files = {}, const char* tag = "",
                   const bool george = false, const bool obs = false,
@@ -206,6 +206,9 @@ int plot_envelope(const int set = 13, vector<TString> files = {}, const char* ta
 
   if(remove_zero_point_) tot->SetTitle("Envelope;r;2*#Deltaln(L)");
   else                   tot->SetTitle("Envelope;r;2*ln(L)");
-  c->SaveAs(Form("envelope_%i%s.png", set, tag));
+  if(remove_zero_point_)
+    c->SaveAs(Form("envelope_%i%s.png", set, tag));
+  else
+    c->SaveAs(Form("envelope_%i%s_no_zero.png", set, tag));
   return 0;
 }

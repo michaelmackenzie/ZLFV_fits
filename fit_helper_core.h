@@ -262,14 +262,14 @@ RooAddPdf * CreateSumExpo(TString name, int order, RooRealVar& dilep_mass, bool 
    RooArgList exp_list;
    RooArgList coef_list;
 
-   float def=-0.1,min=-10,max=10;
    for( int i=0; i<order; i++){
+     float def=-0.1,min=-3,max=1;
      if (order ==1 ) def=-0.07;
-     if (order ==2 && i==0 ) def=0.05,max=10;
-     if (order ==2 && i==1 ) def=-0.1,max=10;
-     if (order >2 && i==0 ) def=0.05,max=10;
-     if (order >2 && i==1 ) def=-0.1,max=10;
-     if (order >2 && i>1 ) def=-1*i,max=0;
+     if (order ==2 && i==0 ) def=-0.05; //,max=10;
+     if (order ==2 && i==1 ) def=-0.05; //,max=10;
+     if (order >2  && i==0 ) def=-0.05; //,max=10;
+     if (order >2  && i==1 ) def=-0.05; //,max=10;
+     if (order >2  && i>1  ) def=-0.05; //,max=0;
      if (parameters.size()>0 && recursive_coef) def= parameters[i+order];
      if (parameters.size()>0 && !recursive_coef) def= parameters[i+order+1];
      RooRealVar * bkg_sumexp_x = new RooRealVar(name+"_x"+TString(to_string(i)), name+"_x"+TString(to_string(i)),def,min,max);
@@ -307,14 +307,14 @@ RooAddPdf * CreateSumPower(TString name, int order, RooRealVar& dilep_mass,  boo
    RooArgList coef_list;
    RooArgSet coef_set;
 
-   float def=0,min=-200,max=200;
    for( int i=0; i<order; i++){
+     float def=0,min=-20,max=0.;
      if (order==1) def=-10;
-     if (order==2 && i==0) def=10;
+     if (order==2 && i==0) def=-5;
      if (order==2 && i==1) def=-8;
-     if (order>2 && i==0) def=-10,min=-100,max=0;
-     if (order>2 && i==1) def=-8,min=-100,max=0;
-     if (order>2 && i==2) def=20,min=-100,max=100;
+     if (order>2 && i==0) def=-10; //,min=-100,max=0;
+     if (order>2 && i==1) def=-5; //,min=-100,max=0;
+     if (order>2 && i==2) def=-5; //,min=-100,max=100;
 
      if (parameters.size()>0) def= parameters[i];
      RooRealVar * bkg_sumplaw_a = new RooRealVar(name+"_a"+TString(to_string(i)), name+"_a"+TString(to_string(i)),def,min,max);

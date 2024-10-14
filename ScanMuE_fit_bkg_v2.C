@@ -81,6 +81,7 @@ int ScanMuE_fit_bkg_v2(TString name="bin1_r2",
   cout<<"\n *********************** Data fit ********************** "<<endl;
 
   dilep_mass.setBins(nbin_data);
+  dilep_mass_out.setBins(nbin_data);
 
   TH1F * hbkg = new TH1F("hbkg","",nbin_data,min_fit_range,max_fit_range);
 
@@ -150,7 +151,7 @@ int ScanMuE_fit_bkg_v2(TString name="bin1_r2",
     cout<<" ************************ Ftest SumExp begin ************************ "<<endl;
     sumexp_Ftest =  HistFtest(bkg_sumexp_pdfs, bkg_sumexp_ampl,  dhist_bkg, dilep_mass, bkg_sumexp_orders,
                               bkg_sumexp_names, bkg_sumexp_legs, nbin_data, "scanbkg_v2_exp_"+name,
-                              ftest_step, min_p_value,printout_levels, force_inclusion, force_standard_env__, cfg_tag);
+                              ftest_step, min_p_value,printout_levels, force_inclusion, force_standard_env_, cfg_tag);
     cout<<" ************************ Ftest SumExp end ************************ "<<endl;
   }
 
@@ -177,7 +178,7 @@ int ScanMuE_fit_bkg_v2(TString name="bin1_r2",
     cout<<" ************************ Ftest Sum Power Law begin ************************ "<<endl;
     sumplaw_Ftest =  HistFtest(bkg_sumplaw_pdfs, bkg_sumplaw_ampl,  dhist_bkg, dilep_mass, bkg_sumplaw_orders,
                                bkg_sumplaw_names, bkg_sumplaw_legs, nbin_data, "scanbkg_v2_sumplaw_"+name,
-                               ftest_step, min_p_value,printout_levels, force_inclusion, force_standard_env__, cfg_tag);
+                               ftest_step, min_p_value,printout_levels, force_inclusion, force_standard_env_, cfg_tag);
     cout<<" ************************ Ftest Sum Power Law end ************************ "<<endl;
   }
 

@@ -44,6 +44,10 @@ def process_datacard(card, directory, name, asimov = False, tag = '', verbose = 
    command += ' --cminDefaultMinimizerStrategy 0'
    command += ' --X-rtd MINIMIZER_freezeDisassociatedParams --X-rtd REMOVE_CONSTANT_ZERO_POINT=1 --X-rtd MINIMIZER_multiMin_hideConstants'
    command += ' --cminRunAllDiscreteCombinations'
+   # command += '  --X-rtd MINIMIZER_multiMin_maskChannels=2'
+   command += ' --cminApproxPreFitTolerance 0.01 --cminPreScan --cminPreFit 1'
+   command += ' --cminDefaultMinimizerTolerance 0.001 --cminDiscreteMinTol 0.0001'
+   # command += ' --rAbsAcc 0.0005 --rRelAcc 0.0005'
    output = 'fit_rate_%s.log' % (name)
    if verbose > 1: print command
    os.system('cd %s; %s >| %s 2>&1; cd ..' % (directory, command, output))
@@ -60,6 +64,10 @@ def process_datacard(card, directory, name, asimov = False, tag = '', verbose = 
    command += ' --cminDefaultMinimizerStrategy 0'
    command += ' --X-rtd MINIMIZER_freezeDisassociatedParams --X-rtd REMOVE_CONSTANT_ZERO_POINT=1 --X-rtd MINIMIZER_multiMin_hideConstants'
    command += ' --cminRunAllDiscreteCombinations'
+   # command += ' --X-rtd MINIMIZER_multiMin_maskChannels=2'
+   command += ' --cminApproxPreFitTolerance 0.01 --cminPreScan --cminPreFit 1'
+   command += ' --cminDefaultMinimizerTolerance 0.001 --cminDiscreteMinTol 0.0001'
+   # command += ' --rAbsAcc 0.0005 --rRelAcc 0.0005'
    output = 'fit_sig_%s.log' % (name)
    if verbose > 1: print command
    os.system('cd %s; %s >| %s 2>&1; cd ..' % (directory, command, output))
@@ -76,6 +84,10 @@ def process_datacard(card, directory, name, asimov = False, tag = '', verbose = 
    command += ' --cminDefaultMinimizerStrategy 0'
    command += ' --X-rtd MINIMIZER_freezeDisassociatedParams --X-rtd REMOVE_CONSTANT_ZERO_POINT=1 --X-rtd MINIMIZER_multiMin_hideConstants'
    command += ' --cminRunAllDiscreteCombinations'
+   # command += ' --X-rtd MINIMIZER_multiMin_maskChannels=2'
+   command += ' --cminApproxPreFitTolerance 0.01 --cminPreScan --cminPreFit 1'
+   command += ' --cminDefaultMinimizerTolerance 0.001 --cminDiscreteMinTol 0.0001'
+   command += ' --rAbsAcc 0.0005 --rRelAcc 0.0005'
    output = 'fit_limit_%s.log' % (name)
    if verbose > 1: print command
    os.system('cd %s; %s >| %s 2>&1; cd ..' % (directory, command, output))
