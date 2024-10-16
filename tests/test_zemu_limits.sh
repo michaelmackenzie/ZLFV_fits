@@ -9,8 +9,8 @@ Help() {
 
 CARD=$1
 SKIPDEBUG=$2
-RMIN=-8
-RMAX=8
+RMIN=-10
+RMAX=10
 
 if [[ "${CARD}" == "" ]]; then
     Help
@@ -23,7 +23,7 @@ if [ ! -f ${CARD} ]; then
 fi
 
 ARGUMENTS="--cminDefaultMinimizerStrategy 0 --X-rtd REMOVE_CONSTANT_ZERO_POINT=1"
-ARGUMENTS="${ARGUMENTS} --X-rtd MINIMIZER_freezeDisassociatedParams --X-rtd MINIMIZER_multiMin_hideConstant --X-rtd MINIMIZER_multiMin_maskConstraints"
+ARGUMENTS="${ARGUMENTS} --X-rtd MINIMIZER_freezeDisassociatedParams --X-rtd MINIMIZER_multiMin_hideConstants --X-rtd MINIMIZER_multiMin_maskConstraints"
 ARGUMENTS="${ARGUMENTS} --X-rtd MINIMIZER_multiMin_maskChannels=2"
 ARGUMENTS="${ARGUMENTS} --rMin ${RMIN} --rMax ${RMAX}"
 
@@ -91,7 +91,7 @@ DOPREFIT="d"
 # Flag to increase precision
 PRECISE="d"
 
-if [[ "${PREFIT}" != "" ]]; then
+if [[ "${DOPREFIT}" != "" ]]; then
     ARGUMENTS="${ARGUMENTS} --cminApproxPreFitTolerance 0.01 --cminPreScan --cminPreFit 1"
 fi
 if [[ "${DOCYCLE}" != "" ]] && [[ "${CARD}" != *"total"* ]]; then
@@ -106,7 +106,9 @@ if [[ "${PRECISE}" != "" ]]; then
 fi
 
 echo "Performing original fits"
-combine -d ${CARD} ${ARGUMENTS} ${LIMARGS}
+echo ">>> combine -d ${CARD} ${ARGUMENTS} ${LIMARGS}"
+#combine -d ${CARD} ${ARGUMENTS} ${LIMARGS}
+echo ">>> combine -d ${CARD} -M FitDiagnostics ${ARGUMENTS}"
 combine -d ${CARD} -M FitDiagnostics ${ARGUMENTS}
 if [[ "${DOSCAN}" != "" ]]; then
     combine -d ${CARD} -M MultiDimFit ${ARGUMENTS} --saveNLL --setParameterRanges r=-1,1 -n .original_${NAME} --algo grid --points 10

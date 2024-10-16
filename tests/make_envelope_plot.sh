@@ -117,7 +117,7 @@ RMIN=-${RRANGE}
 RMAX=${RRANGE}
 ARGRANGES=" --setParameterRanges r=${RMIN},${RMAX}"
 ARGUMENTS="--algo grid --cminDefaultMinimizerStrategy 0 --saveNLL -m 125 --X-rtd REMOVE_CONSTANT_ZERO_POINT=1"
-ARGUMENTS="${ARGUMENTS} --X-rtd MINIMIZER_freezeDisassociatedParams --X-rtd MINIMIZER_multiMin_hideConstant --X-rtd MINIMIZER_multiMin_maskConstraints"
+ARGUMENTS="${ARGUMENTS} --X-rtd MINIMIZER_freezeDisassociatedParams --X-rtd MINIMIZER_multiMin_maskConstraints" #--X-rtd MINIMIZER_multiMin_hideConstants
 ARGUMENTS="${ARGUMENTS} --cminApproxPreFitTolerance 0.1 --cminPreScan --cminPreFit 1 --X-rtd MINIMIZER_multiMin_maskChannels=2"
 ARGUMENTS="${ARGUMENTS} --cminDefaultMinimizerTolerance 0.001 --cminDiscreteMinTol 0.0001"
 ARGUMENTS="${ARGUMENTS} --rMin ${RMIN} --rMax ${RMAX}"

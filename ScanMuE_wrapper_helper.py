@@ -34,8 +34,10 @@ def print_datacard(name, sig_file, bkg_file, param_name, mass):
    txt+="MuonID     lnN 1.020    -\n"
    txt+="Lumi       lnN 1.025    -\n"
    #FIXME: Re-evaluate the JER/JES
-   txt+="JES        lnN %.3f    -\n" % (1.021 if param_name == 'bin1' else 1.015)
-   txt+="JER        lnN %.3f    -\n" % (1.010 if param_name == 'bin1' else 1.017)
+   # txt+="JES        lnN %.3f    -\n" % (1.021 if param_name == 'bin1' else 1.015)
+   # txt+="JER        lnN %.3f    -\n" % (1.010 if param_name == 'bin1' else 1.017)
+   txt+="JES        lnN %.3f    -\n" % (1.005 if param_name == 'bin1' else 1.028)
+   txt+="JER        lnN %.3f    -\n" % (1.005 if param_name == 'bin1' else 1.026)
 
    txt+="Trigger    lnN 1.001    -\n"
    txt+="Prefire    lnN 1.006    -\n"

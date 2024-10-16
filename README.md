@@ -283,6 +283,32 @@ do
 done
 ```
 
+### Example skimming with systematic variations
+
+Skimming can be roughly done using [skim_ntuple.py](skim_ntuple.py) (not the official script).
+BDT evaluation is then done with [evaluate_bdt.py](evaluate_bdt.py).
+
+```
+# Define the sample to process
+PROC="Zprime_M100"; YEAR="2018";
+# Create the nominal ntuple
+time python skim_ntuple.py -o ${PROC} --input-file ${PROC}_${YEAR}.root --year ${YEAR} --tree-name Events --input-directory lfvanalysis_rootfiles --min-mass 80
+python evaluate_bdt.py --modelname models/xgbmodel_v7_Run2_no_met_significance.pkl --measureFile trees/skim_${PROC}_${YEAR}.root --mainName bdt_v7_emu_scan --extraName ${PROC}_mcRun${YEAR}
+# Process systematic variations
+for SYS in "MuonES" "ElectronES" "JER" "JES"
+do
+time python skim_ntuple.py -o ${PROC} --input-file ${PROC}_${YEAR}.root --year ${YEAR} --tree-name Events --input-directory lfvanalysis_rootfiles --min-mass 80 --systematic ${SYS}_up
+python evaluate_bdt.py --modelname models/xgbmodel_v7_Run2_no_met_significance.pkl --measureFile trees/skim_${PROC}_${SYS}_up_${YEAR}.root --mainName bdt_v7_emu_scan --extraName ${PROC}_${SYS}_up_mcRun${YEAR}
+time python skim_ntuple.py -o ${PROC} --input-file ${PROC}_${YEAR}.root --year ${YEAR} --tree-name Events --input-directory lfvanalysis_rootfiles --min-mass 80 --systematic ${SYS}_down
+python evaluate_bdt.py --modelname models/xgbmodel_v7_Run2_no_met_significance.pkl --measureFile trees/skim_${PROC}_${SYS}_down_${YEAR}.root --mainName bdt_v7_emu_scan --extraName ${PROC}_${SYS}_down_mcRun${YEAR}
+done
+
+# Evaluate the systematic effects on the yield and resonance position
+python tools/eval_zprime_unc.py --xgb-min 0.30 --xgb-max 0.70 --local
+python tools/eval_zprime_unc.py --xgb-min 0.70 --xgb-max 1.00 --local
+
+```
+
 ### Additional useful tools/studies
 
 - [plot_signal_model.py](tools/plot_signal_model.py): Plot the signal model interpolation, including the line shape and the overall efficiency.

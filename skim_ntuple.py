@@ -79,6 +79,7 @@ parser.add_argument("--out-tree-name", dest="out_tree_name",default="mytree",typ
 parser.add_argument("--min-mass", dest="min_mass",default=95.,type=float,help="Minimum mass allowed")
 parser.add_argument("--first-entry", dest="first_entry",default=0,type=int,help="First entry to process")
 parser.add_argument("--max-entries", dest="max_entries",default=-1,type=int,help="Maximum entries to process")
+parser.add_argument("--systematic", dest="systematic",default="",type=str,help="Systematic scale to test ([MuonES, ElectronES, JER, JES]_[up/down])")
 
 args, unknown = parser.parse_known_args()
 
@@ -89,11 +90,23 @@ args, unknown = parser.parse_known_args()
 # check input flags
 if len(unknown)>0: 
    print "not found:",unknown,"exitting"
-   exit()
+   exit(1)
 
 if args.year not in [2016, 2017, 2018]:
    print "Unknown year %i" % (args.year)
-   exit()
+   exit(2)
+
+sys = ""
+sys_is_up = True
+if args.systematic != "":
+   if not '_up' in args.systematic and not '_down' in args.systematic:
+      print 'Systematic %s not configured properly' % (args.systematic)
+      exit(3)
+   sys_is_up = '_up' in args.systematic
+   sys = args.systematic.split('_')[0]
+   if not sys in ['MuonES', 'ElectronES', 'JER', 'JES']:
+      print 'Unknown systematic %s' % (sys)
+      exit(3)
 
 #----------------------------------------------
 # Read in the input data
@@ -109,6 +122,9 @@ os.system("[ ! -d %s ] && mkdir -p %s" % (outdir, outdir))
 os.system("[ ! -d log ] && mkdir log")
 
 f_in = rt.TFile.Open(path + args.input_file, 'READ')
+if not f_in:
+   print "File " + path + args.input_file + " not found"
+   exit(4)
 t_in = f_in.Get(args.tree_name)
 nentries = t_in.GetEntries()
 
@@ -133,7 +149,7 @@ t_in.SetBranchStatus('LHE*', 0)
 # Narrow to relevant events with TEventList
 #----------------------------------------------
 
-cuts = 'SelectionFilter_LepM > ' + str(args.min_mass-5.) + ' && (Muon_charge[0] * Electron_charge[0] < 0) && Muon_corrected_pt[0] > 20. && Electron_pt[0] > 20.'
+cuts = 'SelectionFilter_LepM > ' + str(args.min_mass-5.) + ' && (Muon_charge[0] * Electron_charge[0] < 0) && Muon_corrected_pt[0] > 17. && Electron_pt[0] > 17.'
 print 'Apply event list selection', cuts
 t_in.Draw(">>elist", cuts);
 elist = rt.gDirectory.Get("elist");
@@ -142,7 +158,11 @@ elist = rt.gDirectory.Get("elist");
 # Create the output data structure
 #----------------------------------------------
 
-f_out = rt.TFile.Open(outdir + 'skim_' + args.name + '_' + str(args.year) + '.root', 'RECREATE')
+f_name = 'skim_' + args.name + '_' + str(args.year) + '.root'
+if sys != "":
+   f_name = 'skim_' + args.name + '_' + sys + ('_up_' if sys_is_up else '_down_') + str(args.year) + '.root'
+   
+f_out = rt.TFile.Open(outdir + f_name, 'RECREATE')
 t_out = rt.TTree(args.out_tree_name, 'Z prime events tree')
 
 
@@ -214,6 +234,24 @@ for entry in range(first_entry, max_entry):
    # Evaluate input information
    #-----------------------------------------
 
+   # Update event energy scales if requested
+   muon_scale_sys = 0.003
+   elec_scale_sys = 0.005
+   if sys == 'MuonES': # No need to propagate to MET as this is done below
+      t_in.Muon_corrected_pt[0] *= (1. + muon_scale_sys) if sys_is_up else (1. - muon_scale_sys)
+   if sys == 'ElectronES':
+      # [met_corr, met_corr_phi] = met_correction(t_in.Electron_pt[0]*(elec_scale_sys if sys_is_up else -elec_scale_sys), t_in.Electron_phi[0], t_in.PuppiMET_pt, t_in.PuppiMET_phi)
+      # t_in.PuppiMET_pt  = met_corr
+      # t_in.PuppiMET_phi = met_corr_phi
+      t_in.Electron_pt[0] *= (1. + elec_scale_sys) if sys_is_up else (1. - elec_scale_sys)
+   # if sys == 'JER': # FIXME: Add a down variation
+   #    t_in.PuppiMET_pt  = t_in.PuppiMET_ptJERUp  if sys_is_up else t_in.PuppiMET_pt
+   #    t_in.PuppiMET_phi = t_in.PuppiMET_phiJERUp if sys_is_up else t_in.PuppiMET_phi
+   # if sys == 'JES': # FIXME: Add a down variation
+   #    t_in.PuppiMET_pt  = t_in.PuppiMET_ptJESUp  if sys_is_up else t_in.PuppiMET_pt
+   #    t_in.PuppiMET_phi = t_in.PuppiMET_phiJESUp if sys_is_up else t_in.PuppiMET_phi
+
+
    # Set the lepton kinematics
    ele_lead = t_in.Electron_pt[0] > t_in.Muon_corrected_pt[0]
    if ele_lead:
@@ -222,6 +260,8 @@ for entry in range(first_entry, max_entry):
    else:
       pt_l1[0] = t_in.Muon_corrected_pt[0]; eta_l1[0] = t_in.Muon_eta    [0]; phi_l1[0] = t_in.Muon_phi    [0]; mass_l1[0] = 0.10566;
       pt_l2[0] = t_in.Electron_pt      [0]; eta_l2[0] = t_in.Electron_eta[0]; phi_l2[0] = t_in.Electron_phi[0]; mass_l2[0] = 0.511e-3;
+
+
    lv1.SetPtEtaPhiM(pt_l1[0], eta_l1[0], phi_l1[0], mass_l1[0])
    lv2.SetPtEtaPhiM(pt_l2[0], eta_l2[0], phi_l2[0], mass_l2[0])
    isMuon_l1[0] = 0. if ele_lead else 1.
@@ -236,6 +276,12 @@ for entry in range(first_entry, max_entry):
    # Set the MET kinematics
    met           [0] = t_in.PuppiMET_pt
    met_phi       [0] = t_in.PuppiMET_phi
+   if sys == 'JER': # FIXME: Add a down variation
+      met    [0] = t_in.PuppiMET_ptJERUp  if sys_is_up else t_in.PuppiMET_pt
+      met_phi[0] = t_in.PuppiMET_phiJERUp if sys_is_up else t_in.PuppiMET_phi
+   if sys == 'JES': # FIXME: Add a down variation
+      met    [0] = t_in.PuppiMET_ptJESUp  if sys_is_up else t_in.PuppiMET_pt
+      met_phi[0] = t_in.PuppiMET_phiJESUp if sys_is_up else t_in.PuppiMET_phi
    # Propagate the muon pT correction to the MET
    [met_corr, met_corr_phi] = met_correction(t_in.Muon_corrected_pt[0] - t_in.Muon_pt[0], t_in.Muon_phi[0], met[0], met_phi[0])
    met           [0] = met_corr
