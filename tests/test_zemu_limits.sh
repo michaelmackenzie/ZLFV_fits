@@ -23,7 +23,7 @@ if [ ! -f ${CARD} ]; then
 fi
 
 ARGUMENTS="--cminDefaultMinimizerStrategy 0 --X-rtd REMOVE_CONSTANT_ZERO_POINT=1"
-ARGUMENTS="${ARGUMENTS} --X-rtd MINIMIZER_freezeDisassociatedParams --X-rtd MINIMIZER_multiMin_hideConstants --X-rtd MINIMIZER_multiMin_maskConstraints"
+ARGUMENTS="${ARGUMENTS} --X-rtd MINIMIZER_freezeDisassociatedParams --X-rtd MINIMIZER_multiMin_maskConstraints" # --X-rtd MINIMIZER_multiMin_hideConstants
 ARGUMENTS="${ARGUMENTS} --X-rtd MINIMIZER_multiMin_maskChannels=2"
 ARGUMENTS="${ARGUMENTS} --rMin ${RMIN} --rMax ${RMAX}"
 
@@ -107,7 +107,7 @@ fi
 
 echo "Performing original fits"
 echo ">>> combine -d ${CARD} ${ARGUMENTS} ${LIMARGS}"
-#combine -d ${CARD} ${ARGUMENTS} ${LIMARGS}
+combine -d ${CARD} ${ARGUMENTS} ${LIMARGS}
 echo ">>> combine -d ${CARD} -M FitDiagnostics ${ARGUMENTS}"
 combine -d ${CARD} -M FitDiagnostics ${ARGUMENTS}
 if [[ "${DOSCAN}" != "" ]]; then

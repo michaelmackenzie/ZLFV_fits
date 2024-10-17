@@ -26,6 +26,8 @@ def process_datacard(card, directory, name, test = 'bias', toys = 100, signal_ra
    #----------------------------------------------------------------------------
 
    results = []
+
+   #----------------------------------------------------------------------------
    if test == 'bias':
       command = base_dir + '/tests/bemu_bias.sh ' + card + ' -t ' + str(toys) + ' -g ' + str(toys) + ' --name ' + name + ' -r 30 --skipplots'
       if signal_rate > 0.: command += ' --genarg "--expectSignal ' + str(signal_rate) + '"'
@@ -34,10 +36,42 @@ def process_datacard(card, directory, name, test = 'bias', toys = 100, signal_ra
       if verbose > 1: print command
       os.system('cd %s; %s >| %s; cd ..' % (directory, command, output))
 
+   #----------------------------------------------------------------------------
+   if test == 'gof':
+      name = name + tag
+      command = base_dir + '/tests/do_goodness_of_fit.sh ' + card + ' -t ' + str(toys) + ' -g ' + str(toys) + ' --tag ' + name + ' -r 30 --algo saturated --skipplots'
+      command += ' --asimov'
+      output = 'fit_gof_%s.log' % (name)
+      if verbose > 1: print command
+      os.system('cd %s; %s >| %s; cd ..' % (directory, command, output))
+
+
+   #----------------------------------------------------------------------------
+   if test == 'impacts':
+      command = base_dir + '/tests/impacts.sh ' + card + ' -r 30'
+      if tag != "": command += ' --tag ' + tag
+      # command += ' -o --unblind'
+      output = 'fit_impacts_%s.log' % (name)
+      if verbose > 1: print command
+      os.system('cd %s; %s >| %s; cd ..' % (directory, command, output))
+
 #----------------------------------------------------------------------------------------
 # Retrieve fit information for a single mass point
 def retrieve_info(card, directory, name, test = 'bias', signal_rate = 0., tag = '', figdir = '', verbose = 0):
+
+   #----------------------------------------------------------------------------
+   # Extract the mass
+   #----------------------------------------------------------------------------
+
+   mass = float(card.split('mass-')[1].split('_')[0])
+      
+   #----------------------------------------------------------------------------
+   # Retrieve the test results
+   #----------------------------------------------------------------------------
+
    results = []
+
+   #----------------------------------------------------------------------------
    if test == 'bias':
       fit_file = directory + 'fitDiagnostics.' + name + '_closure_test' + tag + '.root'
       f = rt.TFile.Open(fit_file, 'READ')
@@ -67,11 +101,62 @@ def retrieve_info(card, directory, name, test = 'bias', signal_rate = 0., tag = 
       results = [mean, pull, width]
 
    #----------------------------------------------------------------------------
-   # Extract the mass
-   #----------------------------------------------------------------------------
+   if test == 'gof':
+      obs_file = directory + 'higgsCombine.saturated_observed_' + name + tag + '.GoodnessOfFit.mH120.root'
+      toy_file = directory + 'higgsCombine.saturated_' + name + tag + '.GoodnessOfFit.mH120.root'
+      f_obs = rt.TFile.Open(obs_file, 'READ')
+      f_toy = rt.TFile.Open(toy_file, 'READ')
+      if not f_obs or not f_toy:
+         return [[-1.], mass]
+      t_obs = f_obs.Get('limit')
+      t_toy = f_toy.Get('limit')
 
-   mass = float(card.split('mass-')[1].split('_')[0])
-      
+      t_obs.GetEntry(0)
+      obs_val = t_obs.limit
+
+      min_val = min(obs_val, t_toy.GetMinimum('limit'))
+      max_val = max(obs_val, t_toy.GetMaximum('limit'))
+      h_vals = rt.TH1D('h_vals', 'Goodness of Fit', 25, min_val - 0.05*(max_val-min_val), max_val + 0.05*(max_val-min_val))
+
+      ntoys = t_toy.GetEntries()
+      p_val = 0
+      for itoy in range(ntoys):
+         t_toy.GetEntry(itoy)
+         toy_val = t_toy.limit
+         if obs_val <= toy_val: p_val += 1
+         h_vals.Fill(toy_val)
+      p_val = p_val * 1./ntoys
+
+      rt.gStyle.SetOptStat(0)
+      c = rt.TCanvas()
+      h_vals.SetXTitle("test statistic")
+      h_vals.Draw('hist')
+      h_vals.SetLineWidth(2)
+      h_vals.GetYaxis().SetRangeUser(0., 1.2*h_vals.GetMaximum())
+
+      label = rt.TLatex()
+      label.SetNDC()
+      label.SetTextFont(62)
+      label.SetTextSize(0.05)
+      label.SetTextAlign(32)
+      label.SetTextAngle(0)
+      label.DrawLatex(0.83, 0.85, "p = %.3f" % (p_val))
+
+      arr = rt.TArrow(obs_val,0.15*h_vals.GetMaximum(),obs_val,0.,0.03,"|>")
+      arr.SetLineWidth(3)
+      arr.SetLineColor(rt.kRed)
+      arr.SetFillColor(rt.kRed)
+      arr.Draw()
+
+      c.SaveAs(figdir+name+'_gof.png')
+
+      results = [p_val]
+
+   #----------------------------------------------------------------------------
+   if test == 'impacts':
+      os.system('cp %s/impacts_*.pdf %s' % (directory, figdir))
+
+
    #----------------------------------------------------------------------------
    # Return the results
    #----------------------------------------------------------------------------
@@ -167,6 +252,10 @@ if not args.skip_fits:
       for job in jobs[ithread:nthread]:    
          job.join()
 
+#----------------------------------------------
+# Retrieve the validation results
+#----------------------------------------------
+
 for f in list_of_files:
    mass_point = f.split('_mp')[1].split('.txt')[0]
    if args.mass_point >= 0 and mass_point != str(args.mass_point): continue
@@ -199,4 +288,19 @@ if args.test == 'bias':
    for index in range(len(masses)):
       if abs(val_results[index][1]) > 0.3:
          print 'Mass point', masses[index],'(index', index,'): Large bias, mean =', val_results[index][1], 'width =', val_results[index][2]
+
+if args.test == 'gof':
+   h = rt.TH1D('hpull', 'Z prime mass goodness of fit', 40, 0., 1.05)
+   for pval in [res[0] for res in val_results]: h.Fill(pval)
+   c = rt.TCanvas()
+   h.Draw('hist')
+   h.SetLineWidth(2)
+   h.SetFillStyle(3005)
+   h.SetFillColor(rt.kBlue)
+   h.SetXTitle('GOF p-value')
+   c.SaveAs(figdir+'pvals.png')
+
+   for index in range(len(masses)):
+      if abs(val_results[index][0]) < 0.01:
+         print 'Mass point', masses[index],'(index', index,'): Low p-value =', val_results[index][0]
 

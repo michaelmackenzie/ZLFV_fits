@@ -204,8 +204,8 @@ int plot_envelope(const int set = 13, vector<TString> files = {}, const char* ta
     }
   }
 
-  if(remove_zero_point_) tot->SetTitle("Envelope;r;2*#Deltaln(L)");
-  else                   tot->SetTitle("Envelope;r;2*ln(L)");
+  if(remove_zero_point_) tot->SetTitle("Envelope;r;-2*#Deltaln(L)");
+  else                   tot->SetTitle("Envelope;r;-2*ln(L)");
   if(remove_zero_point_)
     c->SaveAs(Form("envelope_%i%s.png", set, tag));
   else
