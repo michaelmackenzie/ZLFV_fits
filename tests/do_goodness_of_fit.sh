@@ -11,6 +11,8 @@ Help() {
     echo " --fitarg            : Additional fit arguments"
     echo " --skipworkspace     : Don't recreate workspace for input data card"
     echo " --plotonly          : Only make plots"
+    echo " --skipplots         : Do not make plots"
+    echo " --asimov            : Use the Asimov template instead of observed"
     echo " --algo              : Only process the given algorithm"
     echo " --tag               : Tag for output results"
     echo " --help         (-h ): Print this information"
@@ -23,6 +25,8 @@ TOYSPERLOOP=50
 FITARG=""
 SKIPWORKSPACE=""
 PLOTONLY=""
+SKIPPLOTS=""
+ASIMOV=""
 TAG=""
 ONLYALGO=""
 
@@ -61,6 +65,10 @@ do
         SKIPWORKSPACE="d"
     elif [[ "${var}" == "--plotonly" ]]; then
         PLOTONLY="d"
+    elif [[ "${var}" == "--skipplots" ]]; then
+        SKIPPLOTS="d"
+    elif [[ "${var}" == "--asimov" ]]; then
+        ASIMOV="-t -1"
     elif [[ "${CARD}" != "" ]]; then
         echo "Arguments aren't configured correctly! (at ${var}, CARD=${CARD})"
         Help
@@ -89,9 +97,9 @@ if [[ "${SKIPWORKSPACE}" == "" ]] && [[ "${CARD}" == *".txt" ]]; then
     echo "Created workspace ${WORKSPACE}"
 fi
 
-# FITARG="${FITARG} --cminDefaultMinimizerStrategy 0 --cminApproxPreFitTolerance 0.1 --cminPreScan --cminPreFit 1 --rMin -${RRANGE} --rMax ${RRANGE}"
-FITARG="${FITARG} --cminDefaultMinimizerStrategy 0  --cminRunAllDiscreteCombinations --X-rtd REMOVE_CONSTANT_ZERO_POINT=1"
-FITARG="${FITARG} --X-rtd MINIMIZER_freezeDisassociatedParams --X-rtd MINIMIZER_multiMin_hideConstants"
+FITARG="${FITARG} --X-rtd MINIMIZER_freezeDisassociatedParams --X-rtd MINIMIZER_multiMin_maskConstraints" #--X-rtd MINIMIZER_multiMin_hideConstants
+FITARG="${FITARG} --cminApproxPreFitTolerance 0.1 --cminPreScan --cminPreFit 1 --X-rtd MINIMIZER_multiMin_maskChannels=2"
+FITARG="${FITARG} --cminDefaultMinimizerTolerance 0.001 --cminDiscreteMinTol 0.0001"
 FITARG="${FITARG} --rMin -${RRANGE} --rMax ${RRANGE}"
 if [ ${NTOYS} -lt ${TOYSPERLOOP} ]; then
     echo "Setting N(gen) per loop to ${NTOYS}"
@@ -110,8 +118,8 @@ for ALGO in "saturated" "KS" "AD"; do
     fi
     if [[ "${PLOTONLY}" == "" ]]; then
         echo "Performing ${ALGO} goodness of fit calculation"
-        echo ">>> combine -M GoodnessOfFit --algo=${ALGO} -d ${WORKSPACE} ${FITARG} -n .${ALGO}_observed${TAG}"
-        combine -M GoodnessOfFit --algo=${ALGO} -d ${WORKSPACE} ${FITARG} -n .${ALGO}_observed${TAG}
+        echo ">>> combine -M GoodnessOfFit --algo=${ALGO} -d ${WORKSPACE} ${FITARG} -n .${ALGO}_observed${TAG} ${ASIMOV}"
+        combine -M GoodnessOfFit --algo=${ALGO} -d ${WORKSPACE} ${FITARG} -n .${ALGO}_observed${TAG} ${ASIMOV}
 
         #Generate toys in sections
         SEED=90
@@ -130,7 +138,7 @@ for ALGO in "saturated" "KS" "AD"; do
         done
         echo "Merging output files..."
         TOYFILE="higgsCombine.${ALGO}${TAG}.GoodnessOfFit.mH120.root"
-        ${CMSSW_BASE}/src/CLFVAnalysis/Roostats/haddfitdiag.py ${TOYFILE} ${OUTPUTLIST}
+        ${CMSSW_BASE}/src/ZLFV_fits/tools/haddfitdiag.py ${TOYFILE} ${OUTPUTLIST}
         rm ${OUTPUTLIST}
     fi
 
@@ -139,8 +147,8 @@ for ALGO in "saturated" "KS" "AD"; do
         echo "${OBSFILE} not found!"
     elif [ ! -f ${TOYFILE} ]; then
         echo "${TOYFILE} not found!"
-    else
-        root.exe -q -b "${CMSSW_BASE}/src/CLFVAnalysis/Roostats/tools/plot_goodness_of_fit.C(\"${OBSFILE}\", \"${TOYFILE}\", \"_${ALGO}${TAG}\")"
+    elif [[ "${SKIPPLOTS}" == "" ]]; then
+        root.exe -q -b "${CMSSW_BASE}/src/ZLFV_fits/tools/plot_goodness_of_fit.C(\"${OBSFILE}\", \"${TOYFILE}\", \"_${ALGO}${TAG}\")"
     fi
 done
 

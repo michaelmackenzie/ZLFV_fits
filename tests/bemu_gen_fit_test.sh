@@ -4,21 +4,23 @@
 Help() {
     echo "Process Z->e+mu closure test:"
     echo " Usage: bemu_bias.sh --card_1 --card_2 [options]"
-    echo "--card_1      : Card for generation"
-    echo "--card_2      : Card for generation"
-    echo "--name    (-n): Test name (default taken from gen card)"
-    echo "--toys    (-t): N(toys) (default = 1000)"
-    echo "--gentoys (-g): N(gen) per segment (default = 100)"
-    echo "--fitarg      : Additional fit arguments"
-    echo "--genarg      : Additional generator arguments"
-    echo "--tag         : Name tag for output"
-    echo "--rrange  (-r): r range (default = 100)"
-    echo "--seed    (-s): Base random seed (default = 90)"
-    echo "--skipfits    : Skip fit loops, only create plots"
-    echo "--multidim    : Use the MultiDimFit method"
-    echo "--grid        : Use a grid scan with MultiDimFit"
-    echo "--dontclean   : Don't clean up temporary files"
-    echo "--dryrun      : Don't execute commands"
+    echo "--card_1       : Card for generation"
+    echo "--card_2       : Card for generation"
+    echo "--name    (-n) : Test name (default taken from gen card)"
+    echo "--toys    (-t) : N(toys) (default = 1000)"
+    echo "--gentoys (-g) : N(gen) per segment (default = 100)"
+    echo "--fitarg       : Additional fit arguments"
+    echo "--genarg       : Additional generator arguments"
+    echo "--gensignal    : Rate to inject signal in the generation (default = 0)"
+    echo "--tag          : Name tag for output"
+    echo "--rrange  (-r) : r range (default = 10)"
+    echo "--seed    (-s) : Base random seed (default = 90)"
+    echo "--skipfits     : Skip fit loops, only create plots"
+    echo "--skipfullplots: Skip printing plots of all fit parameters"
+    echo "--multidim     : Use the MultiDimFit method"
+    echo "--grid         : Use a grid scan with MultiDimFit"
+    echo "--dontclean    : Don't clean up temporary files"
+    echo "--dryrun       : Don't execute commands"
 }
 
 CARD_GEN=""
@@ -27,9 +29,10 @@ NTOYS="1000"
 NGENPERTOY="100"
 FITARG=""
 GENARG=""
+GENSIGNAL="0"
 NAME=""
 TAG=""
-RRANGE="100"
+RRANGE="10"
 SEED="90"
 SKIPFITS=""
 MULTIDIM=""
@@ -90,6 +93,11 @@ do
         iarg=$((iarg + 1))
         eval "var=\${${iarg}}"
         GENARG=${var}
+    elif [[ "${var}" == "--gensignal" ]]
+    then
+        iarg=$((iarg + 1))
+        eval "var=\${${iarg}}"
+        GENSIGNAL=${var}
     elif [[ "${var}" == "--seed" ]] || [[ "${var}" == "-s" ]]
     then
         iarg=$((iarg + 1))
@@ -98,6 +106,9 @@ do
     elif [[ "${var}" == "--skipfits" ]]
     then
         SKIPFITS="d"
+    elif [[ "${var}" == "--skipfullplots" ]]
+    then
+        SKIPFULLPLOTS="d"
     elif [[ "${var}" == "--multidim" ]]
     then
         MULTIDIM="d"
@@ -111,7 +122,7 @@ do
     then
         HEAD="echo"
     else
-        echo "Arguments aren't configured correctly!"
+        echo "Arguments aren't configured correctly! ARG=${var}"
         Help
         exit
     fi
@@ -136,7 +147,7 @@ ARGS="${ARGS} --X-rtd MINIMIZER_freezeDisassociatedParams"
 ARGS="${ARGS} --X-rtd MINIMIZER_multiMin_hideConstants"
 
 FITARG="${ARGS} ${FITARG}"
-GENARG="${ARGS} ${GENARG}"
+GENARG="${ARGS} ${GENARG} --expectSignal ${GENSIGNAL}"
 ALGO="singles --cl=0.68"
 if [[ "${GRID}" == "d" ]]; then
     ALGO="grid --points 3 --alignEdges 1"
@@ -158,7 +169,7 @@ if [[ "${SKIPFITS}" == "" ]]; then
         ${HEAD} combine -d ${GENCARD} -M GenerateOnly --saveToys -t ${NGEN} -n .${OUTNAME} --genBinnedChannels lepm_13,lepm_12,lepm_11,lepm_10 -s ${SEED} ${GENARG}
 
         # Create binned data to fit
-        ${HEAD} root.exe -q -b -l "${CMSSW_BASE}/src/CLFVAnalysis/Roostats/convert_unbinned_to_binned.C(\"higgsCombine.${OUTNAME}.GenerateOnly.mH120.${SEED}.root\", \"higgsCombine.${OUTNAME}_binned.GenerateOnly.mH120.${SEED}.root\")"
+        ${HEAD} root.exe -q -b -l "${CMSSW_BASE}/src/ZLFV_fits/tools/convert_unbinned_to_binned.C(\"higgsCombine.${OUTNAME}.GenerateOnly.mH120.${SEED}.root\", \"higgsCombine.${OUTNAME}_binned.GenerateOnly.mH120.${SEED}.root\")"
 
         # Fit the toy data
         if [[ "${MULTIDIM}" == "" ]]; then
@@ -184,9 +195,9 @@ if [[ "${SKIPFITS}" == "" ]]; then
 
     #Merge the output fitDiagnostics files
     if [[ "${MULTIDIM}" == "" ]]; then
-        ${HEAD} ${CMSSW_BASE}/src/CLFVAnalysis/Roostats/haddfitdiag.py "fitDiagnostics.${OUTNAME}${TAG}.root" ${OUTPUTLIST}
+        ${HEAD} ${CMSSW_BASE}/src/ZLFV_fits/tools/haddfitdiag.py "fitDiagnostics.${OUTNAME}${TAG}.root" ${OUTPUTLIST}
     else
-        ${HEAD} ${CMSSW_BASE}/src/CLFVAnalysis/Roostats/haddfitdiag.py "higgsCombine.${OUTNAME}${TAG}.MultiDimFit.root" ${OUTPUTLIST}
+        ${HEAD} ${CMSSW_BASE}/src/ZLFV_fits/tools/haddfitdiag.py "higgsCombine.${OUTNAME}${TAG}.MultiDimFit.root" ${OUTPUTLIST}
     fi
 
     #Clean up the output
@@ -204,10 +215,12 @@ ${HEAD} ls -l ${OUTFILE}
 
 echo "Creating bias plots..."
 if [[ "${MULTIDIM}" == "" ]]; then
-    ${HEAD} root.exe -q -b "${CMSSW_BASE}/src/CLFVAnalysis/Roostats/tools/plot_combine_fits.C(\"${OUTFILE}\", 0, \"bias_${OUTNAME}${TAG}\", 2, 0)"
+    ${HEAD} root.exe -q -b "${CMSSW_BASE}/src/ZLFV_fits/tools/plot_combine_fits.C(\"${OUTFILE}\", ${GENSIGNAL}, \"bias_${OUTNAME}${TAG}\", 2, 0)"
 else
-    ${HEAD} root.exe -q -b "${CMSSW_BASE}/src/CLFVAnalysis/Roostats/tools/plot_combine_multidim_fits.C(\"${OUTFILE}\", 0., \"bias_${OUTNAME}${TAG}\")"
+    ${HEAD} root.exe -q -b "${CMSSW_BASE}/src/ZLFV_fits/tools/plot_combine_multidim_fits.C(\"${OUTFILE}\", ${GENSIGNAL}, \"bias_${OUTNAME}${TAG}\")"
 fi
 
-echo "Creating plots of all fit params..."
-${HEAD} root.exe -q -b "${CMSSW_BASE}/src/CLFVAnalysis/Roostats/tools/plot_combine_fit_params.C(\"${OUTFILE}\", \"figures/bias_${OUTNAME}${TAG}\")"
+if [[ "${SKIPFULLPLOTS}" == "" ]]; then
+    echo "Creating plots of all fit params..."
+    ${HEAD} root.exe -q -b "${CMSSW_BASE}/src/ZLFV_fits/tools/plot_combine_fit_params.C(\"${OUTFILE}\", \"figures/bias_${OUTNAME}${TAG}\")"
+fi

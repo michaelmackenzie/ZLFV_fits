@@ -5,6 +5,7 @@ import ROOT as rt
 from array import array
 from math import exp
 from math import log10
+from multiprocessing import Process
 
 #----------------------------------------------------------------------------------------
 # Define the sorting of the datacards
@@ -13,7 +14,7 @@ def file_sort(f):
 
 #----------------------------------------------------------------------------------------
 # Process a single mass point
-def process_datacard(card, directory, name, test = 'bias', toys = 100, skip_fit = False, tag = '', figdir = '', verbose = 0):
+def process_datacard(card, directory, name, test = 'bias', toys = 100, signal_rate = 0., tag = '', verbose = 0):
    if not os.path.isfile(directory + card):
       print "Card %s not found" % (card)
    if verbose > -1: print 'Processing mass point', name, '(card =', card+')'
@@ -25,34 +26,38 @@ def process_datacard(card, directory, name, test = 'bias', toys = 100, skip_fit 
    #----------------------------------------------------------------------------
 
    results = []
+
+   #----------------------------------------------------------------------------
    if test == 'bias':
       command = base_dir + '/tests/bemu_bias.sh ' + card + ' -t ' + str(toys) + ' -g ' + str(toys) + ' --name ' + name + ' -r 30 --skipplots'
+      if signal_rate > 0.: command += ' --genarg "--expectSignal ' + str(signal_rate) + '"'
       if tag != "":  command += ' --tag ' + tag
-      output = 'fit_bias_%s_%s.log' % (name, tag)
+      output = 'fit_bias_%s%s.log' % (name, tag)
       if verbose > 1: print command
-      if not skip_fit:
-         os.system('cd %s; %s >| %s; cd ..' % (directory, command, output))
-      fit_file = directory + 'fitDiagnostics.' + name + tag + '_closure_test.root'
-      f = rt.TFile.Open(fit_file, 'READ')
-      t = f.Get('tree_fit_sb')
-      t.Draw("r >> h")
-      h = rt.gPad.GetPrimitive('h')
-      mean = h.GetMean()
-      t.Draw('r / (r < 0. ? rHiErr : rLoErr) >> hpull', 'rHiErr > 0. && rLoErr > 0.')
-      h = rt.gPad.GetPrimitive('hpull')
-      func = rt.TF1("func", "[2]*TMath::Gaus(x, [0], [1])", -3, 3);
-      func.SetParameters(0., 1., h.Integral())
-      h.Fit(func, 'R')
-      pull  = func.GetParameter(0)
-      width = func.GetParameter(1)
-      # pull = h.GetMean()
-      # width = h.GetStdDev()
-      c = rt.TCanvas()
-      h.Draw('hist')
-      func.Draw('same')
-      c.SaveAs(figdir+name+'_bias.png')
-      f.Close()
-      results = [mean, pull, width]
+      os.system('cd %s; %s >| %s; cd ..' % (directory, command, output))
+
+   #----------------------------------------------------------------------------
+   if test == 'gof':
+      name = name + tag
+      command = base_dir + '/tests/do_goodness_of_fit.sh ' + card + ' -t ' + str(toys) + ' -g ' + str(toys) + ' --tag ' + name + ' -r 30 --algo saturated --skipplots'
+      command += ' --asimov'
+      output = 'fit_gof_%s.log' % (name)
+      if verbose > 1: print command
+      os.system('cd %s; %s >| %s; cd ..' % (directory, command, output))
+
+
+   #----------------------------------------------------------------------------
+   if test == 'impacts':
+      command = base_dir + '/tests/impacts.sh ' + card + ' -r 30'
+      if tag != "": command += ' --tag ' + tag
+      # command += ' -o --unblind'
+      output = 'fit_impacts_%s.log' % (name)
+      if verbose > 1: print command
+      os.system('cd %s; %s >| %s; cd ..' % (directory, command, output))
+
+#----------------------------------------------------------------------------------------
+# Retrieve fit information for a single mass point
+def retrieve_info(card, directory, name, test = 'bias', signal_rate = 0., tag = '', figdir = '', verbose = 0):
 
    #----------------------------------------------------------------------------
    # Extract the mass
@@ -61,11 +66,102 @@ def process_datacard(card, directory, name, test = 'bias', toys = 100, skip_fit 
    mass = float(card.split('mass-')[1].split('_')[0])
       
    #----------------------------------------------------------------------------
+   # Retrieve the test results
+   #----------------------------------------------------------------------------
+
+   results = []
+
+   #----------------------------------------------------------------------------
+   if test == 'bias':
+      fit_file = directory + 'fitDiagnostics.' + name + '_closure_test' + tag + '.root'
+      f = rt.TFile.Open(fit_file, 'READ')
+      t = f.Get('tree_fit_sb')
+      t.Draw("r >> h")
+      h = rt.gPad.GetPrimitive('h')
+      mean = h.GetMean() - signal_rate
+      c = rt.TCanvas()
+      h.Draw('hist')
+      h.SetLineWidth(2)
+      c.SaveAs(figdir+name+'_r.png')
+
+      h = rt.TH1F('hpull', 'Pull distribution', 30, -3, 3)
+      t.Draw('(r - %.3f) / (r < 0. ? rHiErr : rLoErr) >> hpull' % (signal_rate), 'rHiErr > 0. && rLoErr > 0.')
+      func = rt.TF1("func", "[2]*TMath::Gaus(x, [0], [1])", -3, 3);
+      func.SetParameters(0., 1., h.Integral())
+      h.Fit(func, 'R')
+      pull  = func.GetParameter(0)
+      width = func.GetParameter(1)
+      # pull = h.GetMean()
+      # width = h.GetStdDev()
+      h.Draw('hist')
+      h.SetLineWidth(2)
+      func.Draw('same')
+      c.SaveAs(figdir+name+'_bias.png')
+      f.Close()
+      results = [mean, pull, width]
+
+   #----------------------------------------------------------------------------
+   if test == 'gof':
+      obs_file = directory + 'higgsCombine.saturated_observed_' + name + tag + '.GoodnessOfFit.mH120.root'
+      toy_file = directory + 'higgsCombine.saturated_' + name + tag + '.GoodnessOfFit.mH120.root'
+      f_obs = rt.TFile.Open(obs_file, 'READ')
+      f_toy = rt.TFile.Open(toy_file, 'READ')
+      if not f_obs or not f_toy:
+         return [[-1.], mass]
+      t_obs = f_obs.Get('limit')
+      t_toy = f_toy.Get('limit')
+
+      t_obs.GetEntry(0)
+      obs_val = t_obs.limit
+
+      min_val = min(obs_val, t_toy.GetMinimum('limit'))
+      max_val = max(obs_val, t_toy.GetMaximum('limit'))
+      h_vals = rt.TH1D('h_vals', 'Goodness of Fit', 25, min_val - 0.05*(max_val-min_val), max_val + 0.05*(max_val-min_val))
+
+      ntoys = t_toy.GetEntries()
+      p_val = 0
+      for itoy in range(ntoys):
+         t_toy.GetEntry(itoy)
+         toy_val = t_toy.limit
+         if obs_val <= toy_val: p_val += 1
+         h_vals.Fill(toy_val)
+      p_val = p_val * 1./ntoys
+
+      rt.gStyle.SetOptStat(0)
+      c = rt.TCanvas()
+      h_vals.SetXTitle("test statistic")
+      h_vals.Draw('hist')
+      h_vals.SetLineWidth(2)
+      h_vals.GetYaxis().SetRangeUser(0., 1.2*h_vals.GetMaximum())
+
+      label = rt.TLatex()
+      label.SetNDC()
+      label.SetTextFont(62)
+      label.SetTextSize(0.05)
+      label.SetTextAlign(32)
+      label.SetTextAngle(0)
+      label.DrawLatex(0.83, 0.85, "p = %.3f" % (p_val))
+
+      arr = rt.TArrow(obs_val,0.15*h_vals.GetMaximum(),obs_val,0.,0.03,"|>")
+      arr.SetLineWidth(3)
+      arr.SetLineColor(rt.kRed)
+      arr.SetFillColor(rt.kRed)
+      arr.Draw()
+
+      c.SaveAs(figdir+name+'_gof.png')
+
+      results = [p_val]
+
+   #----------------------------------------------------------------------------
+   if test == 'impacts':
+      os.system('cp %s/impacts_*.pdf %s' % (directory, figdir))
+
+
+   #----------------------------------------------------------------------------
    # Return the results
    #----------------------------------------------------------------------------
 
    return [results, mass]
-
 
 #----------------------------------------------
 # Read in the input parameters
@@ -73,16 +169,17 @@ def process_datacard(card, directory, name, test = 'bias', toys = 100, skip_fit 
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-o", dest="name",default="bdt_v01", type=str,help="datacard directory name")
+parser.add_argument("-j", "--nthreads", dest="nthreads",default=8,type=int,help="Number of threads to process using")
 parser.add_argument("--test", dest="test",default="bias", type=str,help="Validation test to perform: bias, GOF, impact")
 parser.add_argument("-t", dest="toys",default=100, type=int,help="Toys for validation tests")
+parser.add_argument("--signal-rate", dest="signal_rate",default=0., type=float, help="Signal rate to inject into the test")
 parser.add_argument("--skip-fits", dest="skip_fits",default=False, action='store_true',help="Skip fits, assume already processed")
-parser.add_argument("--asimov", dest="asimov",default=False, action='store_true',help="Perform fits Asimov dataset")
-parser.add_argument("--unblind", dest="unblind",default=False, action='store_true',help="Plot the observed limits")
 parser.add_argument("--max-steps", dest="max_steps",default=-1, type=int, help="Maximum steps to take in the scan")
 parser.add_argument("--first-step", dest="first_step",default=0, type=int, help="First mass step to process")
+parser.add_argument("--mass-point", dest="mass_point",default=-1, type=int, help="Mass point to process")
 parser.add_argument("--card-tag", dest="card_tag",default="", type=str, help="Card name tag to process")
 parser.add_argument("--tag", dest="tag",default="", type=str, help="Output directory tag")
-parser.add_argument("-v", dest="verbose",default=0, type=int,help="Add verbose printout")
+parser.add_argument("-v","--verbose", dest="verbose",default=0, type=int,help="Add verbose printout")
 
 args, unknown = parser.parse_known_args()
 
@@ -99,6 +196,7 @@ if len(unknown)>0:
 #----------------------------------------------
 
 ### default path
+if args.tag != '': args.tag = '_' + args.tag
 figdir = "./figures/val_%s_%s%s/" % (args.name, args.test, args.tag)
 carddir = "./datacards/%s/" % (args.name)
 os.system("[ ! -d %s ] && mkdir -p %s" % (figdir , figdir ))
@@ -126,8 +224,6 @@ if args.first_step > 0:
 if args.max_steps > 0 and args.max_steps < len(list_of_files):
    list_of_files = list_of_files[:args.max_steps]
 
-asimov = args.asimov
-
 #----------------------------------------------
 # Perform the validation processing
 #----------------------------------------------
@@ -136,15 +232,41 @@ asimov = args.asimov
 masses = array('d')
 val_results = []
 
+jobs = [] # For multithreaded processing
+
+if not args.skip_fits:
+   for f in list_of_files:
+      mass_point = f.split('_mp')[1].split('.txt')[0]
+      if args.mass_point >= 0 and mass_point != str(args.mass_point): continue
+      job = Process(target = process_datacard, args=(f, carddir, args.name+ '_mp'+mass_point, args.test, args.toys, args.signal_rate, args.tag, args.verbose))
+      jobs.append(job)
+   if args.nthreads < 1: args.nthreads = 1
+   print("Parallel processing using %i threads" % (args.nthreads))
+   for ithread in range(0,len(jobs),args.nthreads):
+      nthread = args.nthreads+ithread
+      if (nthread>len(jobs)):
+         nthread=len(jobs)
+      print("Processing threads %i to %i out of %i jobs: %5.1f%% processed" % (ithread, nthread-1, len(jobs), (ithread*100./len(jobs))))
+      for job in jobs[ithread:nthread]:
+         job.start()
+      for job in jobs[ithread:nthread]:    
+         job.join()
+
+#----------------------------------------------
+# Retrieve the validation results
+#----------------------------------------------
+
 for f in list_of_files:
    mass_point = f.split('_mp')[1].split('.txt')[0]
-   [result, mass] = process_datacard(f, carddir, args.name+ '_mp'+mass_point, args.test, args.toys, args.skip_fits, args.tag, figdir, args.verbose)
+   if args.mass_point >= 0 and mass_point != str(args.mass_point): continue
+   [result, mass] = retrieve_info(f, carddir, args.name+ '_mp'+mass_point, args.test, args.signal_rate, args.tag, figdir, args.verbose)
 
    # store the results
    masses.append(mass)
    print result
    val_results.append(result)
 
+if args.mass_point >= 0: exit() # don't make a plot for the single point
 
 #----------------------------------------------
 # Combine and plot the results
@@ -153,7 +275,7 @@ for f in list_of_files:
 rt.gStyle.SetOptStat(0)
 
 if args.test == 'bias':
-   h = rt.TH1D('hpull', 'Z prime mass fit pulls', 40, -2, 2)
+   h = rt.TH1D('hpull', 'Z prime mass fit pulls', 40, -1.5, 1.5)
    for bias in [res[1] for res in val_results]: h.Fill(bias)
    c = rt.TCanvas()
    h.Draw('hist')
@@ -166,4 +288,19 @@ if args.test == 'bias':
    for index in range(len(masses)):
       if abs(val_results[index][1]) > 0.3:
          print 'Mass point', masses[index],'(index', index,'): Large bias, mean =', val_results[index][1], 'width =', val_results[index][2]
+
+if args.test == 'gof':
+   h = rt.TH1D('hpull', 'Z prime mass goodness of fit', 40, 0., 1.05)
+   for pval in [res[0] for res in val_results]: h.Fill(pval)
+   c = rt.TCanvas()
+   h.Draw('hist')
+   h.SetLineWidth(2)
+   h.SetFillStyle(3005)
+   h.SetFillColor(rt.kBlue)
+   h.SetXTitle('GOF p-value')
+   c.SaveAs(figdir+'pvals.png')
+
+   for index in range(len(masses)):
+      if abs(val_results[index][0]) < 0.01:
+         print 'Mass point', masses[index],'(index', index,'): Low p-value =', val_results[index][0]
 

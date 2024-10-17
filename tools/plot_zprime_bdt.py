@@ -21,14 +21,15 @@ figdir = "./figures/signal_bdt/"
 os.system("[ ! -d %s ] && mkdir -p %s" % (figdir , figdir ))
 
 ### MC signal mass points
-sgn_masspoints=["200","400","600","800","1000"]
+sgn_masspoints=["100", "200","400","600","800","1000"]
 sgn_masspoint_files={
+               "100":"Meas_fullAndSF_bdt_v7_emu_scan_sgnM100_mcRun18.root",\
                "200":"Meas_fullAndSF_bdt_v7_emu_scan_sgnM200_mcRun18.root",\
                "400":"Meas_fullAndSF_bdt_v7_emu_scan_sgnM400_mcRun18.root",\
                "600":"Meas_fullAndSF_bdt_v7_emu_scan_sgnM600_mcRun18.root",\
                "800":"Meas_fullAndSF_bdt_v7_emu_scan_sgnM800_mcRun18.root",\
                "1000":"Meas_fullAndSF_bdt_v7_emu_scan_sgnM1000_mcRun18.root"}
-ndens={"200":96300.,"400":97600.,"600":97600.,"800":97600.,"1000":97600.}
+ndens={"100":99200.,"200":96300.,"400":97600.,"600":97600.,"800":97600.,"1000":97600.}
 
 # Loop through the signal files
 bdts = []

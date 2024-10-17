@@ -147,7 +147,8 @@ do
         DRYRUN="d"
     elif [[ "${CARD}" != "" ]]
     then
-        echo "Arguments aren't configured correctly!"
+        echo "Arguments aren't configured correctly! card = ${CARD}, arg = ${var} "
+        echo $@
         Help
         exit
     else
@@ -242,7 +243,10 @@ if [[ "${PLOTONLY}" == "" ]]; then
     fi
 
     # Add additional fit arguments to help convergence
-    FITADDITIONAL="${FITADDITIONAL} --cminDefaultMinimizerStrategy 0 --X-rtd MINIMIZER_freezeDisassociatedParams --X-rtd REMOVE_CONSTANT_ZERO_POINT=1 --X-rtd MINIMIZER_multiMin_hideConstants"
+    FITADDITIONAL="${FITADDITIONAL} --cminDefaultMinimizerStrategy 0 --X-rtd REMOVE_CONSTANT_ZERO_POINT=1"
+    FITADDITIONAL="${FITADDITIONAL} --X-rtd MINIMIZER_freezeDisassociatedParams --X-rtd MINIMIZER_multiMin_maskConstraints"
+    FITADDITIONAL="${FITADDITIONAL} --cminApproxPreFitTolerance 0.1 --cminPreScan --cminPreFit 1 --X-rtd MINIMIZER_multiMin_maskChannels=2"
+    FITADDITIONAL="${FITADDITIONAL} --cminDefaultMinimizerTolerance 0.001 --cminDiscreteMinTol 0.0001"
 
     # Perform initial fits
     if [[ "${APPROX}" == "" ]] && [[ "${SKIPINITIAL}" == "" ]] && [[ "${GRIDFIN}" == "" ]]; then

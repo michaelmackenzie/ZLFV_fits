@@ -151,7 +151,7 @@ if [[ "${SKIPFITS}" == "" ]]; then
         combine -d ${GENCARD} -M GenerateOnly --saveToys -t ${NGEN} -n .${OUTNAME} --genBinnedChannels lepm_13,lepm_12,lepm_11,lepm_10 -s ${SEED} ${GENARG}
 
         # Create binned data to fit
-        root.exe -q -b -l "${CMSSW_BASE}/src/CLFVAnalysis/Roostats/convert_unbinned_to_binned.C(\"higgsCombine.${OUTNAME}.GenerateOnly.mH120.${SEED}.root\", \"higgsCombine.${OUTNAME}_binned.GenerateOnly.mH120.${SEED}.root\")"
+        root.exe -q -b -l "${CMSSW_BASE}/src/ZLFV_fits/tools/convert_unbinned_to_binned.C(\"higgsCombine.${OUTNAME}.GenerateOnly.mH120.${SEED}.root\", \"higgsCombine.${OUTNAME}_binned.GenerateOnly.mH120.${SEED}.root\")"
 
         # Fit the toy data
         if [[ "${MULTIDIM}" == "" ]]; then
@@ -177,11 +177,11 @@ if [[ "${SKIPFITS}" == "" ]]; then
 
     #Merge the output fitDiagnostics files
     if [[ "${MULTIDIM}" == "" ]]; then
-        echo ${CMSSW_BASE}/src/CLFVAnalysis/Roostats/haddfitdiag.py "fitDiagnostics.${OUTNAME}${TAG}.root" ${OUTPUTLIST}
-        ${CMSSW_BASE}/src/CLFVAnalysis/Roostats/haddfitdiag.py "fitDiagnostics.${OUTNAME}${TAG}.root" ${OUTPUTLIST}
+        echo ${CMSSW_BASE}/src/ZLFV_fits/tools/haddfitdiag.py "fitDiagnostics.${OUTNAME}${TAG}.root" ${OUTPUTLIST}
+        ${CMSSW_BASE}/src/ZLFV_fits/tools/haddfitdiag.py "fitDiagnostics.${OUTNAME}${TAG}.root" ${OUTPUTLIST}
     else
-        echo ${CMSSW_BASE}/src/CLFVAnalysis/Roostats/haddfitdiag.py "higgsCombine.${OUTNAME}${TAG}.MultiDimFit.root" ${OUTPUTLIST}
-        ${CMSSW_BASE}/src/CLFVAnalysis/Roostats/haddfitdiag.py "higgsCombine.${OUTNAME}${TAG}.MultiDimFit.root" ${OUTPUTLIST}
+        echo ${CMSSW_BASE}/src/ZLFV_fits/tools/haddfitdiag.py "higgsCombine.${OUTNAME}${TAG}.MultiDimFit.root" ${OUTPUTLIST}
+        ${CMSSW_BASE}/src/ZLFV_fits/tools/haddfitdiag.py "higgsCombine.${OUTNAME}${TAG}.MultiDimFit.root" ${OUTPUTLIST}
     fi
 
     #Clean up the output
@@ -203,10 +203,10 @@ ls -l ${OUTFILE}
 
 echo "Creating bias plots..."
 if [[ "${MULTIDIM}" == "" ]]; then
-    root.exe -q -b "${CMSSW_BASE}/src/CLFVAnalysis/Roostats/tools/plot_combine_fits.C(\"${OUTFILE}\", 0, \"bias_${OUTNAME}${TAG}\", 2, 0)"
+    root.exe -q -b "${CMSSW_BASE}/src/ZLFV_fits/tools/plot_combine_fits.C(\"${OUTFILE}\", 0, \"bias_${OUTNAME}${TAG}\", 2, 0)"
 else
-    root.exe -q -b "${CMSSW_BASE}/src/CLFVAnalysis/Roostats/tools/plot_combine_multidim_fits.C(\"${OUTFILE}\", 0., \"bias_${OUTNAME}${TAG}\")"
+    root.exe -q -b "${CMSSW_BASE}/src/ZLFV_fits/tools/plot_combine_multidim_fits.C(\"${OUTFILE}\", 0., \"bias_${OUTNAME}${TAG}\")"
 fi
 
 echo "Creating plots of all fit params..."
-root.exe -q -b "${CMSSW_BASE}/src/CLFVAnalysis/Roostats/tools/plot_combine_fit_params.C(\"${OUTFILE}\", \"figures/bias_${OUTNAME}${TAG}\")"
+root.exe -q -b "${CMSSW_BASE}/src/ZLFV_fits/tools/plot_combine_fit_params.C(\"${OUTFILE}\", \"figures/bias_${OUTNAME}${TAG}\")"

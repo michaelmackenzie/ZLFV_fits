@@ -28,13 +28,14 @@ parser.add_argument("--skip-sgn-syst", dest="skip_sgn_syst",default=False, actio
 parser.add_argument("--run-pseudodata", dest="run_pseudodata",default=False, action='store_true',help="run pseudodata instead of data")
 parser.add_argument("--run-histo", dest="run_histo",default=False, action='store_true',help="run pseudodata instead of data")
 parser.add_argument("--histo-toy", dest="histo_toy",default=False, action='store_true')
+parser.add_argument("--zmm-histo-toy", dest="zmm_histo_toy",default=False, action='store_true', help="Fit a toy Z->mumu dataset to get the PDF")
 
 
 args, unknown = parser.parse_known_args()
 
 
 if len(unknown)>0: 
-   print "not found:",unknown,"exitting"
+   print "not found:",unknown,"exiting"
    exit()
 
 
@@ -43,6 +44,7 @@ shape_dc = "false"
 do_sgn_syst="true"
 run_histo="false"
 histo_toy="false"
+zmm_histo_toy="false"
 
 if args.shape_dc:
    shape_dc="true"
@@ -52,6 +54,8 @@ if args.run_histo:
    run_histo="true"
 if args.histo_toy:
    histo_toy="true"
+if args.zmm_histo_toy:
+   zmm_histo_toy="true"
 
 if args.run_histo:
    if "bin1" in args.data_file :
@@ -150,7 +154,7 @@ if args.component == "sgn" or args.component == "all":
   os.system('root -l -b -q ZMuE_fit_mk2_sgn_v'+args.ver+'.C\'("'+args.name+'","'+args.sgn_file+'","'+args.xgb_min+'","'+args.xgb_max+'",'+shape_dc+','+str(nsgn)+',"'+args.outvar+'",'+do_sgn_syst+',"'+args.param_name+'")\'')
 
 if args.component == "zmm" or args.component == "all":
-  os.system('root -l -b -q ZMuE_fit_mk2_Zmm_v'+args.ver+'.C\'("'+args.name+'","'+args.zmm_file+'","'+args.xgb_min+'","'+args.xgb_max+'",'+shape_dc+',"'+args.outvar+'","'+args.param_name+'",'+str(pseudodata_norm)+','+run_histo+','+histo_toy+')\'')   
+  os.system('root -l -b -q ZMuE_fit_mk2_Zmm_v'+args.ver+'.C\'("'+args.name+'","'+args.zmm_file+'","'+args.xgb_min+'","'+args.xgb_max+'",'+shape_dc+',"'+args.outvar+'","'+args.param_name+'",'+str(pseudodata_norm)+','+run_histo+','+zmm_histo_toy+')\'')   
 
 if args.component == "bkg" or args.component == "all":
   os.system('root -l -b -q ZMuE_fit_mk2_bkg_v'+args.ver+'.C\'("'+args.name+'","'+args.bkg_file+'","'+args.xgb_min+'","'+args.xgb_max+'",'+shape_dc+',"'+args.outvar+'","'+args.param_name+'",'+run_on_pseudodata+','+str(pseudodata_norm)+','+run_histo+','+histo_toy+','+args.add_pol_order+','+args.add_exp_order+','+args.add_plaw_order+')\'')

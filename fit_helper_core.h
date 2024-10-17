@@ -122,7 +122,9 @@ void PlotFunctions(std::vector<RooAbsPdf*> pdfs, RooPlot * xframe, RooRealVar di
 
 
 ///////// systematic functions parameters : returns maximum deviation of mean/width
-std::pair<double,double> SignalSystematicsMaxMeanWidth(TString syst_file, TString cuts, TString syst_name, float min_fit_range, float max_fit_range, int nbin_data,TString outname, TString ver ="v15"){
+std::pair<double,double> SignalSystematicsMaxMeanWidth(TString syst_file, TString cuts, TString syst_name,
+						       float min_fit_range, float max_fit_range, int nbin_data,
+						       TString outname, TString ver ="v15"){
 
     TTree * syst_tree = get_tree("mytreefit",syst_file,cuts);
     RooRealVar dilep_mass_syst("mass_ll_"+syst_name,"m(e,#mu)", (min_fit_range-max_fit_range)/2., min_fit_range , max_fit_range, "GeV/c^{2}");
@@ -192,11 +194,10 @@ RooChebychev * CreateChebychev( TString name, int order, RooRealVar& dilep_mass,
    RooArgList param_list;
    std::vector<RooRealVar*> bkg_params;
    for (int i=0; i<order; i++){
-     float def=0,min=-3.0,max=3.0;
-     if (i==0)
-       def=-1,min=-5.0,max=5.0;
-     else if (i==1) def=0.6;
-     else if (i==2) def=-0.2;
+     float def=0.,min=-3.0,max=3.0;
+     if (i==0)      def=-1,min=-5.0,max=5.0;
+     else if (i==1) def=0.6,min=-3.0,max=3.0;
+     else if (i==2) def=-0.2,min=-1.,max=1.0;
      if (parameters.size()>0)
         def= parameters[i];
      bkg_params.push_back(new RooRealVar(name+"_"+TString(to_string(i)), name+"_"+TString(to_string(i)), def,min,max));
@@ -261,14 +262,14 @@ RooAddPdf * CreateSumExpo(TString name, int order, RooRealVar& dilep_mass, bool 
    RooArgList exp_list;
    RooArgList coef_list;
 
-   float def=-0.1,min=-10,max=10;
    for( int i=0; i<order; i++){
+     float def=-0.1,min=-3,max=1;
      if (order ==1 ) def=-0.07;
-     if (order ==2 && i==0 ) def=0.05,max=10;
-     if (order ==2 && i==1 ) def=-0.1,max=10;
-     if (order >2 && i==0 ) def=0.05,max=10;
-     if (order >2 && i==1 ) def=-0.1,max=10;
-     if (order >2 && i>1 ) def=-1*i,max=0;
+     if (order ==2 && i==0 ) def=-0.05; //,max=10;
+     if (order ==2 && i==1 ) def=-0.05; //,max=10;
+     if (order >2  && i==0 ) def=-0.05; //,max=10;
+     if (order >2  && i==1 ) def=-0.05; //,max=10;
+     if (order >2  && i>1  ) def=-0.05; //,max=0;
      if (parameters.size()>0 && recursive_coef) def= parameters[i+order];
      if (parameters.size()>0 && !recursive_coef) def= parameters[i+order+1];
      RooRealVar * bkg_sumexp_x = new RooRealVar(name+"_x"+TString(to_string(i)), name+"_x"+TString(to_string(i)),def,min,max);
@@ -306,14 +307,14 @@ RooAddPdf * CreateSumPower(TString name, int order, RooRealVar& dilep_mass,  boo
    RooArgList coef_list;
    RooArgSet coef_set;
 
-   float def=0,min=-200,max=200;
    for( int i=0; i<order; i++){
+     float def=0,min=-20,max=0.;
      if (order==1) def=-10;
-     if (order==2 && i==0) def=10;
+     if (order==2 && i==0) def=-5;
      if (order==2 && i==1) def=-8;
-     if (order>2 && i==0) def=-10,min=-100,max=0;
-     if (order>2 && i==1) def=-8,min=-100,max=0;
-     if (order>2 && i==2) def=20,min=-100,max=100;
+     if (order>2 && i==0) def=-10; //,min=-100,max=0;
+     if (order>2 && i==1) def=-5; //,min=-100,max=0;
+     if (order>2 && i==2) def=-5; //,min=-100,max=100;
 
      if (parameters.size()>0) def= parameters[i];
      RooRealVar * bkg_sumplaw_a = new RooRealVar(name+"_a"+TString(to_string(i)), name+"_a"+TString(to_string(i)),def,min,max);
@@ -346,21 +347,49 @@ RooAddPdf * CreateSumPower(TString name, int order, RooRealVar& dilep_mass,  boo
 
 
 
+/////////// gauss + chebychev
+RooAddPdf * CreateGaussChebychev( TString name, int order, RooRealVar& dilep_mass, RooRealVar * gauss_mu, RooRealVar * gauss_wd, std::vector<float> parameters={}){
+   float def=0,min=-1,max=1;
+   RooArgList param_list;
+   std::vector<RooRealVar*> bkg_params;
+   for (int i=0; i<order; i++){
+     if (i==0) def=0.06,min=-1,max=1;
+     else      def=-0.0005,min=-0.1,max=0.1;
+     if (parameters.size()>0) def= parameters[i];
+     bkg_params.push_back(new RooRealVar(name+"_b"+TString(to_string(i)), name+"_b"+TString(to_string(i)), def,min,max));
+     param_list.add(*bkg_params[i]);
+   }
+  auto pol = new RooChebychev(name+"_cheb", name+"_cheb",dilep_mass,param_list);
+  RooRealVar * gs_mu= new RooRealVar(name+"_mu",name+"_mu",gauss_mu->getVal(),60,70); // gs_mu->setConstant(true);
+  RooRealVar * gs_wd = new RooRealVar(name+"_wd",name+"_wd",gauss_wd->getVal(),6,15);
+  RooGaussian * gauss = new RooGaussian(name+"_gauss", name+"_gauss",dilep_mass,*gs_mu,*gs_wd);
+  RooRealVar * ratio = new RooRealVar("ratio_"+name, "ratio_"+name,0.1,0,1);
+
+  if (parameters.size()>0){
+    gs_mu->setVal(parameters[order]);
+    gs_wd->setVal(parameters[order+1]);
+    ratio->setVal(parameters[order+2]);
+  }
+
+  return new RooAddPdf(name, name, RooArgList(*gauss,*pol),RooArgList(*ratio));
+}
+
+
 /////////// gauss + polynomial
 RooAddPdf * CreateGaussPolynomial( TString name, int order, RooRealVar& dilep_mass, RooRealVar * gauss_mu, RooRealVar * gauss_wd, std::vector<float> parameters={}){
    float def=0,min=-0.1,max=0.1;
    RooArgList param_list;
    std::vector<RooRealVar*> bkg_params;
    for (int i=0; i<order; i++){
-     if (i==0)
-       def=0.06,min=-3.0,max=3.0;
+     if (i==0) def=0.06,min=-0.1,max=0.1;
+     else      def=-0.0005,min=-0.002,max=0.002;
      if (parameters.size()>0) def= parameters[i];
      bkg_params.push_back(new RooRealVar(name+"_b"+TString(to_string(i)), name+"_b"+TString(to_string(i)), def,min,max));
      param_list.add(*bkg_params[i]);
    }
   auto pol = new RooPolynomial(name+"_pol", name+"_pol",dilep_mass,param_list);
-  RooRealVar * gs_mu= new RooRealVar(name+"_mu",name+"_mu",gauss_mu->getVal(),50,69);
-  RooRealVar * gs_wd = new RooRealVar(name+"_wd",name+"_wd",gauss_wd->getVal(),5,20);
+  RooRealVar * gs_mu= new RooRealVar(name+"_mu",name+"_mu",gauss_mu->getVal(),60,70); // gs_mu->setConstant(true);
+  RooRealVar * gs_wd = new RooRealVar(name+"_wd",name+"_wd",gauss_wd->getVal(),6,15);
   RooGaussian * gauss = new RooGaussian(name+"_gauss", name+"_gauss",dilep_mass,*gs_mu,*gs_wd);
   RooRealVar * ratio = new RooRealVar("ratio_"+name, "ratio_"+name,0.1,0,1);
 
@@ -384,14 +413,14 @@ RooAddPdf * CreateGaussExpo( TString name, int order, RooRealVar& dilep_mass, Ro
    RooArgList exp_list;
    RooArgList coef_list;
 
-   float def=-0.1,min=-10,max=10;
    for (int i=0; i<order; i++){
+     float def=-0.05,min=-1.,max=0.05;
      if (order ==1 ) def=-0.07;
-     if (order ==2 && i==0 ) def=0.05,max=10;
-     if (order ==2 && i==1 ) def=-0.1,max=10;
-     if (order >2 && i==0 ) def=0.05,max=10;
-     if (order >2 && i==1 ) def=-0.1,max=10;
-     if (order >2 && i>1 ) def=-1*i,max=0;
+     if (order ==2 && i==0 ) def=-0.05; //,max=10;
+     if (order ==2 && i==1 ) def=-0.1; //,max=10;
+     if (order >2 && i==0  ) def=-0.05; //,max=10;
+     if (order >2 && i==1  ) def=-0.1; //,max=10;
+     if (order >2 && i>1   ) def=-0.05; //,max=0;
      if (parameters.size()>0) def = parameters[order+1+i];
      RooRealVar * bkg_sumexp_x = new RooRealVar(name+"_x"+TString(to_string(i)), name+"_x"+TString(to_string(i)),def,min,max);
      bkg_params.push_back(bkg_sumexp_x);
@@ -402,15 +431,15 @@ RooAddPdf * CreateGaussExpo( TString name, int order, RooRealVar& dilep_mass, Ro
         float c_def = 1./order;
         if (parameters.size())
           c_def = parameters[i-1];
-        RooRealVar * bkg_sumplaw_c = new RooRealVar(name+"_c"+TString(to_string(i)), name+"_c"+TString(to_string(i)),c_def, 0, 1.);
-        coefs.push_back(bkg_sumplaw_c);
+        RooRealVar * bkg_sumexp_c = new RooRealVar(name+"_c"+TString(to_string(i)), name+"_c"+TString(to_string(i)),c_def, 0, 1.);
+        coefs.push_back(bkg_sumexp_c);
         coef_list.add(*coefs[i]);
      }
   }
 
   RooAddPdf * sum_exp = new RooAddPdf(name+"_exp", name+"_exp",exp_list,coef_list,true);
-  RooRealVar * gs_mu= new RooRealVar(name+"_mu",name+"_mu",gauss_mu->getVal(),50,69);
-  RooRealVar * gs_wd = new RooRealVar(name+"_wd",name+"_wd",gauss_wd->getVal(),5,150);
+  RooRealVar * gs_mu= new RooRealVar(name+"_mu",name+"_mu",gauss_mu->getVal(),60,70);
+  RooRealVar * gs_wd = new RooRealVar(name+"_wd",name+"_wd",gauss_wd->getVal(),6,15);
   RooGaussian * gauss = new RooGaussian(name+"_gauss", name+"_gauss",dilep_mass,*gs_mu,*gs_wd);
 
   RooRealVar * ratio = new RooRealVar("ratio_"+name, "ratio_"+name,0.2,0,1);
@@ -434,14 +463,14 @@ RooAddPdf * CreateGaussPower( TString name, int order, RooRealVar& dilep_mass, R
    RooArgList plaw_list;
    RooArgList coef_list;
 
-   float def=0,min=-200,max=200;
    for (int i=0; i<order; i++){
+     float def=0,min=-20,max=0.;
      if (order==1) def=-10;
      if (order==2 && i==0) def=10;
      if (order==2 && i==1) def=-8;
-     if (order>2 && i==0) def=-10,min=-100,max=0;
-     if (order>2 && i==1) def=-8,min=-100,max=0;
-     if (order>2 && i==2) def=20,min=-100,max=100;
+     if (order>2 && i==0 ) def=-10; //,min=-100,max=0;
+     if (order>2 && i==1 ) def=-8 ; //,min=-100,max=0;
+     if (order>2 && i==2 ) def=20 ; //,min=-100,max=100;
      if (parameters.size()>0) def= parameters[i];
 
      RooRealVar * bkg_sumplaw_a = new RooRealVar(name+"_a"+TString(to_string(i)), name+"_a"+TString(to_string(i)),def,min,max);
@@ -461,8 +490,8 @@ RooAddPdf * CreateGaussPower( TString name, int order, RooRealVar& dilep_mass, R
   }
 
   RooAddPdf * sum_plaw = new RooAddPdf(name+"_plaw", name+"_exp",plaw_list,coef_list,true);
-  RooRealVar * gs_mu= new RooRealVar(name+"_mu",name+"_mu",gauss_mu->getVal(),50,69);
-  RooRealVar * gs_wd = new RooRealVar(name+"_wd",name+"_wd",gauss_wd->getVal(),5,20);
+  RooRealVar * gs_mu= new RooRealVar(name+"_mu",name+"_mu",gauss_mu->getVal(),60,70);
+  RooRealVar * gs_wd = new RooRealVar(name+"_wd",name+"_wd",gauss_wd->getVal(),6,15);
   RooGaussian * gauss = new RooGaussian(name+"_gauss", name+"_gauss",dilep_mass,*gs_mu,*gs_wd);
 
   RooRealVar * ratio = new RooRealVar("ratio_"+name, "ratio_"+name,0.2,0,1);
@@ -539,7 +568,7 @@ std::vector<std::vector<float>> FitBkgFunctions(std::vector<RooAbsPdf*> pdfs, st
     }
     output.push_back(temp);
     cout<<">>>>> p-value "<<pvalue<<endl;
-    pdfs[i]->plotOn(plot_frame,RooFit::LineColor(i+1),RooFit::Range("full"),RooFit::Name(names[i]));
+    pdfs[i]->plotOn(plot_frame,RooFit::LineColor(i+1+(i>=4)),RooFit::Range("full"),RooFit::Name(names[i]));
     leg->AddEntry(plot_frame->findObject(names[i]), Form(legs[i]+" (p: %1.2lf, #chi^2: %2.4lf)",pvalue, chi2/(nbin_data-nbin_blind-n_param) ));
     cout<<names[i]<<endl;
     pt->AddText(Form(legs[i]+" %3.4lf",pvalue));
@@ -720,13 +749,13 @@ std::vector<std::vector<float>> FitHistBkgFunctions(std::vector<RooAbsPdf*> pdfs
 
     RooFitResult * fit_result = epdf.fitTo(*dataset,RooFit::Extended(1),RooFit::Save(),RooFit::PrintLevel(-1),RooFit::Range(fit_range));
     if (Print_details) print_details (fit_result);
-    int n_param = fit_result->floatParsFinal().getSize();
+    int n_param = count_pdf_params(pdfs[i])+1; //fit_result->floatParsFinal().getSize();
     auto chi2_frame = dilep_mass.frame();
     dataset->plotOn(chi2_frame,RooFit::Name("data"));
     pdfs[i]->plotOn(chi2_frame,RooFit::Range("full"));
     //FIXME: Should the chi^2 and N(DOF) only consider the sidebands, not the full range?
     int nbins_used; //set by the chi^2 call
-    float chi2 = get_chi_squared(dilep_mass, pdfs[i], *dataset, true || Unblind_data_sr, nbins_used, n_param, false, false);
+    float chi2 = get_chi_squared(dilep_mass, pdfs[i], *dataset, Unblind_data_sr || Bkg_only_fit_whole_region, nbins_used, n_param, false, false);
     const int ndof = max(1, nbins_used - n_param); //force positive N(dof) to avoid division by 0
     // RooChi2Var chi("chi", "chi", *pdfs[i], *dataset, RooFit::Range("full"));
     // float chi2 = chi.getVal();//chi2_frame->chiSquare(nbin_data-1);
@@ -742,7 +771,7 @@ std::vector<std::vector<float>> FitHistBkgFunctions(std::vector<RooAbsPdf*> pdfs
     }
     output.push_back(temp);
     cout<<">>>>> p-value "<<pvalue<<endl;
-    pdfs[i]->plotOn(plot_frame,RooFit::LineColor(i+1),RooFit::Range("full"),RooFit::Name(names[i]));
+    pdfs[i]->plotOn(plot_frame,RooFit::LineColor(i+1+(i>=4)),RooFit::Range("full"),RooFit::Name(names[i]));
     leg->AddEntry(plot_frame->findObject(names[i]), Form(legs[i]+" (p: %1.2lf, #chi^2: %2.4lf)",pvalue, chi2/(ndof) ));
     cout<<names[i]<<endl;
     pt->AddText(Form(legs[i]+" %3.4lf",pvalue));
@@ -770,7 +799,8 @@ FtestStruct HistFtest(std::vector<RooAbsPdf*> pdfs, std::vector<RooRealVar*> amp
                       vector<TString> names, std::vector<TString> legs,
                       int nbin_data, TString extra_name, float ftest_step,
                       float min_pvalue=-1, int print_level=0,
-                      bool force_inclusion = false, bool force_standard_env = false,TString cfg="./"){
+                      bool force_inclusion = false, bool force_standard_env = false,
+		      TString cfg = "", bool use_signal_region = false){
 
   bool Print_details = 0;
   if (print_level) Print_details=true;
@@ -779,7 +809,7 @@ FtestStruct HistFtest(std::vector<RooAbsPdf*> pdfs, std::vector<RooRealVar*> amp
 
   //Fit each function to the sidebands and evalueate the chi^2 and N(dof)
   std::vector<std::vector<float>> chi2_dof = FitHistBkgFunctions(pdfs, ampls, dataset, dilep_mass, names, legs, nbin_data,
-                                                                 false, //use or don't use the signal region in the fit
+                                                                 use_signal_region,
                                                                  extra_name,Print_details,cfg+"ftest");
 
   //Evaluate the p-values for each function as well as the F-test p-value for increasing the function order

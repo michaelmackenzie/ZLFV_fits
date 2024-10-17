@@ -9,6 +9,7 @@ Help() {
     echo " --scan-arg       : Arguments to pass to scan python script"
     echo " --tag            : Tag for output results (default = v01)"
     echo " --skip-fits      : Skip fits and initial datacard creation"
+    echo " --clean          : Clean cards from previous processing"
     echo " --dry-run        : Don't execute commands"
     echo " --help      (-h ): Print this information"
 }
@@ -19,6 +20,7 @@ ARG=""
 MINMASS="110"
 MAXMASS="500"
 SKIPFITS=""
+CLEAN=""
 DRYRUN=""
 
 iarg=1
@@ -46,6 +48,8 @@ do
         MAXMASS=${var}
     elif [[ "${var}" == "--skip-fits" ]]; then
         SKIPFITS="d"
+    elif [[ "${var}" == "--clean" ]]; then
+        CLEAN="d"
     elif [[ "${var}" == "--dry-run" ]]; then
         DRYRUN="d"
     else
@@ -58,13 +62,21 @@ done
 
 if [[ "${DRYRUN}" != "" ]]; then
     ARG="${ARG} --dry-run"
+elif [[ "${CLEAN}" != "" ]]; then
+    CARDDIR="datacards/bdt_0d3_0d7_${TAG}/"
+    [ -d ${CARDDIR} ] && rm -r ${CARDDIR}
+    CARDDIR="datacards/bdt_0d7_1d0_${TAG}/"
+    [ -d ${CARDDIR} ] && rm -r ${CARDDIR}
+    CARDDIR="datacards/bdt_${TAG}/"
+    [ -d ${CARDDIR} ] && rm -r ${CARDDIR}
 fi
+
 # Create the standard BDT score-defined regions
 if [[ "${SKIPFITS}" == "" ]]; then
     [ ! -d log ] && mkdir log
     echo "Running fits and creating datacards..."
-    python ScanMuE_fit_wrapper_v1.py -o bdt_0d3_0d7_${TAG} --scan-min ${MINMASS} --scan-max ${MAXMASS} --xgb-min 0.3 --xgb-max 0.70 --param-name bin1 ${ARG}
-    python ScanMuE_fit_wrapper_v1.py -o bdt_0d7_1d0_${TAG} --scan-min ${MINMASS} --scan-max ${MAXMASS} --xgb-min 0.7 --xgb-max 1.01 --param-name bin2 ${ARG}
+    python ScanMuE_fit_wrapper_v2.py -o bdt_0d3_0d7_${TAG} --scan-min ${MINMASS} --scan-max ${MAXMASS} --xgb-min 0.30 --xgb-max 0.70 --param-name bin1 ${ARG}
+    python ScanMuE_fit_wrapper_v2.py -o bdt_0d7_1d0_${TAG} --scan-min ${MINMASS} --scan-max ${MAXMASS} --xgb-min 0.70 --xgb-max 1.00 --param-name bin2 ${ARG}
 fi
 
 # make a combined directory

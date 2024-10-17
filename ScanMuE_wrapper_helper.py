@@ -30,13 +30,24 @@ def print_datacard(name, sig_file, bkg_file, param_name, mass):
 
    # Define the uncertainties
    txt+="### uncertainties-----------------------------------------------------------------------------------------------------------\n"
-   #FIXME: Implement mass-dependent uncertainties
-   txt+="ElectronID lnN 1.02     -\n"
-   txt+="MuonID     lnN 1.02     -\n"
-   txt+="Lumi       lnN 1.02     -\n"
+   txt+="ElectronID lnN 1.020    -\n"
+   txt+="MuonID     lnN 1.020    -\n"
+   txt+="Lumi       lnN 1.025    -\n"
+   #FIXME: Re-evaluate the JER/JES
+   # txt+="JES        lnN %.3f    -\n" % (1.021 if param_name == 'bin1' else 1.015)
+   # txt+="JER        lnN %.3f    -\n" % (1.010 if param_name == 'bin1' else 1.017)
+   txt+="JES        lnN %.3f    -\n" % (1.005 if param_name == 'bin1' else 1.028)
+   txt+="JER        lnN %.3f    -\n" % (1.005 if param_name == 'bin1' else 1.026)
+
+   txt+="Trigger    lnN 1.001    -\n"
+   txt+="Prefire    lnN 1.006    -\n"
+   txt+="Pileup     lnN %.3f    -\n" % (1.003 if param_name == 'bin1' else 1.006)
    txt+="BTag       lnN 1.005    -\n"
-   txt+="Theory     lnN 1.01     -\n"
-   txt+="BDT        lnN 1.02     -\n"
+   txt+="Theory     lnN 1.010    -\n"
+   txt+="BDT        lnN 1.020    -\n"
+   txt+="SigModel   lnN 1.050    -\n" #Uncertainty due to the interpolation
+   txt+="MC2016     lnN %.3f    -\n" % (1.008 if param_name == 'bin1' else 1.013) #2016 MC corr
+   txt+="MC2017     lnN %.3f    -\n" % (1.011 if param_name == 'bin1' else 1.004) #2017 MC corr
 
    txt+="#### scales-----------------------------------------------------------------------------------------------------------\n\n"
    # Scale uncertainties
@@ -48,7 +59,6 @@ def print_datacard(name, sig_file, bkg_file, param_name, mass):
    txt+="pdfindex_%s discrete\n" % (param_name)
 
    # Write the file
-   # with open(carddir + "/datacard_zprime_" + name +"_mass-"+str(mass)+ "_mp" + cnt + ".txt",'w') as fl:
    with open(name,'w') as fl:
      fl.write(txt)
    fl.close()
