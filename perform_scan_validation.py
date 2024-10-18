@@ -55,6 +55,19 @@ def process_datacard(card, directory, name, test = 'bias', toys = 100, signal_ra
       if verbose > 1: print command
       os.system('cd %s; %s >| %s; cd ..' % (directory, command, output))
 
+   #----------------------------------------------------------------------------
+   if test == 'distributions':
+      command = base_dir + '/tests/plot_distributions.sh ' + card + ' -r 30 --zemu --ignoresys'
+      plot_tag = card.replace('datacard_zprime_', '')
+      plot_tag = plot_tag.replace('.txt', '')
+      plot_tag = plot_tag.split('_mass-')[0] + '_mp' + plot_tag.split('_mp')[1]
+      plot_tag = 'fits_' + plot_tag + tag
+      command += ' --tag ' + plot_tag
+      # command += ' --unblind'
+      output = 'fit_distributions_%s.log' % (name)
+      if verbose > 1: print command
+      os.system('cd %s; %s >| %s; cd ..' % (directory, command, output))
+
 #----------------------------------------------------------------------------------------
 # Retrieve fit information for a single mass point
 def retrieve_info(card, directory, name, test = 'bias', signal_rate = 0., tag = '', figdir = '', verbose = 0):
@@ -156,6 +169,11 @@ def retrieve_info(card, directory, name, test = 'bias', signal_rate = 0., tag = 
    if test == 'impacts':
       os.system('cp %s/impacts_*.pdf %s' % (directory, figdir))
 
+   #----------------------------------------------------------------------------
+   if test == 'distributions':
+      print 'cp -r %s/figures/fits_* %s' % (directory, figdir)
+      os.system('cp -r %s/figures/fits_* %s' % (directory, figdir))
+
 
    #----------------------------------------------------------------------------
    # Return the results
@@ -189,7 +207,11 @@ args, unknown = parser.parse_known_args()
 ### check input flags
 if len(unknown)>0: 
    print "not found:",unknown,"exiting"
-   exit()
+   exit(1)
+
+if not args.test in ['bias', 'gof', 'impacts', 'distributions']:
+   print "Unknown validation test", args.test
+   exit(1)
 
 #----------------------------------------------
 # Setup the tests
@@ -210,8 +232,8 @@ rt.gROOT.SetBatch(True)
 
 list_of_files = [f for f in os.listdir(carddir) if '.txt' in f]
 # If not using a BDT score region tag, only take the merged files
-if args.card_tag == "":  list_of_files = [f for f in list_of_files if '0d7' not in f]
-else:                    list_of_files = [f for f in list_of_files if args.card_tag in f]
+if args.card_tag == "":  list_of_files = [f for f in list_of_files if '0d7' not in f and '.root' not in f]
+else:                    list_of_files = [f for f in list_of_files if args.card_tag in f and '.root' not in f]
 
 if len(list_of_files) == 0:
    print "No card files found!"

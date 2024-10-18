@@ -95,7 +95,7 @@ if [[ "${ZEMU}" != "" ]]; then
     FITARG="${FITARG} --X-rtd REMOVE_CONSTANT_ZERO_POINT=1 --X-rtd MINIMIZER_freezeDisassociatedParams" #--X-rtd MINIMIZER_multiMin_hideConstants
     FITARG="${FITARG} --X-rtd MINIMIZER_multiMin_maskConstraints --X-rtd MINIMIZER_multiMin_maskChannels=2"
     FITARG="${FITARG} --cminDefaultMinimizerTolerance 0.001 --cminDiscreteMinTol 0.0001"
-    if [[ "${WORKSPACE}" != *"total"* ]]; then
+    if [[ "${WORKSPACE}" != *"total"* ]] && [[ "${WORKSPACE}" != *"zprime"* ]]; then
         FITARG="${FITARG} --cminRunAllDiscreteCombinations"
     fi
 fi

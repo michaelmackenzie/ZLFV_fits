@@ -92,9 +92,15 @@ int print_hist(vector<TDirectoryFile*> dirs, TString tag, TString outdir) {
   TH1* htotal              = get_hist(dirs, "total");
   TGraphAsymmErrors* gdata = get_data(dirs);
 
+  //Z->mumu names in ZLFV_fits datacards
   if(!hzmumu) hzmumu = get_hist(dirs, "zmm");
   if(!hzemu ) hzemu  = get_hist(dirs, "sgn");
-  if(!hsignal || !hbackground || !htotal || ! hzmumu || !hzemu || !gdata) {
+
+  //Z prime scan names
+  if(!hbkg ) hbkg  = get_hist(dirs, "background");
+  if(!hzemu) hzemu = get_hist(dirs, "signal");
+
+  if(!hsignal || !hbackground || !htotal || !hzemu || !gdata) {
     cout << "Data not found for tag " << tag.Data() << endl;
     return 1;
   }
@@ -154,10 +160,12 @@ int print_hist(vector<TDirectoryFile*> dirs, TString tag, TString outdir) {
   hbkg->SetLineStyle(kDashed);
 
   //Configure the Z->mumu component style
-  hzmumu->SetLineColor(kGreen);
-  hzmumu->SetMarkerColor(kGreen);
-  hzmumu->SetLineWidth(3);
-  hzmumu->SetLineStyle(kDashed);
+  if(hzmumu) {
+    hzmumu->SetLineColor(kGreen);
+    hzmumu->SetMarkerColor(kGreen);
+    hzmumu->SetLineWidth(3);
+    hzmumu->SetLineStyle(kDashed);
+  }
 
   //Configure the signal component style
   hsignal->SetLineColor(kBlue);
@@ -169,7 +177,7 @@ int print_hist(vector<TDirectoryFile*> dirs, TString tag, TString outdir) {
   htotal->Draw("L");
   if(unblind_) {
     hbkg->Draw("L same");
-    hzmumu->Draw("L same");
+    if(hzmumu) hzmumu->Draw("L same");
     hsignal->Draw("L same");
   }
   gdata->Draw("P");
@@ -182,7 +190,7 @@ int print_hist(vector<TDirectoryFile*> dirs, TString tag, TString outdir) {
   leg.AddEntry(htotal, "Background+signal fit", "LF");
   if(unblind_) {
     leg.AddEntry(hbkg, "Parametric background", "L");
-    leg.AddEntry(hzmumu, "Z#rightarrow#mu#mu", "L");
+    if(hzmumu) leg.AddEntry(hzmumu, "Z#rightarrow#mu#mu", "L");
     leg.AddEntry(hsignal, "Fit Z#rightarrowe#mu", "L");
   }
   leg.SetTextSize(0.05);
