@@ -245,6 +245,22 @@ MAIN="bdt_v01" #Main directory used for cloning
 time python perform_scan.py -o ${MAIN}_toy_${TOY} --unblind --smooth-expected
 ```
 
+### Unblinding validation stages
+
+The unblinding stages include several steps to validate the fit model and results. These tests for each point in the scan are performed using
+the [perform_scan_validation.py](perform_scan_validation.py) tool.
+
+```
+# Data card directory name (under "datacards/")
+CARDDIR="bdt_v13"
+# Goodness-of-fit tests (blinded uses the Asimov template, which has ideal GOF)
+python perform_scan_validation.py -o ${CARDDIR} --test gof -t 200 [--unblind] [--mass point X]
+# Nuisance parameter impact tests
+python perform_scan_validation.py -o ${CARDDIR} --test impacts [--unblind] [--mass-point X]
+# Fit distributions (pre-fit, B-only fit, and S+B fit results, blinded doesn't show the individual S or B results)
+python perform_scan_validation.py -o ${CARDDIR} --test distributions [--unblind] [--mass-point X]
+```
+
 ### Validation studies
 
 Validation studies for the entire scan are performed using the [perform_scan_validation.py](perform_scan_validation.py) tool.
