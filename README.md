@@ -186,13 +186,11 @@ The Z prime scan searches for a narrow resonance in the e-mu data using the Z->e
 
 ### To do list
 
-- Account for the effects of different running periods: see [evaluate_years_effect.py](tools/evaluate_years_effects.py) for a starting point, added linear correction to [signal_model.py](signal_model.py)
-- Add uncertainty for efficiency turn-on (perhaps maximum difference from the fit)
 - Validate systematic uncertainty values: see [eval_zprime_unc.py](tools/eval_zprime_unc.py) for a starting point
-- Code updates: Merge ScanMuE_fit_wrapper_v2.py changes, add ntupling code to repo, add BDT score code to repo
+- Validate electron+muon energy scale uncertainties are consistent with simulated resolution function offsets from zero
+- Code updates: Add ntupling and BDT score code to repo and Z prime gen config to this repo or generator repo
 - Update documentation: AN and paper have a preliminary discussion added
 - Find a relevant theory model to compare to (e.g. EXO-19-014 Z' model with B = 1e-4 or something)
-- Prepare for mini-preapproval presentation on Oct. 1st
 
 ### Create signal and background PDFs for a range of mass points for a single BDT category
 ```

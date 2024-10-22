@@ -270,6 +270,7 @@ for entry in range(first_entry, max_entry):
    mass_ll[0] = ll.M  ()
    pt_ll  [0] = ll.Pt ()
    eta_ll [0] = ll.Eta()
+   phi_ll [0] = ll.Phi()
    eta_sc = t_in.Electron_deltaEtaSC[0] + t_in.Electron_eta[0]
    pt_ratio[0] = pt_l2[0] / pt_l1[0]
 

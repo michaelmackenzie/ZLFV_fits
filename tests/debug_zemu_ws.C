@@ -112,7 +112,7 @@ int debug_zemu_ws(const char* bin = "bin3") {
 
   // Draw the Z->mumu PDF
   frame = obs->frame();
-  zmm->plotOn(frame);
+  zmm->plotOn(frame, RooFit::Normalization(zmm_norm->getVal()));
   frame->Draw();
   c.SaveAs(Form("inputs_zmm_%s.png", bin));
 
