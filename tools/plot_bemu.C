@@ -24,6 +24,16 @@ double hmin(TH1* h, double cutoff = 0.01) {
   return max(cutoff, min_val);
 }
 
+double gmax(TGraph* g) {
+  const int nbins = g->GetN();
+  double max_val = 0.;
+  for(int ibin = 0; ibin < nbins; ++ibin) {
+    const double val = g->GetY()[ibin];
+    max_val = max(max_val, val);
+  }
+  return max_val;
+}
+
 double gmin(TGraph* g, double cutoff = 0.01) {
   const int nbins = g->GetN();
   double min_val = -1;
@@ -33,6 +43,17 @@ double gmin(TGraph* g, double cutoff = 0.01) {
     min_val = (min_val < 0.) ? val : min(min_val, val);
   }
   return max(cutoff, min_val);
+}
+
+//------------------------------------------------------------------------------------------
+// Scale the data
+void scale_g(TGraphAsymmErrors* g, float scale = 1.f) {
+  const int nbins = g->GetN();
+  for(int ibin = 0; ibin < nbins; ++ibin) {
+    g->SetPointY(ibin, g->GetPointY(ibin)*scale);
+    g->SetPointEYhigh(ibin, g->GetEYhigh()[ibin]*scale);
+    g->SetPointEYlow(ibin, g->GetEYlow()[ibin]*scale);
+  }
 }
 
 //------------------------------------------------------------------------------------------
@@ -112,6 +133,16 @@ int print_hist(vector<TDirectoryFile*> dirs, TString tag, TString outdir) {
     return 2;
   }
 
+  //Scale the inputs to remove the 1/bin width normalization
+  const float scale = hbkg->GetBinWidth(1);
+  scale_g(gdata,scale);
+  hbackground->Scale(scale);
+  hsignal->Scale(scale);
+  hbkg->Scale(scale);
+  hzemu->Scale(scale);
+  htotal->Scale(scale);
+  if(hzmumu) hzmumu->Scale(scale);
+
   //Determine the x-axis range to use
   const double xmin = htotal->GetBinLowEdge(htotal->FindFirstBinAbove(0.01));
   const double xmax = htotal->GetXaxis()->GetBinUpEdge(htotal->FindLastBinAbove(0.01));
@@ -134,8 +165,8 @@ int print_hist(vector<TDirectoryFile*> dirs, TString tag, TString outdir) {
 
   //Configure the data style
   gdata->SetMarkerStyle(20);
-  gdata->SetMarkerSize(0.8);
-  gdata->SetLineWidth(3);
+  gdata->SetMarkerSize(1.2);
+  gdata->SetLineWidth(1);
 
   //Configure the total fit (S+B) style
   htotal->SetLineColor(kRed);
@@ -339,8 +370,8 @@ int print_hist(vector<TDirectoryFile*> dirs, TString tag, TString outdir) {
 
   //Print a linear and a log version of the distribution
   double min_val = std::max(0.1, std::min(gmin(gdata), hmin(htotal)));
-  double max_val = std::max(gdata->GetMaximum(), hmax(htotal));
-  htotal->GetYaxis()->SetRangeUser(0., 1.2*max_val);
+  double max_val = std::max(gmax(gdata), hmax(htotal));
+  htotal->GetYaxis()->SetRangeUser(0., 1.05*(max_val + 1.05*sqrt(max_val)));
   c->SaveAs(Form("%s%s.png", outdir.Data(), tag.Data()));
   double plot_min = std::min(std::max(0.2, 0.2*hmax(hsignal)), 0.2*min_val);
   double plot_max = plot_min*pow(10, 1.7*log10(max_val/plot_min));

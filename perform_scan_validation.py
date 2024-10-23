@@ -20,6 +20,7 @@ def process_datacard(card, directory, name, test = 'bias', toys = 100, signal_ra
    if verbose > -1: print 'Processing mass point', name, '(card =', card+')'
 
    base_dir = os.getenv('CMSSW_BASE') + '/src/ZLFV_fits'
+   mass = float(card.split('mass-')[1].split('_')[0])
 
    #----------------------------------------------------------------------------
    # Perform the validation test
@@ -48,16 +49,25 @@ def process_datacard(card, directory, name, test = 'bias', toys = 100, signal_ra
 
    #----------------------------------------------------------------------------
    if test == 'impacts':
-      command = base_dir + '/tests/impacts.sh ' + card + ' -r 30'
+      use_observed_impacts = True # FIXME: This should be a flag
+      max_r = 30.*exp(-(mass-110.)/130.) # rough exponential approximation
+      max_bkg = 3.e4*exp(-(mass - 110.)/130.) # rough exponential approximation
+      command = base_dir + '/tests/impacts.sh ' + card + ' -r %.3f --timeout' % (max_r)
+      # constrain the background rates
+      command += ' --fitarg "--setParameterRanges shapeBkg_background_bin_1__norm=100,%.0f:shapeBkg_background_bin_2__norm=100,%.0f"' % (max_bkg, max_bkg)
+      # # exclude background PDF parameters
+      # command += ' --exclude bkg_cheb1_pdf_bin1_0'
       if tag != "": command += ' --tag ' + tag
-      if unblind: command += ' -o --unblind'
+      if use_observed_impacts: command += ' -o'
+      if unblind: command += ' --unblind'
       output = 'fit_impacts_%s.log' % (name)
       if verbose > 1: print command
       os.system('cd %s; %s >| %s; cd ..' % (directory, command, output))
 
    #----------------------------------------------------------------------------
    if test == 'distributions':
-      command = base_dir + '/tests/plot_distributions.sh ' + card + ' -r 30 --zemu --ignoresys'
+      max_r = 30.*exp(-(mass-110.)/130.) # rough exponential approximation
+      command = base_dir + '/tests/plot_distributions.sh ' + card + ' -r %.3f --zemu --ignoresys' % (max_r)
       plot_tag = card.replace('datacard_zprime_', '')
       plot_tag = plot_tag.replace('.txt', '')
       plot_tag = plot_tag.split('_mass-')[0] + '_mp' + plot_tag.split('_mp')[1]
@@ -167,12 +177,19 @@ def retrieve_info(card, directory, name, test = 'bias', signal_rate = 0., tag = 
 
    #----------------------------------------------------------------------------
    if test == 'impacts':
-      os.system('cp %s/impacts_*.pdf %s' % (directory, figdir))
+      plot_tag = card.replace('datacard_', 'impacts_')
+      plot_tag = plot_tag.replace('.txt', '.pdf')
+      print 'cp %s/%s %s' % (directory, plot_tag, figdir)
+      os.system('cp %s/%s %s' % (directory, plot_tag, figdir))
 
    #----------------------------------------------------------------------------
    if test == 'distributions':
-      print 'cp -r %s/figures/fits_* %s' % (directory, figdir)
-      os.system('cp -r %s/figures/fits_* %s' % (directory, figdir))
+      plot_tag = card.replace('datacard_zprime_', '')
+      plot_tag = plot_tag.replace('.txt', '')
+      plot_tag = plot_tag.split('_mass-')[0] + '_mp' + plot_tag.split('_mp')[1]
+      plot_tag = 'fits_' + plot_tag + tag
+      print 'cp -r %s/figures/%s %s' % (directory, plot_tag, figdir)
+      os.system('cp -r %s/figures/%s %s' % (directory, plot_tag, figdir))
 
 
    #----------------------------------------------------------------------------
@@ -223,7 +240,6 @@ if args.tag != '': args.tag = '_' + args.tag
 figdir = "./figures/val_%s_%s%s/" % (args.name, args.test, args.tag)
 carddir = "./datacards/%s/" % (args.name)
 os.system("[ ! -d %s ] && mkdir -p %s" % (figdir , figdir ))
-os.system("[ ! -d %s ] && mkdir -p %s" % (carddir, carddir))
 
 rt.gROOT.SetBatch(True)
 
@@ -238,6 +254,9 @@ else:                    list_of_files = [f for f in list_of_files if args.card_
 
 if len(list_of_files) == 0:
    print "No card files found!"
+   exit()
+if args.mass_point >= len(list_of_files):
+   print 'Mass point is greater than the file list length:', len(list_of_files)
    exit()
 
 # Sort the list by mass point
@@ -286,10 +305,12 @@ for f in list_of_files:
 
    # store the results
    masses.append(mass)
-   print result
    val_results.append(result)
 
-if args.mass_point >= 0: exit() # don't make a plot for the single point
+if args.mass_point >= 0:
+   print 'Mass point', args.mass_point, ' results:'
+   print val_results[0]
+   exit() # don't make a plot for the single point
 
 #----------------------------------------------
 # Combine and plot the results
@@ -324,6 +345,6 @@ if args.test == 'gof':
    c.SaveAs(figdir+'pvals.png')
 
    for index in range(len(masses)):
-      if abs(val_results[index][0]) < 0.01:
+      if abs(val_results[index][0]) < 0.05:
          print 'Mass point', masses[index],'(index', index,'): Low p-value =', val_results[index][0]
 

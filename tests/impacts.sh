@@ -17,6 +17,7 @@ Help() {
     echo " --fitonly        : Only process fitting steps, not impact PDF"
     echo " --skipinitial    : Skip initial fit"
     echo " --initialonly    : Only do initial fit"
+    echo " --timeout        : Apply timeout to retry the initial fit"
     echo " --plotonly       : Skip fits, only make plots"
     echo " --parallel N     : Fit with N parallel processes"
     echo " --grid-sub       : Prepare for grid processing of impacts"
@@ -40,6 +41,7 @@ INCLUDE=""
 FITONLY=""
 SKIPINITIAL=""
 INITIALONLY=""
+TIMEOUT=""
 PLOTONLY=""
 PARALLEL=""
 GRIDSUB=""
@@ -102,6 +104,9 @@ do
     elif [[ "${var}" == "--initialonly" ]]
     then
         INITIALONLY="d"
+    elif [[ "${var}" == "--timeout" ]]
+    then
+        TIMEOUT="d"
     elif [[ "${var}" == "--plotonly" ]]
     then
         PLOTONLY="d"
@@ -251,9 +256,16 @@ if [[ "${PLOTONLY}" == "" ]]; then
     # Perform initial fits
     if [[ "${APPROX}" == "" ]] && [[ "${SKIPINITIAL}" == "" ]] && [[ "${GRIDFIN}" == "" ]]; then
         COMMAND="combineTool.py -M Impacts -d ${WORKSPACE} -m 0 --rMin -${RRANGE} --rMax ${RRANGE} --robustFit 1 --doInitialFit ${DOOBS} ${FITADDITIONAL} -n ${FITNAME}"
+        if [[ "${TIMEOUT}" != "" ]]; then
+            COMMAND="timeout 300 ${COMMAND}"
+        fi
         echo ${COMMAND}
         if [[ "${DRYRUN}" == "" ]]; then
             ${COMMAND}
+            if [ $? -ne 0 ]; then
+                echo "Attempting initial fit again due to failure/timeout!"
+                ${COMMAND}
+            fi
         fi
     fi
 
@@ -293,9 +305,16 @@ if [[ "${PLOTONLY}" == "" ]]; then
     # Local processing
 
     if [[ "${GRIDFIN}" == "" ]]; then
-        echo ">>> ${COMMAND}"
+        if [[ "${TIMEOUT}" != "" ]]; then
+            COMMAND="timeout 500 ${COMMAND}"
+        fi
+        echo ${COMMAND}
         if [[ "${DRYRUN}" == "" ]]; then
             ${COMMAND}
+            if [ $? -ne 0 ]; then
+                echo "Attempting initial fit again due to failure/timeout!"
+                ${COMMAND}
+            fi
         fi
     else
         RESULTDIR=grid/${TASK}
