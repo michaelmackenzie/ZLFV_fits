@@ -5,6 +5,7 @@
 bool unblind_      = false;
 bool debug_        = false; //print debug info
 bool do_single_    = false; //test printing a single histogram
+bool do_sig_wt_    = true ; //make a plot with S/(S+B) weighting
 
 
 //------------------------------------------------------------------------------------------
@@ -58,68 +59,105 @@ void scale_g(TGraphAsymmErrors* g, float scale = 1.f) {
 
 //------------------------------------------------------------------------------------------
 // Get a distribution from the directory list
-TH1* get_hist(vector<TDirectoryFile*> dirs, const char* name) {
+TH1* get_hist(vector<TDirectoryFile*> dirs, const char* name, vector<double> weights = {}) {
   TH1* h = nullptr;
+  int index = 0;
   for(auto dir : dirs) {
     TH1* h_tmp = (TH1*) dir->Get(name);
     if(!h_tmp) {
       // cout << __func__ << ": Histogram " << name << " not found in directory " << dir->GetName() << endl;
       return nullptr;
     }
+    const double weight = (weights.size() > index) ? weights[index] : 1.f;
     if(!h) {
       h = (TH1*) h_tmp->Clone(Form("%s_Run2", name));
+      h->Scale(weight);
     } else {
-      h->Add(h_tmp);
+      h->Add(h_tmp, weight);
     }
+    ++index;
   }
   return h;
 }
 
 //------------------------------------------------------------------------------------------
 // Get the data distribution from the directory list
-TGraphAsymmErrors* get_data(vector<TDirectoryFile*> dirs) {
+TGraphAsymmErrors* get_data(vector<TDirectoryFile*> dirs, vector<double> weights = {}) {
   TGraphAsymmErrors* g = nullptr;
+  int index = 0;
   for(auto dir : dirs) {
     TGraphAsymmErrors* g_tmp = (TGraphAsymmErrors*) dir->Get("data");
     if(!g_tmp) {
       cout << __func__ << ": Data not found in directory " << dir->GetName() << endl;
       return nullptr;
     }
+    const double weight = (weights.size() > index) ? weights[index] : 1.f;
     if(!g) {
       g = (TGraphAsymmErrors*) g_tmp->Clone("data_Run2");
+      if(weights.size() > 0) { //scale the data
+        for(int ipoint = 0; ipoint < g->GetN(); ++ipoint) {
+          g->SetPointY(ipoint, weights[0]*g->GetPointY(ipoint));
+          //use sqrt(N) for the errors
+          g->SetPointEYhigh(ipoint, weight*sqrt(g->GetPointY(ipoint)));
+          g->SetPointEYlow (ipoint, weight*sqrt(g->GetPointY(ipoint)));
+        }
+
+      }
     } else {
       //Add the data and errors
       for(int ipoint = 0; ipoint < g->GetN(); ++ipoint) {
-        g->SetPointY(ipoint, g->GetPointY(ipoint)+g_tmp->GetPointY(ipoint));
-        //use sqrt(N) for the errors
-        g->SetPointEYhigh(ipoint, sqrt(g->GetPointY(ipoint)));
-        g->SetPointEYlow (ipoint, sqrt(g->GetPointY(ipoint)));
+        g->SetPointY(ipoint, g->GetPointY(ipoint) + weight*g_tmp->GetPointY(ipoint));
+        //use sqrt(N) and add in quadrature
+        g->SetPointEYhigh(ipoint, sqrt(pow(g->GetErrorYhigh(ipoint), 2) + weight*g_tmp->GetPointY(ipoint)));
+        g->SetPointEYlow (ipoint, sqrt(pow(g->GetErrorYhigh(ipoint), 2) + weight*g_tmp->GetPointY(ipoint)));
       }
     }
+    ++index;
   }
   return g;
 }
 
 //------------------------------------------------------------------------------------------
 // Print an individual distribution
-int print_hist(vector<TDirectoryFile*> dirs, TString tag, TString outdir) {
+int print_hist(vector<TDirectoryFile*> dirs, TString tag, TString outdir, bool s_over_sb = false) {
+
+  //get the weights for each region if requested
+  vector<double> weights;
+  if(s_over_sb && dirs.size() > 1) {
+    double max_wt = 0.;
+    for(auto dir : dirs) {
+      auto hbkg = get_hist({dir}, "total_background");
+      auto hsig = get_hist({dir}, "total_signal");
+      const double peak_mass = hsig->GetBinCenter(hsig->GetMaximumBin());
+      const double width = hsig->GetStdDev();
+      const double nbkg = hbkg->Integral(hbkg->FindBin(peak_mass - 2.*width), hbkg->FindBin(peak_mass + 2.*width));
+      const double nsig = fabs(hsig->Integral()); //use |S| in the ratio
+      weights.push_back(max(1.e-5, nsig/(nbkg + nsig)));
+      max_wt = max(max_wt, weights.back());
+    }
+    for(unsigned index = 0; index < weights.size(); ++index) {
+      weights[index] *= 1./max_wt; //normalize to max of 1
+      cout << "Category " << index << " weight = " << weights[index] << endl;
+    }
+  }
 
   //Get the fit results and the data
-  TH1* hbackground         = get_hist(dirs, "total_background");
-  TH1* hbkg                = get_hist(dirs, "bkg");
-  TH1* hzmumu              = get_hist(dirs, "zmumu");
-  TH1* hzemu               = get_hist(dirs, "zemu");
-  TH1* hsignal             = get_hist(dirs, "total_signal");
-  TH1* htotal              = get_hist(dirs, "total");
-  TGraphAsymmErrors* gdata = get_data(dirs);
+  TH1* hbackground         = get_hist(dirs, "total_background", weights);
+  TH1* hbkg                = get_hist(dirs, "bkg", weights);
+  TH1* hzmumu              = get_hist(dirs, "zmumu", weights);
+  TH1* hzemu               = get_hist(dirs, "zemu", weights);
+  TH1* hsignal             = get_hist(dirs, "total_signal", weights);
+  TH1* htotal              = get_hist(dirs, "total", weights);
+  TGraphAsymmErrors* gdata = get_data(dirs, weights);
 
   //Z->mumu names in ZLFV_fits datacards
-  if(!hzmumu) hzmumu = get_hist(dirs, "zmm");
-  if(!hzemu ) hzemu  = get_hist(dirs, "sgn");
+  if(!hzmumu) hzmumu = get_hist(dirs, "zmm", weights);
+  if(!hzemu ) hzemu  = get_hist(dirs, "sgn", weights);
 
   //Z prime scan names
-  if(!hbkg ) hbkg  = get_hist(dirs, "background");
-  if(!hzemu) hzemu = get_hist(dirs, "signal");
+  const bool zprime = !hbkg || !hzemu;
+  if(!hbkg ) hbkg  = get_hist(dirs, "background", weights);
+  if(!hzemu) hzemu = get_hist(dirs, "signal", weights);
 
   if(!hsignal || !hbackground || !htotal || !hzemu || !gdata) {
     cout << "Data not found for tag " << tag.Data() << endl;
@@ -179,7 +217,8 @@ int print_hist(vector<TDirectoryFile*> dirs, TString tag, TString outdir) {
   htotal->SetLineColor(kRed);
   htotal->SetTitle("");
   htotal->SetXTitle("");
-  htotal->SetYTitle(Form("Events / %.1f GeV/c^{2}", htotal->GetBinWidth(1)));
+  if(s_over_sb) htotal->SetYTitle(Form("S/(S+B) weighted Events / %.1f GeV/c^{2}", htotal->GetBinWidth(1)));
+  else          htotal->SetYTitle(Form("Events / %.1f GeV/c^{2}", htotal->GetBinWidth(1)));
   htotal->GetYaxis()->SetTitleSize(0.05);
   htotal->GetYaxis()->SetTitleOffset(0.92);
   htotal->GetXaxis()->SetLabelSize(0.);
@@ -222,7 +261,8 @@ int print_hist(vector<TDirectoryFile*> dirs, TString tag, TString outdir) {
   if(unblind_) {
     leg.AddEntry(hbkg, "Parametric background", "L");
     if(hzmumu) leg.AddEntry(hzmumu, "Z#rightarrow#mu#mu", "L");
-    leg.AddEntry(hsignal, "Fit Z#rightarrowe#mu", "L");
+    if(zprime) leg.AddEntry(hsignal, "Fit Z'#rightarrowe#mu", "L");
+    else       leg.AddEntry(hsignal, "Fit Z#rightarrowe#mu", "L");
   }
   leg.SetTextSize(0.05);
   leg.SetFillStyle(0);
@@ -401,6 +441,7 @@ int print_dir(TDirectoryFile* dir, TString tag, TString outdir) {
   //List of categories
   TList* list = dir->GetListOfKeys();
   if(!list) return 10;
+  vector<TDirectoryFile*> subdirs;
   bool subdir(false); //whether there are sub-directories or not
   for(TObject* o : *list) {
     TObject* obj = dir->Get(o->GetName());
@@ -413,12 +454,15 @@ int print_dir(TDirectoryFile* dir, TString tag, TString outdir) {
       status += print_dir(next_dir, (tag + "_") + obj->GetName(), outdir);
       subdir = true;
       if(do_single_) return status;
+      subdirs.push_back(next_dir);
     }
   }
 
   //If this directory doesn't contain a sub-directory, print the histograms within the category
   if(!subdir) { //histogram directory
     status += print_hist({dir}, tag, outdir);
+  } else { //print the S/(S+B) weighted histogram
+    status += print_hist(subdirs, tag +"_s_sb_wt", outdir, true);
   }
   return status;
 }
