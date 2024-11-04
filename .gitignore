@@ -10,7 +10,7 @@ figures
 datacards
 templates
 hists
-zemu_*
+zemu_*/
 *.hist
 *.root
 *.pyc

@@ -15,8 +15,22 @@ def file_sort(f):
 #----------------------------------------------------------------------------------------
 # Smooth expected limits by fitting to an exponential
 def smooth_limits(vals, masses):
-   func = rt.TF1('func', 'exp([0] + [1]*(x/1000))', masses[0], masses[-1])
-   func.SetParameters(1., -1.)
+   mode = 0 # How to smooth the fits
+   if mode == 0:
+      func = rt.TF1('func', 'exp([0] + [1]*(x/1000))', masses[0], masses[-1])
+      func.SetParameters(1., -1.)
+   elif mode == 1:
+      func = rt.TF1('func', 'exp([0] + [1]*(x/1000)) + exp([2] + [3]*(x/1000))', masses[0], masses[-1])
+      func.SetParameters(1., -1., 0., -0.9)
+   elif mode == 2:
+      func = rt.TF1('func', '[0] + [1]*(x/1000) + [2]*pow((x/1000),2) + [3]*pow((x/1000),3)', masses[0], masses[-1])
+      func.SetParameters(10., -1., 0., 0.) 
+   elif mode == 3:
+      func = rt.TF1('func', 'pow([0]*(x/1000),[1]) + exp([2] + [3]*(x/1000))', masses[0], masses[-1])
+      func.SetParameters(3., -1.3, 0., -0.9)
+   else:
+      print "Unknown smoothing mode", mode, "--> no smoothing will be performed!"
+      return vals
    g = rt.TGraph(len(masses), masses, vals)
    g.Fit(func, 'R Q 0')
    for index in range(len(masses)):
@@ -312,7 +326,7 @@ g_exp.SetLineStyle(rt.kDashed)
 g_exp.SetLineWidth(2)
 g_exp.SetLineColor(rt.kBlack)
 g_exp.Draw("XL")
-g_exp_2.GetXaxis().SetTitle("Z\' mass (GeV/c^{2})");
+g_exp_2.GetXaxis().SetTitle("Z\' mass (GeV)");
 g_exp_2.GetYaxis().SetTitle("#sigma(Z\')*BR(Z\'->e#mu) (fb)");
 
 if draw_obs:
@@ -341,6 +355,45 @@ c.SaveAs(figdir+'limits.png')
 g_exp_2.GetYaxis().SetRangeUser(0.5*min_lim, 5*max_lim)
 c.SetLogy()
 c.SaveAs(figdir+'limits_log.png')
+
+#----------------------------------------------
+# Limit plot with log plot on top
+#----------------------------------------------
+
+c = rt.TCanvas('c_lim_2', 'c_lim_2', 800, 600)
+pad1 = rt.TPad('pad1', 'pad1', 0., 0., 1., 1.)
+# pad2 = rt.TPad('pad2', 'pad2', 0.3, 0.42, 0.7, 0.88)
+pad2 = rt.TPad('pad2', 'pad2', 0.45, 0.30, 0.895, 0.88)
+leg.SetX1NDC(0.2); leg.SetX2NDC(0.40);
+pad2.SetTopMargin(0.01)
+pad2.SetRightMargin(0.03)
+pad2.SetBottomMargin(0.08)
+pad2.SetLeftMargin(0.10)
+pad1.Draw()
+pad2.Draw()
+pad1.cd()
+g_exp_2.Draw("AE3")
+g_exp_1.Draw("E3")
+g_exp.Draw("XL")
+if draw_obs:
+   g_obs.Draw("PL")
+leg.Draw()
+g_exp_2.GetYaxis().SetRangeUser(0.*min_lim, 1.01*max_lim)
+pad2.cd()
+g_exp_2_log = g_exp_2.Clone('g_exp_2_log')
+g_exp_2_log.Draw("AE3")
+g_exp_1.Draw("E3")
+g_exp.Draw("XL")
+if draw_obs:
+   g_obs.Draw("PL")
+g_exp_2_log.SetTitle('')
+# g_exp_2_log.GetXaxis().SetTitle("");
+# g_exp_2_log.GetYaxis().SetTitle("");
+g_exp_2_log.GetYaxis().SetRangeUser(0.5*min_lim, 1.7*max_lim)
+pad2.SetLogy()
+c.SaveAs(figdir+'limits_plus_log.png')
+
+
 
 #----------------------------------------------
 # Signal rate plot
@@ -393,7 +446,7 @@ for index in range(len(r_fits)):
       m_errs.append(1.)
 
 g_sig = rt.TGraphErrors(len(masses), masses, sig_half, m_errs, sig_err)
-g_sig.SetTitle(";Z' mass (GeV/c^{2});#sigma_{r}")
+g_sig.SetTitle(";Z' mass (GeV);#sigma_{r}")
 g_sig.SetFillColor(rt.kAtlantic)
 g_sig.Draw("AE2")
 g_sig.GetXaxis().SetRangeUser(masses[0], masses[-1])
@@ -422,7 +475,7 @@ g_sig   = rt.TGraph(len(masses), masses, r_sigs)
 c = rt.TCanvas('c_sig', 'c_sig', 800, 600)
 c.SetRightMargin(0.03)
 c.SetLeftMargin(0.08)
-g_sig.SetTitle("Measurement significance vs. Z' mass; Z' mass (GeV/c^{2}); #sigma(BR(Z'->e#mu))")
+g_sig.SetTitle("Measurement significance vs. Z' mass; Z' mass (GeV); #sigma(BR(Z'->e#mu))")
 g_sig.SetMarkerStyle(20)
 g_sig.SetMarkerSize(0.75)
 g_sig.SetLineWidth(2)
@@ -479,7 +532,7 @@ g_pval   = rt.TGraph(len(masses), masses, pvals)
 g_global = rt.TGraph(len(masses), masses, global_pvals)
 
 c = rt.TCanvas('c_pval', 'c_pval', 800, 600)
-g_pval.SetTitle("Measurement p-value vs. Z' mass; Z' mass (GeV/c^{2}); p")
+g_pval.SetTitle("Measurement p-value vs. Z' mass; Z' mass (GeV); p")
 g_pval.SetMarkerStyle(20)
 g_pval.SetMarkerSize(0.8)
 g_pval.SetLineWidth(2)
@@ -505,7 +558,7 @@ c.SetLogy()
 # Add sigma lines to the p-value plot
 sig_p_min = rt.RooStats.PValueToSignificance(0.2*min_pval)
 lines = []
-for sig in range(int(sig_p_min)):
+for sig in range(int(sig_p_min)+1):
    p_sig = rt.RooStats.SignificanceToPValue(sig)
    line = rt.TLine(masses[0], p_sig, masses[-1], p_sig)
    line.SetLineStyle(rt.kDashed)
