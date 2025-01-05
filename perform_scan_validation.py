@@ -14,7 +14,7 @@ def file_sort(f):
 
 #----------------------------------------------------------------------------------------
 # Process a single mass point
-def process_datacard(card, directory, name, test = 'bias', toys = 100, signal_rate = 0., unblind = False, tag = '', verbose = 0):
+def process_datacard(card, directory, name, test = 'bias', toys = 100, signal_rate = 0., extra_arg = '', unblind = False, tag = '', verbose = 0):
    if not os.path.isfile(directory + card):
       print "Card %s not found" % (card)
    if verbose > -1: print 'Processing mass point', name, '(card =', card+')'
@@ -33,6 +33,7 @@ def process_datacard(card, directory, name, test = 'bias', toys = 100, signal_ra
       command = base_dir + '/tests/bemu_bias.sh ' + card + ' -t ' + str(toys) + ' -g ' + str(toys) + ' --name ' + name + ' -r 30 --skipplots'
       if signal_rate > 0.: command += ' --genarg "--expectSignal ' + str(signal_rate) + '"'
       if tag != "":  command += ' --tag ' + tag
+      if extra_arg != "": command += ' ' + extra_arg
       output = 'fit_bias_%s%s.log' % (name, tag)
       if verbose > 1: print command
       os.system('cd %s; %s >| %s; cd ..' % (directory, command, output))
@@ -42,6 +43,7 @@ def process_datacard(card, directory, name, test = 'bias', toys = 100, signal_ra
       name = name + tag
       command = base_dir + '/tests/do_goodness_of_fit.sh ' + card + ' -t ' + str(toys) + ' -g ' + str(toys) + ' --tag ' + name + ' -r 30 --algo saturated --skipplots'
       if not unblind: command += ' --asimov'
+      if extra_arg != "": command += ' ' + extra_arg
       output = 'fit_gof_%s.log' % (name)
       if verbose > 1: print command
       os.system('cd %s; %s >| %s; cd ..' % (directory, command, output))
@@ -59,6 +61,7 @@ def process_datacard(card, directory, name, test = 'bias', toys = 100, signal_ra
       # command += ' --exclude bkg_cheb1_pdf_bin1_0'
       if tag != "": command += ' --tag ' + tag
       if use_observed_impacts: command += ' -o'
+      if extra_arg != "": command += ' ' + extra_arg
       if unblind: command += ' --unblind'
       output = 'fit_impacts_%s.log' % (name)
       if verbose > 1: print command
@@ -67,13 +70,14 @@ def process_datacard(card, directory, name, test = 'bias', toys = 100, signal_ra
    #----------------------------------------------------------------------------
    if test == 'distributions':
       max_r = 30.*exp(-(mass-110.)/130.) # rough exponential approximation
-      command = base_dir + '/tests/plot_distributions.sh ' + card + ' -r %.3f --zemu --ignoresys' % (max_r)
+      command = base_dir + '/tests/plot_distributions.sh ' + card + ' -r %.3f --zemu --ignoresys' % (max_r) # --plotonly
       plot_tag = card.replace('datacard_zprime_', '')
       plot_tag = plot_tag.replace('.txt', '')
       plot_tag = plot_tag.split('_mass-')[0] + '_mp' + plot_tag.split('_mp')[1]
       plot_tag = 'fits_' + plot_tag + tag
       command += ' --tag ' + plot_tag
       if unblind: command += ' --unblind'
+      if extra_arg != "": command += ' ' + extra_arg
       output = 'fit_distributions_%s.log' % (name)
       if verbose > 1: print command
       os.system('cd %s; %s >| %s; cd ..' % (directory, command, output))
@@ -209,6 +213,7 @@ parser.add_argument("--test", dest="test",default="bias", type=str,help="Validat
 parser.add_argument("-t", dest="toys",default=100, type=int,help="Toys for validation tests")
 parser.add_argument("--signal-rate", dest="signal_rate",default=0., type=float, help="Signal rate to inject into the test")
 parser.add_argument("--skip-fits", dest="skip_fits",default=False, action='store_true',help="Skip fits, assume already processed")
+parser.add_argument("--extra-arg", dest="extra_arg",default="", type=str, help="Extra argument to processing command")
 parser.add_argument("--unblind", dest="unblind",default=False, action='store_true',help="Unblind the validation stage")
 parser.add_argument("--max-steps", dest="max_steps",default=-1, type=int, help="Maximum steps to take in the scan")
 parser.add_argument("--first-step", dest="first_step",default=0, type=int, help="First mass step to process")
@@ -280,7 +285,7 @@ if not args.skip_fits:
    for f in list_of_files:
       mass_point = f.split('_mp')[1].split('.txt')[0]
       if args.mass_point >= 0 and mass_point != str(args.mass_point): continue
-      job = Process(target = process_datacard, args=(f, carddir, args.name+ '_mp'+mass_point, args.test, args.toys, args.signal_rate, args.unblind, args.tag, args.verbose))
+      job = Process(target = process_datacard, args=(f, carddir, args.name+ '_mp'+mass_point, args.test, args.toys, args.signal_rate, args.extra_arg, args.unblind, args.tag, args.verbose))
       jobs.append(job)
    if args.nthreads < 1: args.nthreads = 1
    print("Parallel processing using %i threads" % (args.nthreads))

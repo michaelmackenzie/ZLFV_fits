@@ -3,10 +3,12 @@
 //$> combine -M FitDiagnostics -d <input card/workspace> --saveShapes --saveWithUncertainties [additional options]
 
 bool unblind_      = false;
+int  err_mode_     =  1   ; //errors in the pulls: 0: sqrt(data^2 + fit^2); 1: sqrt(data^2 - fit^2)
 bool debug_        = false; //print debug info
 bool do_single_    = false; //test printing a single histogram
 bool do_sig_wt_    = true ; //make a plot with S/(S+B) weighting
-
+bool is_prelim_    = true ; //is preliminary or not
+TString file_type_ = "pdf";
 
 //------------------------------------------------------------------------------------------
 // Helper functions
@@ -44,6 +46,39 @@ double gmin(TGraph* g, double cutoff = 0.01) {
     min_val = (min_val < 0.) ? val : min(min_val, val);
   }
   return max(cutoff, min_val);
+}
+
+
+//------------------------------------------------------------------------------------------
+// Draw the CMS label
+void draw_cms_label() {
+    //CMS prelim drawing
+    TText cmslabel;
+    cmslabel.SetNDC();
+    cmslabel.SetTextColor(1);
+    cmslabel.SetTextSize(0.07);
+    cmslabel.SetTextAlign(11);
+    cmslabel.SetTextAngle(0);
+    cmslabel.SetTextFont(61);
+    cmslabel.DrawText(0.14, 0.81, "CMS");
+    if(is_prelim_) {
+      cmslabel.SetTextFont(52);
+      cmslabel.SetTextSize(0.76*cmslabel.GetTextSize());
+      cmslabel.DrawText(0.23, 0.81, "Preliminary");
+    }
+}
+
+void draw_luminosity(int year = -1) {
+  TLatex label;
+  label.SetNDC();
+  label.SetTextFont(42);
+  // label.SetTextColor(1);
+  label.SetTextSize(0.05);
+  label.SetTextAlign(31);
+  label.SetTextAngle(0);
+  TString period = (year > 2000) ? Form("%i, ", year) : "";
+  const double lum = (year == 2016) ? 36.33 : (year == 2017) ? 41.48 : (year == 2018) ? 59.83 : 137.64;
+  label.DrawLatex(0.97, 0.907, Form("%s%.0f fb^{-1} (13 TeV)",period.Data(),lum));
 }
 
 //------------------------------------------------------------------------------------------
@@ -217,8 +252,8 @@ int print_hist(vector<TDirectoryFile*> dirs, TString tag, TString outdir, bool s
   htotal->SetLineColor(kRed);
   htotal->SetTitle("");
   htotal->SetXTitle("");
-  if(s_over_sb) htotal->SetYTitle(Form("S/(S+B) weighted Events / %.1f GeV/c^{2}", htotal->GetBinWidth(1)));
-  else          htotal->SetYTitle(Form("Events / %.1f GeV/c^{2}", htotal->GetBinWidth(1)));
+  if(s_over_sb) htotal->SetYTitle(Form("S/(S+B) weighted Events / %.1f GeV", htotal->GetBinWidth(1)));
+  else          htotal->SetYTitle(Form("Events / %.1f GeV", htotal->GetBinWidth(1)));
   htotal->GetYaxis()->SetTitleSize(0.05);
   htotal->GetYaxis()->SetTitleOffset(0.92);
   htotal->GetXaxis()->SetLabelSize(0.);
@@ -257,12 +292,13 @@ int print_hist(vector<TDirectoryFile*> dirs, TString tag, TString outdir, bool s
   //Add a legend
   TLegend leg(0.6, 0.5, 0.85, 0.85);
   leg.AddEntry(gdata, "Data", "PLE");
-  leg.AddEntry(htotal, "Background+signal fit", "LF");
+  leg.AddEntry(htotal, "Background+signal", "LF");
   if(unblind_) {
-    leg.AddEntry(hbkg, "Parametric background", "L");
+    if(zprime) leg.AddEntry(hbkg, "Background", "L");
+    else       leg.AddEntry(hbkg, "Parametric background", "L");
     if(hzmumu) leg.AddEntry(hzmumu, "Z#rightarrow#mu#mu", "L");
-    if(zprime) leg.AddEntry(hsignal, "Fit Z'#rightarrowe#mu", "L");
-    else       leg.AddEntry(hsignal, "Fit Z#rightarrowe#mu", "L");
+    if(zprime) leg.AddEntry(hsignal, "Z'#rightarrowe#mu", "L");
+    else       leg.AddEntry(hsignal, "Z#rightarrowe#mu", "L");
   }
   leg.SetTextSize(0.05);
   leg.SetFillStyle(0);
@@ -307,6 +343,13 @@ int print_hist(vector<TDirectoryFile*> dirs, TString tag, TString outdir, bool s
     //Calculate the pulls, combining the data and model errors
     const double data_err_s = (y > tot_v) ? err_low : err_high;
     const double data_err_b = (y > bkg_v) ? err_low : err_high;
+    // const double err_s      = (tot_e <= 0.) ? 0. : (err_mode_ == 0) ? sqrt(tot_e*tot_e + data_err_s*data_err_s) : sqrt(data_err_s*data_err_s - tot_e*tot_e);
+    // const double err_b      = (bkg_e <= 0.) ? 0. : (err_mode_ == 0) ? sqrt(bkg_e*bkg_e + data_err_b*data_err_b) : sqrt(data_err_b*data_err_b - bkg_e*bkg_e);
+    // if(!std::isfinite(err_s) || !std::isfinite(err_b)) printf(" %s: %s bin %i has non-finite error(s): err_s = %f; err_b = %f\n",
+    //                                                           __func__, tag.Data(), bin, err_s, err_b);
+    // const double pull_s     = (tot_e > 0.) ? (y - tot_v) / err_s : 0.;
+    // const double pull_b     = (bkg_e > 0.) ? (y - bkg_v) / err_b : 0.;
+
     const double pull_s     = (tot_v > 0.) ? (y - tot_v) / sqrt(tot_v) : 0.;
     const double pull_b     = (bkg_v > 0.) ? (y - bkg_v) / sqrt(bkg_v) : 0.;
 
@@ -358,7 +401,7 @@ int print_hist(vector<TDirectoryFile*> dirs, TString tag, TString outdir, bool s
   hBkg_unc->Draw("E2");
   if(unblind_) {
     hzemu->Draw("L same");
-    hzemu->GetYaxis()->SetRangeUser(min_diff - 0.05*(max_diff-min_diff), max_diff + 0.05*(max_diff-min_diff)); //necessary due to y-axis importing from clone
+    hzemu->GetYaxis()->SetRangeUser(min_diff - 0.05*(max_diff-min_diff), max_diff + 0.11*(max_diff-min_diff)); //necessary due to y-axis importing from clone
   }
   gDiff->Draw("P");
   hBkg_unc->GetXaxis()->SetRangeUser(xmin, xmax);
@@ -371,7 +414,7 @@ int print_hist(vector<TDirectoryFile*> dirs, TString tag, TString outdir, bool s
   line->Draw("same");
 
   //Configure the titles and axes
-  hBkg_unc->GetYaxis()->SetRangeUser(min_diff - 0.05*(max_diff-min_diff), max_diff + 0.05*(max_diff-min_diff));
+  hBkg_unc->GetYaxis()->SetRangeUser(min_diff - 0.05*(max_diff-min_diff), max_diff + 0.11*(max_diff-min_diff));
   hBkg_unc->SetTitle("");
   hBkg_unc->SetXTitle("");
   hBkg_unc->GetXaxis()->SetLabelSize(0.);
@@ -392,10 +435,12 @@ int print_hist(vector<TDirectoryFile*> dirs, TString tag, TString outdir, bool s
   hPull->Draw("hist");
   hPull->GetYaxis()->SetRangeUser(-3,3);
   hPull->SetTitle("");
-  hPull->SetXTitle("M_{e#mu} (GeV/c^{2})");
+  hPull->SetXTitle("m_{e#mu} [GeV]");
   hPull->SetYTitle("#frac{(Data-Fit)}{#sigma_{Fit}}");
   hPull->GetXaxis()->SetLabelSize(0.10);
   hPull->GetYaxis()->SetLabelSize(0.10);
+  hPull->GetXaxis()->SetLabelOffset(0.01);
+  hPull->GetYaxis()->SetLabelOffset(0.015);
   hPull->GetXaxis()->SetTitleSize(0.15);
   hPull->GetYaxis()->SetTitleSize(0.15);
   hPull->GetXaxis()->SetTitleOffset(0.75);
@@ -408,16 +453,23 @@ int print_hist(vector<TDirectoryFile*> dirs, TString tag, TString outdir, bool s
   line_2->SetLineStyle(kDashed);
   line_2->Draw("same");
 
+  //Add the CMS label
+  pad1->cd();
+  draw_cms_label();
+  draw_luminosity();
+
   //Print a linear and a log version of the distribution
   double min_val = std::max(0.1, std::min(gmin(gdata), hmin(htotal)));
   double max_val = std::max(gmax(gdata), hmax(htotal));
-  htotal->GetYaxis()->SetRangeUser(0., 1.05*(max_val + 1.05*sqrt(max_val)));
-  c->SaveAs(Form("%s%s.png", outdir.Data(), tag.Data()));
+  htotal->GetYaxis()->SetRangeUser(0., 1.3*(max_val + 1.05*sqrt(max_val)));
+  c->SaveAs(Form("%s%s.%s", outdir.Data(), tag.Data(), file_type_.Data()));
+  c->SaveAs(Form("%s%s.root", outdir.Data(), tag.Data()));
   double plot_min = std::min(std::max(0.2, 0.2*hmax(hsignal)), 0.2*min_val);
   double plot_max = plot_min*pow(10, 1.7*log10(max_val/plot_min));
   htotal->GetYaxis()->SetRangeUser(plot_min, plot_max);
   pad1->SetLogy();
-  c->SaveAs(Form("%s%s_logy.png", outdir.Data(), tag.Data()));
+  c->SaveAs(Form("%s%s_logy.%s", outdir.Data(), tag.Data(), file_type_.Data()));
+  c->SaveAs(Form("%s%s_logy.root", outdir.Data(), tag.Data()));
 
   //Clean up after printing
   delete c;

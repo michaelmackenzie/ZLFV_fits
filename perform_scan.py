@@ -13,9 +13,60 @@ def file_sort(f):
    return int(f.split('_mp')[1].replace('.txt',''))
 
 #----------------------------------------------------------------------------------------
+# Draw the CMS label
+def draw_cms_label(is_prelim = True):
+    #CMS prelim drawing
+    cmslabel = rt.TText()
+    cmslabel.SetNDC();
+    cmslabel.SetTextColor(1);
+    cmslabel.SetTextSize(0.06);
+    cmslabel.SetTextAlign(11);
+    cmslabel.SetTextAngle(0);
+    cmslabel.SetTextFont(61);
+    cmslabel.DrawText(0.14, 0.83, "CMS");
+    if is_prelim:
+      cmslabel.SetTextFont(52);
+      cmslabel.SetTextSize(0.76*cmslabel.GetTextSize());
+      cmslabel.DrawText(0.24, 0.83, "Preliminary");
+
+def draw_luminosity(year = -1):
+  label = rt.TLatex()
+  label.SetNDC()
+  label.SetTextFont(42)
+  label.SetTextSize(0.04)
+  label.SetTextAlign(31)
+  label.SetTextAngle(0)
+  period = "%i, " % (year) if year > 2000 else ""
+  lums = [36.33, 41.48, 59.83, 137.64]
+  lum = lums[year-2016] if year > 2000 else lums[-1]
+  label.DrawLatex(0.97, 0.91, "%s%.0f fb^{-1} (13 TeV)" % (period,lum));
+
+#----------------------------------------------------------------------------------------
+# Smooth expected limits by fitting to an exponential in a moving window
+def alt_smooth_limits(vals, masses):
+   func = rt.TF1('func', 'exp([0] + [1]*(x/1000))', masses[0], masses[-1])
+   func.SetParameters(1., -1.)
+   g = rt.TGraph(len(masses), masses, vals)
+   # Fit the graph in a moving window
+   for index in range(len(masses)):
+      mass = masses[index]
+      min_mass = masses[max(0, index-6)]
+      max_mass = masses[min(len(masses)-1, index+6)]
+      func.SetRange(min_mass, max_mass)
+      g.Fit(func, 'R Q 0')
+      vals[index] = func.Eval(mass)
+   # Make sure it's monotomic if multiple fits are used
+   for index in range(1, len(masses)-1):
+      if ((vals[index] < vals[index-1] and vals[index] < vals[index+1]) or
+          (vals[index] > vals[index-1] and vals[index] > vals[index+1])):
+         vals[index] = 0.5*(vals[index+1] + vals[index-1])
+      
+   return vals
+
+#----------------------------------------------------------------------------------------
 # Smooth expected limits by fitting to an exponential
 def smooth_limits(vals, masses):
-   mode = 0 # How to smooth the fits
+   mode = 5 # How to smooth the fits
    if mode == 0:
       func = rt.TF1('func', 'exp([0] + [1]*(x/1000))', masses[0], masses[-1])
       func.SetParameters(1., -1.)
@@ -28,6 +79,14 @@ def smooth_limits(vals, masses):
    elif mode == 3:
       func = rt.TF1('func', 'pow([0]*(x/1000),[1]) + exp([2] + [3]*(x/1000))', masses[0], masses[-1])
       func.SetParameters(3., -1.3, 0., -0.9)
+   elif mode == 4: # Fit slightly away from the start
+      func = rt.TF1('func', 'exp([0] + [1]*(x/1000))', 120., masses[-1])
+      func.SetParameters(1., -1.)
+   elif mode == 5: # Fit in different regions
+      func = rt.TF1('func', '(x < 120.) * exp([0] + [1]*(x/1000)) + (x > 120)*exp([2] + [3]*(x/1000))', masses[0], masses[-1])
+      func.SetParameters(1., -1., 1., -1.)
+      # func = rt.TF1('func', '(x < 120.) * exp([0] + [1]*(x/1000)) + (x > 120) * (x < 130)*exp([2] + [3]*(x/1000)) + (x > 130)*exp([4] + [5]*(x/1000))', masses[0], masses[-1])
+      # func.SetParameters(1., -1., 1., -1., 1., -1.)
    else:
       print "Unknown smoothing mode", mode, "--> no smoothing will be performed!"
       return vals
@@ -35,7 +94,16 @@ def smooth_limits(vals, masses):
    g.Fit(func, 'R Q 0')
    for index in range(len(masses)):
       mass = masses[index]
+      if mass < func.GetXmin(): continue
+      if mass > func.GetXmax(): continue
       vals[index] = func.Eval(mass)
+   if mode == 5:
+      # Make sure it's monotomic if multiple fits are used
+      for index in range(1, len(masses)-1):
+         if ((vals[index] < vals[index-1] and vals[index] < vals[index+1]) or
+             (vals[index] > vals[index-1] and vals[index] > vals[index+1])):
+            vals[index] = 0.5*(vals[index+1] + vals[index-1])
+      
    return vals
 
 #----------------------------------------------------------------------------------------
@@ -291,11 +359,11 @@ if len(masses) > 1: masses_errs[0] = (masses[1] - masses[0])/2.
 
 if args.smooth_expected:
    # Fit the expected limits/uncertainties with an exponential
-   r_exps      = smooth_limits(r_exps     , masses)
-   r_exps_lo   = smooth_limits(r_exps_lo  , masses)
-   r_exps_hi   = smooth_limits(r_exps_hi  , masses)
-   r_exps_lo_2 = smooth_limits(r_exps_lo_2, masses)
-   r_exps_hi_2 = smooth_limits(r_exps_hi_2, masses)
+   r_exps      = alt_smooth_limits(r_exps     , masses)
+   r_exps_lo   = alt_smooth_limits(r_exps_lo  , masses)
+   r_exps_hi   = alt_smooth_limits(r_exps_hi  , masses)
+   r_exps_lo_2 = alt_smooth_limits(r_exps_lo_2, masses)
+   r_exps_hi_2 = alt_smooth_limits(r_exps_hi_2, masses)
    
 
 #----------------------------------------------
@@ -303,6 +371,8 @@ if args.smooth_expected:
 #----------------------------------------------
 
 rt.gStyle.SetOptStat(0)
+rt.gStyle.SetPadTickX(1);
+rt.gStyle.SetPadTickY(1);
 
 #----------------------------------------------
 # Limit plot
@@ -315,7 +385,9 @@ g_exp_1 = rt.TGraphAsymmErrors(len(masses), masses, r_exps, masses_errs, masses_
 g_exp_2 = rt.TGraphAsymmErrors(len(masses), masses, r_exps, masses_errs, masses_errs, r_exps_lo_2, r_exps_hi_2)
 
 c = rt.TCanvas('c_lim', 'c_lim', 800, 600)
-g_exp_2.SetTitle("95% CL_{S} limit vs. Z' mass")
+c.SetRightMargin(0.03)
+c.SetLeftMargin(0.10)
+g_exp_2.SetTitle('') #"95% CL_{S} limit vs. Z' mass"
 g_exp_2.SetFillColor(rt.kOrange)
 g_exp_2.SetLineColor(rt.kOrange)
 g_exp_1.SetFillColor(rt.kGreen+1)
@@ -326,8 +398,8 @@ g_exp.SetLineStyle(rt.kDashed)
 g_exp.SetLineWidth(2)
 g_exp.SetLineColor(rt.kBlack)
 g_exp.Draw("XL")
-g_exp_2.GetXaxis().SetTitle("Z\' mass (GeV)");
-g_exp_2.GetYaxis().SetTitle("#sigma(Z\')*BR(Z\'->e#mu) (fb)");
+g_exp_2.GetXaxis().SetTitle("Z\' mass [GeV]");
+g_exp_2.GetYaxis().SetTitle("#sigma(Z\')#it{B}(Z\'#rightarrowe#mu) [fb]");
 
 if draw_obs:
    g_obs = rt.TGraph(len(masses), masses, r_lims)
@@ -338,8 +410,10 @@ if draw_obs:
    g_obs.SetLineColor(rt.kBlack)
    g_obs.Draw("PL")
 
-g_exp_2.GetXaxis().SetRangeUser(masses[0], masses[-1])
-g_exp_2.GetYaxis().SetRangeUser(0.*min_lim, 1.01*max_lim)
+xmin = min(100., masses[0])
+xmax = max(500., masses[-1])
+g_exp_2.GetXaxis().SetRangeUser(xmin, xmax)
+g_exp_2.GetYaxis().SetRangeUser(0.*min_lim, 1.03*max_lim)
 
 leg = rt.TLegend(0.7, 0.7, 0.89, 0.89)
 leg.SetLineWidth(0)
@@ -350,11 +424,15 @@ leg.AddEntry(g_exp_1, '#pm1#sigma' , 'F')
 leg.AddEntry(g_exp_2, '#pm2#sigma' , 'F')
 leg.Draw()
 
+draw_cms_label(True)
+draw_luminosity()
 
-c.SaveAs(figdir+'limits.png')
+c.SaveAs(figdir+'limits.pdf')
+c.SaveAs(figdir+'limits.root')
 g_exp_2.GetYaxis().SetRangeUser(0.5*min_lim, 5*max_lim)
 c.SetLogy()
-c.SaveAs(figdir+'limits_log.png')
+c.SaveAs(figdir+'limits_log.pdf')
+c.SaveAs(figdir+'limits_log.root')
 
 #----------------------------------------------
 # Limit plot with log plot on top
@@ -412,7 +490,7 @@ pad2.SetBottomMargin(0.25)
 
 # Add the fit distribution
 pad1.cd()
-g_r.SetTitle("Z' fit rate vs. Z' mass;; #sigma(Z')*BR(Z'->e#mu) (fb)")
+g_r.SetTitle("Z' fit rate vs. Z' mass;; #sigma(Z')#it{B}(Z'#rightarrowe#mu) (fb)")
 g_r.SetMarkerStyle(20)
 g_r.SetMarkerSize(0.8)
 g_r.SetLineWidth(2)
@@ -420,7 +498,7 @@ g_r.SetMarkerColor(rt.kBlack)
 g_r.SetLineColor(rt.kBlack)
 g_r.Draw("APE1")
 
-g_r.GetXaxis().SetRangeUser(masses[0], masses[-1])
+g_r.GetXaxis().SetRangeUser(xmin, xmax)
 g_r.GetYaxis().SetRangeUser(min_r - 0.05*(max_r - min_r), max_r + 0.1*(max_r - min_r))
 g_r.GetXaxis().SetLabelSize(0.)
 
@@ -449,7 +527,7 @@ g_sig = rt.TGraphErrors(len(masses), masses, sig_half, m_errs, sig_err)
 g_sig.SetTitle(";Z' mass (GeV);#sigma_{r}")
 g_sig.SetFillColor(rt.kAtlantic)
 g_sig.Draw("AE2")
-g_sig.GetXaxis().SetRangeUser(masses[0], masses[-1])
+g_sig.GetXaxis().SetRangeUser(xmin, xmax)
 g_sig.GetYaxis().SetRangeUser(-4, 4)
 g_sig.GetXaxis().SetLabelSize(0.08)
 g_sig.GetYaxis().SetLabelSize(0.08)
@@ -457,7 +535,7 @@ g_sig.GetXaxis().SetTitleSize(0.1)
 g_sig.GetXaxis().SetTitleOffset(0.9)
 g_sig.GetYaxis().SetTitleSize(0.1)
 g_sig.GetYaxis().SetTitleOffset(0.4)
-line = rt.TLine(masses[0], 0., masses[-1], 0.)
+line = rt.TLine(xmin, 0., xmax, 0.)
 line.SetLineWidth(2)
 line.SetLineStyle(rt.kDashed)
 line.SetLineColor(rt.kBlack)
@@ -475,7 +553,7 @@ g_sig   = rt.TGraph(len(masses), masses, r_sigs)
 c = rt.TCanvas('c_sig', 'c_sig', 800, 600)
 c.SetRightMargin(0.03)
 c.SetLeftMargin(0.08)
-g_sig.SetTitle("Measurement significance vs. Z' mass; Z' mass (GeV); #sigma(BR(Z'->e#mu))")
+g_sig.SetTitle("Measurement significance vs. Z' mass; Z' mass (GeV); #sigma(#it{B}(Z'#rightarrowe#mu))")
 g_sig.SetMarkerStyle(20)
 g_sig.SetMarkerSize(0.75)
 g_sig.SetLineWidth(2)
@@ -483,12 +561,10 @@ g_sig.SetMarkerColor(rt.kRed)
 g_sig.SetLineColor  (rt.kGray+2)
 g_sig.Draw("APL")
 
-x_min = masses[ 0] - 0.02*(masses[-1] - masses[0])
-x_max = masses[-1] + 0.02*(masses[-1] - masses[0])
 min_sig = min(r_sigs)
 max_sig = max(r_sigs)
 
-g_sig.GetXaxis().SetRangeUser(x_min, x_max)
+g_sig.GetXaxis().SetRangeUser(xmin, xmax)
 g_sig.GetYaxis().SetRangeUser(min_sig - 0.1*(max_sig-min_sig), max_sig + 0.1*(max_sig-min_sig))
 
 g_sig.GetXaxis().SetLabelSize(0.04)
@@ -498,7 +574,7 @@ g_sig.GetYaxis().SetLabelSize(0.04)
 g_sig.GetYaxis().SetTitleSize(0.045)
 g_sig.GetYaxis().SetTitleOffset(0.65)
 
-line = rt.TLine(x_min, 0., x_max, 0.)
+line = rt.TLine(xmin, 0., xmax, 0.)
 line.SetLineColor(rt.kBlack)
 line.SetLineStyle(rt.kDashed)
 line.SetLineWidth(2)
@@ -551,7 +627,7 @@ g_global.Draw("L")
 
 min_pval = min(pvals)
 max_pval = max(pvals)
-g_pval.GetXaxis().SetRangeUser(masses[0], masses[-1])
+g_pval.GetXaxis().SetRangeUser(xmin, xmax)
 g_pval.GetYaxis().SetRangeUser(0.2*min_pval, 2.)
 c.SetLogy()
 
@@ -560,7 +636,7 @@ sig_p_min = rt.RooStats.PValueToSignificance(0.2*min_pval)
 lines = []
 for sig in range(int(sig_p_min)+1):
    p_sig = rt.RooStats.SignificanceToPValue(sig)
-   line = rt.TLine(masses[0], p_sig, masses[-1], p_sig)
+   line = rt.TLine(xmin, p_sig, xmax, p_sig)
    line.SetLineStyle(rt.kDashed)
    line.SetLineWidth(2)
    line.SetLineColor(rt.kBlack)

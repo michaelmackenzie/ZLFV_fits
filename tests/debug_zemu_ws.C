@@ -1,7 +1,9 @@
 //Draw workspace PDFs
+const bool blind_data_ = true;
+
 TString get_pdf_title(TString pdf_name) {
   TString title = "";
-  if(pdf_name.Contains("_gs"))   title += "Gaussian + ";
+  if(pdf_name.Contains("_gs"))   title += ""; //"Gaussian + ";
   if(pdf_name.Contains("pol1"))  title += "Poly (1)";
   if(pdf_name.Contains("pol2"))  title += "Poly (2)";
   if(pdf_name.Contains("pol3"))  title += "Poly (3)";
@@ -48,6 +50,7 @@ int debug_zemu_ws(const char* bin = "bin3") {
   obs->setRange("LowSideband", xmin, blind_min-1.e-4);
   obs->setRange("HighSideband", blind_max+1.e-4, xmax);
   obs->setRange("BlindRegion", blind_min, blind_max);
+  obs->setUnit("GeV");
 
   ////////////////////////////////////////
   // Retrieve the input data
@@ -90,31 +93,38 @@ int debug_zemu_ws(const char* bin = "bin3") {
   data->plotOn(frame, RooFit::Name("data"));
 
   const int ncats = cat->numTypes();
-  const int colors[] = {kRed-6, kGreen-6, kOrange-4, kViolet-4};
-  // const int colors[] = {kRed-6, kGreen-6, kOrange-4, kViolet-4, kYellow-3, kAtlantic, kOrange+1, kSpring+5};
+  // const int colors[] = {kRed-6, kGreen-6, kOrange-4, kViolet-2};
+  const int styles[] = {kSolid, 6, 10};
+  const int colors[] = {kRed-6, kGreen-6, kOrange-4, kViolet-2, kYellow-3, kAtlantic, kOrange+1, kSpring+5};
   const int ncolors = sizeof(colors)/sizeof(*colors);
+  const int nstyles = sizeof(styles)/sizeof(*styles);
   vector<TString> titles;
   for(int ipdf = 0; ipdf < ncats; ++ipdf) {
     auto pdf = multipdf->getPdf(ipdf);
+    // if(ipdf % 2 == 0) continue;
     TString title = get_pdf_title(pdf->GetName());
     titles.push_back(title);
-    pdf->plotOn(frame, RooFit::LineColor(colors[ipdf % ncolors]), RooFit::LineStyle((ipdf >= ncolors) ? kDashed : kSolid),
+    pdf->plotOn(frame, RooFit::LineColor(colors[ipdf % ncolors]), RooFit::LineStyle(ipdf % 10 + 3), //styles[min(nstyles-1, ipdf / 2)]),
                 RooFit::Title(title), RooFit::Name(Form("pdf_%i", ipdf)));
   }
 
+  gStyle->SetPadTickX(1);
+  gStyle->SetPadTickY(1);
   TCanvas c; c.SetRightMargin(0.05);
   frame->Draw();
   leg->AddEntry("data", "Data", "PL");
   for(int ipdf = 0; ipdf < ncats; ++ipdf) leg->AddEntry(Form("pdf_%i", ipdf), titles[ipdf], "L");
   leg->Draw("same");
   frame->GetYaxis()->SetRangeUser(0.1, 1.4*frame->GetMaximum());
-  c.SaveAs(Form("inputs_%s.png", bin));
+  c.SaveAs(Form("inputs_%s.pdf", bin));
+  c.SaveAs(Form("inputs_%s.root", bin));
 
   // Draw the Z->mumu PDF
   frame = obs->frame();
   zmm->plotOn(frame, RooFit::Normalization(zmm_norm->getVal()));
   frame->Draw();
-  c.SaveAs(Form("inputs_zmm_%s.png", bin));
+  c.SaveAs(Form("inputs_zmm_%s.pdf", bin));
+  c.SaveAs(Form("inputs_zmm_%s.root", bin));
 
   ////////////////////////////////////////
   // Re-fit the Z->mumu+PDFs to the data
@@ -122,9 +132,11 @@ int debug_zemu_ws(const char* bin = "bin3") {
 
   // Blind the data for this plot
   TH1* h_data = data->createHistogram("hdata", *obs);
-  for(int ibin = h_data->FindBin(blind_min+0.01); ibin <= h_data->FindBin(blind_max-0.1); ++ibin) {
-    h_data->SetBinContent(ibin, 0.);
-    h_data->SetBinError(ibin, 0.);
+  if(blind_data_) {
+    for(int ibin = h_data->FindBin(blind_min+0.01); ibin <= h_data->FindBin(blind_max-0.1); ++ibin) {
+      h_data->SetBinContent(ibin, 0.);
+      h_data->SetBinError(ibin, 0.);
+    }
   }
   auto blind_data = new RooDataHist("blind_data", "Blinded data", *obs, h_data);
 
@@ -132,10 +144,10 @@ int debug_zemu_ws(const char* bin = "bin3") {
   TPad pad1("pad1","pad1",0.,0.4,1.,1.0); pad1.Draw();
   TPad pad2("pad2","pad2",0.,0.0,1.,0.4); pad2.Draw();
   pad1.SetTopMargin(0.1);
-  pad1.SetRightMargin(0.05);
+  pad1.SetRightMargin(0.03);
   pad1.SetBottomMargin(0.01);
   pad2.SetTopMargin(0.03);
-  pad2.SetRightMargin(0.05);
+  pad2.SetRightMargin(0.03);
   pad2.SetBottomMargin(0.20);
 
   pad1.cd();
@@ -154,7 +166,8 @@ int debug_zemu_ws(const char* bin = "bin3") {
     RooAddPdf* tot_pdf = new RooAddPdf(Form("tot_pdf_%i", ipdf), titles[ipdf], RooArgList(*pdf, *zmm), RooArgList(*pdf_val, *zmm_val));
     tot_pdf->fitTo(*data, RooFit::PrintLevel(-1), RooFit::Warnings(0), RooFit::PrintEvalErrors(-1),
                    RooFit::Range("LowSideband,HighSideband"), RooFit::NormRange("LowSideband,HighSideband"));
-    tot_pdf->plotOn(frame, RooFit::LineColor(colors[ipdf % ncolors]), RooFit::LineStyle((ipdf >= ncolors) ? kDashed : kSolid),
+    tot_pdf->plotOn(frame, RooFit::LineColor(colors[ipdf % ncolors]), RooFit::LineStyle(ipdf % 10 + 3),
+                    //RooFit::LineStyle((ipdf >= ncolors) ? kDashed : kSolid),
                     RooFit::Title(titles[ipdf]), RooFit::Name(Form("pdf_%i", ipdf)), RooFit::Range("full"), RooFit::NormRange("LowSideband,HighSideband"));
     if(ipdf == 0) {
       tot_pdf->plotOn(frame, RooFit::Components(zmm->GetName()), RooFit::LineColor(kGreen), RooFit::Name("zmm"),
@@ -163,12 +176,15 @@ int debug_zemu_ws(const char* bin = "bin3") {
     auto h = frame->pullHist("data", Form("pdf_%i", ipdf));
     h->SetLineWidth(2);
     h->SetLineColor(colors[ipdf % ncolors]);
-    h->SetLineStyle((ipdf >= ncolors) ? kDashed : kSolid);
-    h->SetMarkerSize(0.1);
+    h->SetLineStyle(ipdf % 10 + 3);
+    h->SetMarkerColor(h->GetLineColor());
+    h->SetMarkerStyle(2);
+    h->SetMarkerSize(1.0);
     frame2->addPlotable(h, "PE1");
   }
   frame->Draw();
-  leg->SetTextSize(0.036);
+  leg->AddEntry("zmm", "Z->#mu#mu", "L");
+  leg->SetTextSize(0.055);
   leg->Draw("same");
   frame->GetYaxis()->SetRangeUser(0.1, 1.4*frame->GetMaximum());
   frame->GetXaxis()->SetLabelSize(0.);
@@ -178,8 +194,10 @@ int debug_zemu_ws(const char* bin = "bin3") {
 
   frame->SetTitle("");
   frame->GetXaxis()->SetTitle("");
+  frame->GetYaxis()->SetTitle(Form("Events / %.1f GeV", frame->GetXaxis()->GetBinWidth(1)));
   frame2->SetTitle("");
   frame2->GetYaxis()->SetTitle("#frac{N_{data} - N_{fit}}{#sigma_{data}}");
+  frame2->GetXaxis()->SetTitle("m(e,#mu) [GeV]");
 
   frame->GetYaxis()->SetLabelSize(0.04);
   frame->GetYaxis()->SetTitleSize(0.04);
@@ -203,6 +221,37 @@ int debug_zemu_ws(const char* bin = "bin3") {
   line.Draw("same");
   pad2.SetGridy();
 
-  c2.SaveAs(Form("inputs_refit_%s.png", bin));
+  //CMS prelim drawing
+  pad1.cd();
+  TText cmslabel;
+  cmslabel.SetNDC();
+  cmslabel.SetTextColor(1);
+  cmslabel.SetTextSize(0.07);
+  cmslabel.SetTextAlign(11);
+  cmslabel.SetTextAngle(0);
+  cmslabel.SetTextFont(61);
+  const float label_y(0.91f);
+  cmslabel.DrawText(0.10, label_y, "CMS");
+  const bool is_prelim = true;
+  if(is_prelim) {
+    cmslabel.SetTextFont(52);
+    cmslabel.SetTextSize(0.76*cmslabel.GetTextSize());
+    cmslabel.DrawText(0.20, label_y, "Preliminary");
+  }
+
+  TLatex lumilabel;
+  lumilabel.SetNDC();
+  lumilabel.SetTextFont(42);
+  lumilabel.SetTextSize(0.05);
+  lumilabel.SetTextAlign(31);
+  lumilabel.SetTextAngle(0);
+  const int year = -1; //default to Run 2
+  TString period = (year > 2000) ? Form("%i, ", year) : "";
+  const double lum = (year == 2016) ? 36.33 : (year == 2017) ? 41.48 : (year == 2018) ? 59.83 : 137.64;
+  lumilabel.DrawLatex(0.97, label_y, Form("%s%.0f fb^{-1} (13 TeV)",period.Data(),lum));
+
+
+  c2.SaveAs(Form("inputs_refit_%s.pdf", bin));
+  c2.SaveAs(Form("inputs_refit_%s.root", bin));
   return 0;
 }
