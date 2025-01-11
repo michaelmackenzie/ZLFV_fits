@@ -1,6 +1,40 @@
 //Draw workspace PDFs
 const bool blind_data_ = true;
 
+void draw_cms_label(bool inside = false) {
+  TText cmslabel;
+  cmslabel.SetNDC();
+  cmslabel.SetTextColor(1);
+  cmslabel.SetTextSize(0.06);
+  cmslabel.SetTextAlign(11);
+  cmslabel.SetTextAngle(0);
+  cmslabel.SetTextFont(61);
+  const float label_y(0.915f);
+  if(inside) cmslabel.DrawText(0.14, 0.82   , "CMS");
+  else       cmslabel.DrawText(0.10, label_y, "CMS");
+  const bool is_prelim = true;
+  if(is_prelim) {
+    cmslabel.SetTextFont(52);
+    cmslabel.SetTextSize(0.76*cmslabel.GetTextSize());
+    if(inside) cmslabel.DrawText(0.14, 0.77   , "Preliminary");
+    else       cmslabel.DrawText(0.20, label_y, "Preliminary");
+  }
+}
+
+void draw_lumi_label() {
+  TLatex lumilabel;
+  lumilabel.SetNDC();
+  lumilabel.SetTextFont(42);
+  lumilabel.SetTextSize(0.045);
+  lumilabel.SetTextAlign(31);
+  lumilabel.SetTextAngle(0);
+  const float label_y(0.915f);
+  const int year = -1; //default to Run 2
+  TString period = (year > 2000) ? Form("%i, ", year) : "";
+  const double lum = (year == 2016) ? 36.33 : (year == 2017) ? 41.48 : (year == 2018) ? 59.83 : 137.64;
+  lumilabel.DrawLatex(0.97, label_y, Form("%s%.0f fb^{-1} (13 TeV)",period.Data(),lum));
+}
+
 TString get_pdf_title(TString pdf_name) {
   TString title = "";
   if(pdf_name.Contains("_gs"))   title += ""; //"Gaussian + ";
@@ -20,6 +54,75 @@ TString get_pdf_title(TString pdf_name) {
   if(pdf_name.Contains("exp2"))  title += "Expo (2)";
   if(pdf_name.Contains("exp3"))  title += "Expo (3)";
   return title;
+}
+
+void set_axis_styles(TAxis* upper_x, TAxis* upper_y,
+                     TAxis* lower_x, TAxis* lower_y) {
+
+  TGaxis::SetMaxDigits(3);
+  TGaxis::SetExponentOffset(-0.05, 0.01, "Y");
+
+  upper_x->SetTitle("");
+  upper_y->SetTitle(Form("Events / %.1f GeV", upper_x->GetBinWidth(1)));
+  lower_y->SetTitle("#frac{N_{data} - N_{fit}}{#sigma_{data}}");
+  lower_x->SetTitle("m_{e#mu} [GeV]");
+
+  upper_x->SetLabelSize(0.);
+  upper_y->SetLabelSize(0.04);
+  upper_y->SetTitleSize(0.05);
+  upper_y->SetTitleOffset(1.07);
+
+  lower_y->SetRangeUser(-4., 4.);
+  lower_y->SetNdivisions(205);
+  lower_y->SetLabelSize(0.09);
+  lower_y->SetLabelOffset(0.01);
+  lower_y->SetTitleSize(0.1);
+  lower_y->SetTitleOffset(0.41);
+  lower_x->SetLabelSize(0.085);
+  lower_x->SetLabelOffset(0.008);
+  lower_x->SetTitleSize(0.11);
+  lower_x->SetTitleOffset(0.84);
+
+  upper_x->SetRangeUser(70., 110.);
+  lower_x->SetRangeUser(70., 110.);
+}
+
+TGraphAsymmErrors* envelope_band(RooMultiPdf* multipdf, TH1* hdata, TH1* hzmm, RooRealVar* obs,
+                                 TGraphAsymmErrors *& data_errors, TGraphAsymmErrors *& band_errors) {
+  vector<TH1*> hpdfs;
+  const int npdfs = multipdf->getNumPdfs();
+  if(npdfs <= 0) return nullptr;
+  for(int ipdf = 0; ipdf < npdfs; ++ipdf) {
+    auto pdf = multipdf->getPdf(ipdf);
+    hpdfs.push_back(pdf->createHistogram(Form("pdf_hist_%i", ipdf), *obs));
+  }
+  const double scale = (hdata->Integral() - hzmm->Integral()) / hpdfs[0]->Integral();
+  const int nbins = hpdfs[0]->GetNbinsX();
+  double xvals[nbins], yvals[nbins], xerrs[nbins], yerr_ups[nbins], yerr_downs[nbins]; //band
+  double pulls[nbins], pull_yerrs[nbins]; //data pulls
+  double rvals[nbins], ryerr_ups[nbins], ryerr_downs[nbins]; //band ratio
+  for(int index = 0; index < nbins; ++index) {
+    double ymin(1.e10), ymax(-1.e10), x(hpdfs[0]->GetBinCenter(index+1)), ndata(hdata->GetBinContent(index+1));
+    for(int ipdf = 0; ipdf < npdfs; ++ipdf) {
+      const double y = hpdfs[ipdf]->GetBinContent(index+1)*scale + hzmm->GetBinContent(index+1);
+      ymin = min(ymin, y);
+      ymax = max(ymax, y);
+    }
+    const double y = (ymax + ymin)/2.;
+    xvals[index] = x;
+    yvals[index] = y;
+    yerr_ups[index] = (ymax - ymin)/2.;
+    yerr_downs[index] = (ymax - ymin)/2.;
+    xerrs[index] = 0.; //no bin widths
+    pulls[index] = (ndata > 0.) ? (ndata - y) / sqrt(ndata) : -999.;
+    pull_yerrs[index] = 1.;
+    rvals[index] = 0.;
+    ryerr_ups  [index] = (y > 0.) ? (yerr_ups  [index]) / sqrt(y) : 0.;
+    ryerr_downs[index] = (y > 0.) ? (yerr_downs[index]) / sqrt(y) : 0.;
+  }
+  data_errors = new TGraphAsymmErrors(nbins, xvals, pulls, xerrs, xerrs, pull_yerrs, pull_yerrs);
+  band_errors = new TGraphAsymmErrors(nbins, xvals, rvals, xerrs, xerrs, ryerr_ups, ryerr_downs);
+  return new TGraphAsymmErrors(nbins, xvals, yvals, xerrs, xerrs, yerr_ups, yerr_downs);
 }
 
 int debug_zemu_ws(const char* bin = "bin3") {
@@ -110,6 +213,7 @@ int debug_zemu_ws(const char* bin = "bin3") {
 
   gStyle->SetPadTickX(1);
   gStyle->SetPadTickY(1);
+  gStyle->SetOptStat(0);
   TCanvas c; c.SetRightMargin(0.05);
   frame->Draw();
   leg->AddEntry("data", "Data", "PL");
@@ -141,8 +245,8 @@ int debug_zemu_ws(const char* bin = "bin3") {
   auto blind_data = new RooDataHist("blind_data", "Blinded data", *obs, h_data);
 
   TCanvas c2("c2","c2", 700, 800);
-  TPad pad1("pad1","pad1",0.,0.4,1.,1.0); pad1.Draw();
-  TPad pad2("pad2","pad2",0.,0.0,1.,0.4); pad2.Draw();
+  TPad pad1("pad1","pad1",0.,0.3,1.,1.0); pad1.Draw();
+  TPad pad2("pad2","pad2",0.,0.0,1.,0.3); pad2.Draw();
   pad1.SetTopMargin(0.1);
   pad1.SetRightMargin(0.03);
   pad1.SetBottomMargin(0.01);
@@ -187,32 +291,15 @@ int debug_zemu_ws(const char* bin = "bin3") {
   leg->SetTextSize(0.055);
   leg->Draw("same");
   frame->GetYaxis()->SetRangeUser(0.1, 1.4*frame->GetMaximum());
-  frame->GetXaxis()->SetLabelSize(0.);
 
   pad2.cd();
   frame2->Draw();
 
   frame->SetTitle("");
-  frame->GetXaxis()->SetTitle("");
-  frame->GetYaxis()->SetTitle(Form("Events / %.1f GeV", frame->GetXaxis()->GetBinWidth(1)));
   frame2->SetTitle("");
-  frame2->GetYaxis()->SetTitle("#frac{N_{data} - N_{fit}}{#sigma_{data}}");
-  frame2->GetXaxis()->SetTitle("m(e,#mu) [GeV]");
 
-  frame->GetYaxis()->SetLabelSize(0.04);
-  frame->GetYaxis()->SetTitleSize(0.04);
-  frame->GetYaxis()->SetTitleOffset(1.2);
-
-  frame2->GetYaxis()->SetRangeUser(-4., 4.);
-  frame2->GetYaxis()->SetNdivisions(5);
-  frame2->GetYaxis()->SetLabelSize(0.07);
-  frame2->GetYaxis()->SetLabelOffset(0.01);
-  frame2->GetYaxis()->SetTitleSize(0.07);
-  frame2->GetYaxis()->SetTitleOffset(0.58);
-  frame2->GetXaxis()->SetLabelSize(0.07);
-  frame2->GetXaxis()->SetLabelOffset(0.008);
-  frame2->GetXaxis()->SetTitleSize(0.07);
-  frame2->GetXaxis()->SetTitleOffset(1.0);
+  set_axis_styles(frame->GetXaxis(), frame->GetYaxis(),
+                  frame2->GetXaxis(), frame2->GetYaxis());
 
   TLine line(frame->GetXaxis()->GetXmin(), 0., frame->GetXaxis()->GetXmax(), 0.);
   line.SetLineWidth(2);
@@ -223,35 +310,82 @@ int debug_zemu_ws(const char* bin = "bin3") {
 
   //CMS prelim drawing
   pad1.cd();
-  TText cmslabel;
-  cmslabel.SetNDC();
-  cmslabel.SetTextColor(1);
-  cmslabel.SetTextSize(0.07);
-  cmslabel.SetTextAlign(11);
-  cmslabel.SetTextAngle(0);
-  cmslabel.SetTextFont(61);
-  const float label_y(0.91f);
-  cmslabel.DrawText(0.10, label_y, "CMS");
-  const bool is_prelim = true;
-  if(is_prelim) {
-    cmslabel.SetTextFont(52);
-    cmslabel.SetTextSize(0.76*cmslabel.GetTextSize());
-    cmslabel.DrawText(0.20, label_y, "Preliminary");
-  }
-
-  TLatex lumilabel;
-  lumilabel.SetNDC();
-  lumilabel.SetTextFont(42);
-  lumilabel.SetTextSize(0.05);
-  lumilabel.SetTextAlign(31);
-  lumilabel.SetTextAngle(0);
-  const int year = -1; //default to Run 2
-  TString period = (year > 2000) ? Form("%i, ", year) : "";
-  const double lum = (year == 2016) ? 36.33 : (year == 2017) ? 41.48 : (year == 2018) ? 59.83 : 137.64;
-  lumilabel.DrawLatex(0.97, label_y, Form("%s%.0f fb^{-1} (13 TeV)",period.Data(),lum));
-
+  draw_cms_label();
+  draw_lumi_label();
 
   c2.SaveAs(Form("inputs_refit_%s.pdf", bin));
   c2.SaveAs(Form("inputs_refit_%s.root", bin));
+
+  // Create a envelope band from the input functions
+  auto h_zmm = zmm->createHistogram("h_zmm", *obs);
+  h_zmm->Scale(zmm_norm->getVal() / h_zmm->Integral());
+  TGraphAsymmErrors *data_errors(nullptr), *band_errors(nullptr);
+  auto band = envelope_band(multipdf, data->createHistogram("hdata_2", *obs), h_zmm, obs, data_errors, band_errors);
+  band->SetLineWidth(1);
+  band->SetLineColor(kRed);
+  band->SetMarkerSize(0.);
+  band->SetFillColor(kGray);
+
+  for(int ibin = 1; ibin <= h_zmm->GetNbinsX(); ++ibin) h_zmm->SetBinError(ibin, 0.);
+  h_zmm->SetLineColor(kGreen);
+  h_zmm->SetLineStyle(kDashed);
+  h_zmm->SetLineWidth(2);
+  h_zmm->SetFillColor(0);
+  h_zmm->SetFillStyle(0);
+
+  pad1.cd();
+  h_data->Draw("EX0");
+  band->Draw("E3");
+  band->Draw("LX");
+  h_zmm->Draw("L0 same");
+
+  h_data->SetLineWidth(2);
+  h_data->SetLineColor(kBlack);
+  h_data->SetMarkerStyle(20);
+  h_data->SetMarkerSize(0.8);
+  h_data->SetTitle("");
+  h_data->GetXaxis()->SetLabelSize(0.);
+  h_data->SetYTitle(Form("Events / %.1f GeV", h_data->GetBinWidth(1)));
+  h_data->GetYaxis()->SetRangeUser(0., 1.3*h_data->GetMaximum());
+  pad1.SetBottomMargin(0.02);
+
+  // Ratio plot
+  pad2.cd();
+
+  if(!data_errors || !band_errors) return 10;
+  data_errors->SetTitle("");
+  data_errors->SetMarkerSize(0.8);
+  data_errors->SetMarkerStyle(20);
+  data_errors->SetLineWidth(2);
+  data_errors->Draw("APEZ");
+
+  band_errors->SetMarkerSize(0.);
+  band_errors->SetFillColor(kGray);
+  band_errors->Draw("E3");
+  data_errors->Draw("PEZ");
+
+  set_axis_styles(h_data->GetXaxis(), h_data->GetYaxis(),
+                  data_errors->GetXaxis(), data_errors->GetYaxis());
+
+  //CMS prelim drawing
+  pad1.cd();
+  draw_cms_label(true);
+  draw_lumi_label();
+
+  leg = new TLegend(0.40, 0.65, 0.94, 0.89);
+  leg->SetNColumns(2);
+  leg->SetLineWidth(0);
+  leg->SetFillColor(0);
+  leg->SetFillStyle(0);
+  leg->SetTextSize(0.055);
+
+  leg->AddEntry(h_data, "Data");
+  leg->AddEntry(band, "Background", "L");
+  leg->AddEntry(band_errors, "Envelope", "F");
+  leg->AddEntry(h_zmm, "Z#rightarrow#mu#mu", "L");
+  leg->Draw();
+
+  c2.SaveAs(Form("inputs_refit_band_%s.pdf", bin));
+  c2.SaveAs(Form("inputs_refit_band_%s.root", bin));
   return 0;
 }

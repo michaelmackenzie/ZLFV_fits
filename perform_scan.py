@@ -414,6 +414,7 @@ xmin = min(100., masses[0])
 xmax = max(500., masses[-1])
 g_exp_2.GetXaxis().SetRangeUser(xmin, xmax)
 g_exp_2.GetYaxis().SetRangeUser(0.*min_lim, 1.03*max_lim)
+# g_exp_2.GetXaxis().SetTitleSize(0.15) #FIXME: Update the font sizes
 
 leg = rt.TLegend(0.7, 0.7, 0.89, 0.89)
 leg.SetLineWidth(0)

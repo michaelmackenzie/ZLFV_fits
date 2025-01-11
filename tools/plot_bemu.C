@@ -6,7 +6,7 @@ bool unblind_      = false;
 int  err_mode_     =  1   ; //errors in the pulls: 0: sqrt(data^2 + fit^2); 1: sqrt(data^2 - fit^2)
 bool debug_        = false; //print debug info
 bool do_single_    = false; //test printing a single histogram
-bool do_sig_wt_    = true ; //make a plot with S/(S+B) weighting
+bool do_sig_wt_    = false; //make a plot with S/(S+B) weighting
 bool is_prelim_    = true ; //is preliminary or not
 TString file_type_ = "pdf";
 
@@ -64,7 +64,7 @@ void draw_cms_label() {
     if(is_prelim_) {
       cmslabel.SetTextFont(52);
       cmslabel.SetTextSize(0.76*cmslabel.GetTextSize());
-      cmslabel.DrawText(0.23, 0.81, "Preliminary");
+      cmslabel.DrawText(0.14, 0.75, "Preliminary");
     }
 }
 
@@ -78,7 +78,7 @@ void draw_luminosity(int year = -1) {
   label.SetTextAngle(0);
   TString period = (year > 2000) ? Form("%i, ", year) : "";
   const double lum = (year == 2016) ? 36.33 : (year == 2017) ? 41.48 : (year == 2018) ? 59.83 : 137.64;
-  label.DrawLatex(0.97, 0.907, Form("%s%.0f fb^{-1} (13 TeV)",period.Data(),lum));
+  label.DrawLatex(0.97, 0.915, Form("%s%.0f fb^{-1} (13 TeV)",period.Data(),lum));
 }
 
 //------------------------------------------------------------------------------------------
@@ -149,6 +149,14 @@ TGraphAsymmErrors* get_data(vector<TDirectoryFile*> dirs, vector<double> weights
     }
     ++index;
   }
+  if(g) {
+    //no x errors
+    for(int ipoint = 0; ipoint < g->GetN(); ++ipoint) {
+      g->SetPointEXhigh(ipoint, 0.);
+      g->SetPointEXlow (ipoint, 0.);
+    }
+  }
+
   return g;
 }
 
@@ -226,10 +234,10 @@ int print_hist(vector<TDirectoryFile*> dirs, TString tag, TString outdir, bool s
   gStyle->SetPadTickY(1);
   TCanvas* c = new TCanvas("c", "c", 900, 900);
   TPad* pad1 = new TPad("pad1", "pad1", 0., 0.40, 1., 1.00);
-  TPad* pad2 = new TPad("pad2", "pad2", 0., 0.20, 1., 0.40);
-  TPad* pad3 = new TPad("pad3", "pad3", 0., 0.00, 1., 0.20);
+  TPad* pad2 = new TPad("pad2", "pad2", 0., 0.23, 1., 0.40);
+  TPad* pad3 = new TPad("pad3", "pad3", 0., 0.00, 1., 0.23);
   pad1->SetRightMargin(0.03); pad2->SetRightMargin(0.03); pad3->SetRightMargin(0.03);
-  pad1->SetBottomMargin(0.02); pad2->SetBottomMargin(0.05); pad3->SetBottomMargin(0.28);
+  pad1->SetBottomMargin(0.02); pad2->SetBottomMargin(0.05); pad3->SetBottomMargin(0.30);
   pad2->SetTopMargin(0.03); pad3->SetTopMargin(0.04);
   pad1->Draw(); pad2->Draw(); pad3->Draw();
 
@@ -239,7 +247,7 @@ int print_hist(vector<TDirectoryFile*> dirs, TString tag, TString outdir, bool s
   //Configure the data style
   gdata->SetMarkerStyle(20);
   gdata->SetMarkerSize(1.2);
-  gdata->SetLineWidth(1);
+  gdata->SetLineWidth(2);
 
   //Configure the total fit (S+B) style
   htotal->SetLineColor(kRed);
@@ -254,8 +262,9 @@ int print_hist(vector<TDirectoryFile*> dirs, TString tag, TString outdir, bool s
   htotal->SetXTitle("");
   if(s_over_sb) htotal->SetYTitle(Form("S/(S+B) weighted Events / %.1f GeV", htotal->GetBinWidth(1)));
   else          htotal->SetYTitle(Form("Events / %.1f GeV", htotal->GetBinWidth(1)));
-  htotal->GetYaxis()->SetTitleSize(0.05);
-  htotal->GetYaxis()->SetTitleOffset(0.92);
+  htotal->GetYaxis()->SetTitleSize(0.052);
+  htotal->GetYaxis()->SetTitleOffset(0.85);
+  htotal->GetYaxis()->SetLabelSize(0.04);
   htotal->GetXaxis()->SetLabelSize(0.);
 
   //Configure the background component style
@@ -285,13 +294,13 @@ int print_hist(vector<TDirectoryFile*> dirs, TString tag, TString outdir, bool s
     if(hzmumu) hzmumu->Draw("L same");
     hsignal->Draw("L same");
   }
-  gdata->Draw("P");
+  gdata->Draw("PZ");
   htotal->GetXaxis()->SetRangeUser(xmin, xmax);
 
 
   //Add a legend
   TLegend leg(0.6, 0.5, 0.85, 0.85);
-  leg.AddEntry(gdata, "Data", "PLE");
+  leg.AddEntry(gdata, "Data", "PE");
   leg.AddEntry(htotal, "Background+signal", "LF");
   if(unblind_) {
     if(zprime) leg.AddEntry(hbkg, "Background", "L");
@@ -300,7 +309,7 @@ int print_hist(vector<TDirectoryFile*> dirs, TString tag, TString outdir, bool s
     if(zprime) leg.AddEntry(hsignal, "Z'#rightarrowe#mu", "L");
     else       leg.AddEntry(hsignal, "Z#rightarrowe#mu", "L");
   }
-  leg.SetTextSize(0.05);
+  leg.SetTextSize(0.055);
   leg.SetFillStyle(0);
   leg.SetFillColor(0);
   leg.SetLineColor(0);
@@ -398,12 +407,13 @@ int print_hist(vector<TDirectoryFile*> dirs, TString tag, TString outdir, bool s
   hzemu->SetLineStyle(kSolid);
 
   //Draw the results
+  const double rmin(min_diff - 0.20*(max_diff-min_diff)), rmax(max_diff + 0.20*(max_diff-min_diff));
   hBkg_unc->Draw("E2");
   if(unblind_) {
     hzemu->Draw("L same");
-    hzemu->GetYaxis()->SetRangeUser(min_diff - 0.05*(max_diff-min_diff), max_diff + 0.11*(max_diff-min_diff)); //necessary due to y-axis importing from clone
+    hzemu->GetYaxis()->SetRangeUser(rmin, rmax); //necessary due to y-axis importing from clone
   }
-  gDiff->Draw("P");
+  gDiff->Draw("PZ");
   hBkg_unc->GetXaxis()->SetRangeUser(xmin, xmax);
 
   //Add a reference line for perfect agreement
@@ -414,13 +424,14 @@ int print_hist(vector<TDirectoryFile*> dirs, TString tag, TString outdir, bool s
   line->Draw("same");
 
   //Configure the titles and axes
-  hBkg_unc->GetYaxis()->SetRangeUser(min_diff - 0.05*(max_diff-min_diff), max_diff + 0.11*(max_diff-min_diff));
+  hBkg_unc->GetYaxis()->SetRangeUser(rmin, rmax);
+  hBkg_unc->GetYaxis()->SetNdivisions(505);
   hBkg_unc->SetTitle("");
   hBkg_unc->SetXTitle("");
   hBkg_unc->GetXaxis()->SetLabelSize(0.);
-  hBkg_unc->GetYaxis()->SetLabelSize(0.10);
-  hBkg_unc->GetYaxis()->SetTitleSize(0.15);
-  hBkg_unc->GetYaxis()->SetTitleOffset(0.30);
+  hBkg_unc->GetYaxis()->SetLabelSize(0.13);
+  hBkg_unc->GetYaxis()->SetTitleSize(0.19);
+  hBkg_unc->GetYaxis()->SetTitleOffset(0.22);
   if(unblind_) hBkg_unc->SetYTitle("Data - Bkg");
   else         hBkg_unc->SetYTitle("Data - Fit");
 
@@ -434,9 +445,10 @@ int print_hist(vector<TDirectoryFile*> dirs, TString tag, TString outdir, bool s
   hPull->SetFillStyle(1000);
   hPull->Draw("hist");
   hPull->GetYaxis()->SetRangeUser(-3,3);
+  hPull->GetYaxis()->SetNdivisions(505);
   hPull->SetTitle("");
   hPull->SetXTitle("m_{e#mu} [GeV]");
-  hPull->SetYTitle("#frac{(Data-Fit)}{#sigma_{Fit}}");
+  hPull->SetYTitle("#frac{Data-Fit}{#sigma_{Fit}}");
   hPull->GetXaxis()->SetLabelSize(0.10);
   hPull->GetYaxis()->SetLabelSize(0.10);
   hPull->GetXaxis()->SetLabelOffset(0.01);
