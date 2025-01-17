@@ -60,7 +60,6 @@ void set_axis_styles(TAxis* upper_x, TAxis* upper_y,
                      TAxis* lower_x, TAxis* lower_y) {
 
   TGaxis::SetMaxDigits(3);
-  TGaxis::SetExponentOffset(-0.05, 0.01, "Y");
 
   upper_x->SetTitle("");
   upper_y->SetTitle(Form("Events / %.1f GeV", upper_x->GetBinWidth(1)));
@@ -91,6 +90,7 @@ TGraphAsymmErrors* envelope_band(RooMultiPdf* multipdf, TH1* hdata, TH1* hzmm, R
                                  TGraphAsymmErrors *& data_errors, TGraphAsymmErrors *& band_errors) {
   vector<TH1*> hpdfs;
   const int npdfs = multipdf->getNumPdfs();
+  const float blind_min(86.f), blind_max(96.f);
   if(npdfs <= 0) return nullptr;
   for(int ipdf = 0; ipdf < npdfs; ++ipdf) {
     auto pdf = multipdf->getPdf(ipdf);
@@ -108,13 +108,14 @@ TGraphAsymmErrors* envelope_band(RooMultiPdf* multipdf, TH1* hdata, TH1* hzmm, R
       ymin = min(ymin, y);
       ymax = max(ymax, y);
     }
+    bool blind = blind_data_ && x >= blind_min && x <= blind_max;
     const double y = (ymax + ymin)/2.;
     xvals[index] = x;
     yvals[index] = y;
     yerr_ups[index] = (ymax - ymin)/2.;
     yerr_downs[index] = (ymax - ymin)/2.;
     xerrs[index] = 0.; //no bin widths
-    pulls[index] = (ndata > 0.) ? (ndata - y) / sqrt(ndata) : -999.;
+    pulls[index] = (ndata > 0. && !blind) ? (ndata - y) / sqrt(ndata) : -999.;
     pull_yerrs[index] = 1.;
     rvals[index] = 0.;
     ryerr_ups  [index] = (y > 0.) ? (yerr_ups  [index]) / sqrt(y) : 0.;
@@ -298,6 +299,7 @@ int debug_zemu_ws(const char* bin = "bin3") {
   frame->SetTitle("");
   frame2->SetTitle("");
 
+  // TGaxis::SetExponentOffset(-0.05, 0.01, "Y");
   set_axis_styles(frame->GetXaxis(), frame->GetYaxis(),
                   frame2->GetXaxis(), frame2->GetYaxis());
 
@@ -327,7 +329,7 @@ int debug_zemu_ws(const char* bin = "bin3") {
   band->SetFillColor(kGray);
 
   for(int ibin = 1; ibin <= h_zmm->GetNbinsX(); ++ibin) h_zmm->SetBinError(ibin, 0.);
-  h_zmm->SetLineColor(kGreen);
+  h_zmm->SetLineColor(kGreen+2);
   h_zmm->SetLineStyle(kDashed);
   h_zmm->SetLineWidth(2);
   h_zmm->SetFillColor(0);
@@ -364,6 +366,7 @@ int debug_zemu_ws(const char* bin = "bin3") {
   band_errors->Draw("E3");
   data_errors->Draw("PEZ");
 
+  TGaxis::SetExponentOffset(-0.05, 0.01, "Y");
   set_axis_styles(h_data->GetXaxis(), h_data->GetYaxis(),
                   data_errors->GetXaxis(), data_errors->GetYaxis());
 
@@ -372,16 +375,16 @@ int debug_zemu_ws(const char* bin = "bin3") {
   draw_cms_label(true);
   draw_lumi_label();
 
-  leg = new TLegend(0.40, 0.65, 0.94, 0.89);
-  leg->SetNColumns(2);
+  leg = new TLegend(0.60, 0.55, 0.94, 0.89);
+  leg->SetNColumns(1);
   leg->SetLineWidth(0);
   leg->SetFillColor(0);
   leg->SetFillStyle(0);
   leg->SetTextSize(0.055);
 
-  leg->AddEntry(h_data, "Data");
-  leg->AddEntry(band, "Background", "L");
-  leg->AddEntry(band_errors, "Envelope", "F");
+  leg->AddEntry(h_data, "Data", "PE");
+  leg->AddEntry(band, "Background", "LF");
+  // leg->AddEntry(band_errors, "Envelope", "F");
   leg->AddEntry(h_zmm, "Z#rightarrow#mu#mu", "L");
   leg->Draw();
 

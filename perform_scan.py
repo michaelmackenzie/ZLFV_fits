@@ -27,7 +27,7 @@ def draw_cms_label(is_prelim = True):
     if is_prelim:
       cmslabel.SetTextFont(52);
       cmslabel.SetTextSize(0.76*cmslabel.GetTextSize());
-      cmslabel.DrawText(0.24, 0.83, "Preliminary");
+      cmslabel.DrawText(0.14, 0.78, "Preliminary");
 
 def draw_luminosity(year = -1):
   label = rt.TLatex()
@@ -39,7 +39,7 @@ def draw_luminosity(year = -1):
   period = "%i, " % (year) if year > 2000 else ""
   lums = [36.33, 41.48, 59.83, 137.64]
   lum = lums[year-2016] if year > 2000 else lums[-1]
-  label.DrawLatex(0.97, 0.91, "%s%.0f fb^{-1} (13 TeV)" % (period,lum));
+  label.DrawLatex(0.97, 0.915, "%s%.0f fb^{-1} (13 TeV)" % (period,lum));
 
 #----------------------------------------------------------------------------------------
 # Smooth expected limits by fitting to an exponential in a moving window
@@ -378,6 +378,10 @@ rt.gStyle.SetPadTickY(1);
 # Limit plot
 #----------------------------------------------
 
+# Limit plot colors
+LimitGreen  = rt.TColor.GetColor("#607641")
+LimitYellow = rt.TColor.GetColor("#F5BB54")
+
 draw_obs = (args.asimov and args.draw_asimov) or args.unblind
 
 g_exp   = rt.TGraph(len(masses), masses, r_exps)
@@ -387,19 +391,20 @@ g_exp_2 = rt.TGraphAsymmErrors(len(masses), masses, r_exps, masses_errs, masses_
 c = rt.TCanvas('c_lim', 'c_lim', 800, 600)
 c.SetRightMargin(0.03)
 c.SetLeftMargin(0.10)
+c.SetBottomMargin(0.13)
 g_exp_2.SetTitle('') #"95% CL_{S} limit vs. Z' mass"
-g_exp_2.SetFillColor(rt.kOrange)
-g_exp_2.SetLineColor(rt.kOrange)
-g_exp_1.SetFillColor(rt.kGreen+1)
-g_exp_1.SetLineColor(rt.kGreen+1)
+g_exp_2.SetFillColor(LimitYellow)
+g_exp_2.SetLineColor(LimitYellow)
+g_exp_1.SetFillColor(LimitGreen)
+g_exp_1.SetLineColor(LimitGreen)
 g_exp_2.Draw("AE3")
 g_exp_1.Draw("E3")
 g_exp.SetLineStyle(rt.kDashed)
 g_exp.SetLineWidth(2)
 g_exp.SetLineColor(rt.kBlack)
 g_exp.Draw("XL")
-g_exp_2.GetXaxis().SetTitle("Z\' mass [GeV]");
-g_exp_2.GetYaxis().SetTitle("#sigma(Z\')#it{B}(Z\'#rightarrowe#mu) [fb]");
+g_exp_2.GetXaxis().SetTitle("m_{Z\'} [GeV]");
+g_exp_2.GetYaxis().SetTitle("#sigma(Z\')#it{B}(Z\'#rightarrowe^{#pm}#mu^{#pm}) [fb]");
 
 if draw_obs:
    g_obs = rt.TGraph(len(masses), masses, r_lims)
@@ -413,17 +418,32 @@ if draw_obs:
 xmin = min(100., masses[0])
 xmax = max(500., masses[-1])
 g_exp_2.GetXaxis().SetRangeUser(xmin, xmax)
-g_exp_2.GetYaxis().SetRangeUser(0.*min_lim, 1.03*max_lim)
-# g_exp_2.GetXaxis().SetTitleSize(0.15) #FIXME: Update the font sizes
+g_exp_2.GetYaxis().SetRangeUser(1.e-4, 1.03*max_lim)
+g_exp_2.GetXaxis().SetLabelSize(0.045)
+g_exp_2.GetYaxis().SetLabelSize(0.045)
+g_exp_2.GetXaxis().SetTitleSize(0.05)
+g_exp_2.GetXaxis().SetTitleOffset(0.9)
+g_exp_2.GetYaxis().SetTitleSize(0.05)
+g_exp_2.GetYaxis().SetTitleOffset(0.6)
 
-leg = rt.TLegend(0.7, 0.7, 0.89, 0.89)
+leg = rt.TLegend(0.6, 0.60, 0.89, 0.80)
 leg.SetLineWidth(0)
 if draw_obs:
    leg.AddEntry(g_obs  , 'Observed', 'PL')
 leg.AddEntry(g_exp  , 'Expected', 'L')
-leg.AddEntry(g_exp_1, '#pm1#sigma' , 'F')
-leg.AddEntry(g_exp_2, '#pm2#sigma' , 'F')
+leg.AddEntry(g_exp_1, '#pm1 std. deviation' , 'F')
+leg.AddEntry(g_exp_2, '#pm2 std. deviation' , 'F')
 leg.Draw()
+leg.SetTextSize(0.04)
+
+# Add limit type label
+label = rt.TLatex()
+label.SetNDC()
+label.SetTextFont(42)
+label.SetTextSize(0.04)
+label.SetTextAlign(11)
+label.SetTextAngle(0)
+label.DrawLatex(0.6, 0.81, "95% CL upper limit")
 
 draw_cms_label(True)
 draw_luminosity()
