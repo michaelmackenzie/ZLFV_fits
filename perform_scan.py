@@ -5,6 +5,7 @@ import ROOT as rt
 from array import array
 from math import exp
 from math import log10
+from math import sqrt
 from multiprocessing import Process
 
 #----------------------------------------------------------------------------------------
@@ -261,6 +262,11 @@ os.system("[ ! -d %s ] && mkdir -p %s" % (carddir, carddir))
    
 rt.gROOT.SetBatch(True)
 
+# Get the local --> global p-value TTree if available
+lee_file = rt.TFile.Open("lee/lee_effect_%s.root" % (args.name), "READ")
+lee_tree = lee_file.Get('LEE') if lee_file else None
+n_lee_tree = lee_tree.GetEntries() if lee_tree else 0
+
 #----------------------------------------------
 # Perform the scan
 #----------------------------------------------
@@ -350,6 +356,16 @@ for f in list_of_files:
    max_lim = max(r_lim[4], r_lim[-1], max_lim)
    min_r = min(r_fit[0] - r_fit[1], min_r)
    max_r = max(r_fit[0] + r_fit[2], max_r)
+
+   # Print the LEE information
+   if lee_tree and n_lee_tree > 0:
+      n_more_extreme = lee_tree.Draw("", "max_sig > %.3f" % (r_sig), "goff")
+      global_p = n_more_extreme * 1. / n_lee_tree
+      global_unc = sqrt(global_p*(1.-global_p)/n_lee_tree)
+      local_p = rt.RooStats.SignificanceToPValue(r_sig)
+      print "mass = %.1f, r = %4.1f, sigma = %5.2f, local p = %.4f, global p = %.4f +- %.4f%s" % (mass, r_fit[0], r_sig, local_p,
+                                                                                                  global_p, global_unc,
+                                                                                                  " <--" if r_sig > 2. else "")
 
 if len(masses) > 1: masses_errs[0] = (masses[1] - masses[0])/2.
 
@@ -549,7 +565,7 @@ g_sig.SetTitle(";Z' mass (GeV);#sigma_{r}")
 g_sig.SetFillColor(rt.kAtlantic)
 g_sig.Draw("AE2")
 g_sig.GetXaxis().SetRangeUser(xmin, xmax)
-g_sig.GetYaxis().SetRangeUser(-4, 4)
+g_sig.GetYaxis().SetRangeUser(min(-4, max(significances)), max(4, max(significances)))
 g_sig.GetXaxis().SetLabelSize(0.08)
 g_sig.GetYaxis().SetLabelSize(0.08)
 g_sig.GetXaxis().SetTitleSize(0.1)

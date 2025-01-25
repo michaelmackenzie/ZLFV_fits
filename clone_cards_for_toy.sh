@@ -54,6 +54,8 @@ if [ ! -e ${OUTDIR}WorkspaceScanBKG ]; then
 fi
 
 cp ${DATACARDS}datacard_zprime_*_mp*.txt ${OUTDIR}
+TMPFILENAME=`tr -dc A-Za-z0-9 </dev/urandom | head -c 13`
+TMPFILENAME="tmp_${TMPFILENAME}.txt"
 
 for CARD in `ls -d ${OUTDIR}*_0d3_0d7_*.txt`
 do
@@ -72,22 +74,21 @@ do
     cat ${CARD} | awk -v toy1=${TOY_MP_1} -v toy2=${TOY_MP_2} '{
                                                                  if($2 == "data_obs" && $4 ~ /0d3_0d7/){print $1,$2,$3,toy1,$5}
                                                                  else if($2 == "data_obs" && $4 ~ /0d7_1d0/){print $1,$2,$3,toy2,$5}
-                                                                 else print $0}' >| tmp.txt
-    cp tmp.txt ${CARD}
-    rm tmp.txt
+                                                                 else print $0}' >| ${TMPFILENAME}
+    cp ${TMPFILENAME} ${CARD}
+    rm ${TMPFILENAME}
     CARD=`echo ${CARD} | sed 's/0d3_0d7/0d7_1d0/g'`
     cat ${CARD} | awk -v toy1=${TOY_MP_1} -v toy2=${TOY_MP_2} '{
                                                                  if($2 == "data_obs" && $4 ~ /0d3_0d7/){print $1,$2,$3,toy1,$5}
                                                                  else if($2 == "data_obs" && $4 ~ /0d7_1d0/){print $1,$2,$3,toy2,$5}
-                                                                 else print $0}' >| tmp.txt
-    cp tmp.txt ${CARD}
-    rm tmp.txt
+                                                                 else print $0}' >| ${TMPFILENAME}
+    cp ${TMPFILENAME} ${CARD}
+    rm ${TMPFILENAME}
     CARD=`echo ${CARD} | sed 's/_bdt_0d7_1d0//g'`
     cat ${CARD} | awk -v toy1=${TOY_MP_1} -v toy2=${TOY_MP_2} '{
                                                                  if($2 == "data_obs" && $4 ~ /0d3_0d7/){print $1,$2,$3,toy1,$5}
                                                                  else if($2 == "data_obs" && $4 ~ /0d7_1d0/){print $1,$2,$3,toy2,$5}
-                                                                 else print $0}' >| tmp.txt
-    cp tmp.txt ${CARD}
-    rm tmp.txt
-
+                                                                 else print $0}' >| ${TMPFILENAME}
+    cp ${TMPFILENAME} ${CARD}
+    rm ${TMPFILENAME}
 done
