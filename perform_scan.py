@@ -420,7 +420,7 @@ g_exp.SetLineWidth(2)
 g_exp.SetLineColor(rt.kBlack)
 g_exp.Draw("XL")
 g_exp_2.GetXaxis().SetTitle("m_{Z\'} [GeV]");
-g_exp_2.GetYaxis().SetTitle("#sigma(Z\')#it{B}(Z\'#rightarrowe^{#pm}#mu^{#pm}) [fb]");
+g_exp_2.GetYaxis().SetTitle("#sigma(Z\')#it{B}(Z\'#rightarrowe^{#pm}#mu^{#mp}) [fb]");
 
 if draw_obs:
    g_obs = rt.TGraph(len(masses), masses, r_lims)
