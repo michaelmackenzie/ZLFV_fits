@@ -235,6 +235,7 @@ parser.add_argument("--max-steps", dest="max_steps",default=-1, type=int, help="
 parser.add_argument("--first-step", dest="first_step",default=0, type=int, help="First mass step to process")
 parser.add_argument("--card-tag", dest="card_tag",default="", type=str, help="Card name tag to process")
 parser.add_argument("--tag", dest="tag",default="", type=str, help="Output directory tag")
+parser.add_argument("--extra-tag", dest="extra_tag",default="", type=str, help="Extra tag on output figure directory")
 parser.add_argument("-v", dest="verbose",default=0, type=int,help="Add verbose printout")
 
 args, unknown = parser.parse_known_args()
@@ -252,10 +253,11 @@ if len(unknown)>0:
 #----------------------------------------------
 
 if args.tag != "": args.tag = "_" + args.tag
+if args.extra_tag != "": args.extra_tag = "_" + args.extra_tag
 
 ### default path
 path="/eos/cms/store/cmst3/user/gkaratha/ZmuE_forBDT_v7_tuples/BDT_outputs_v7/Scan_Zprime/"
-figdir = "./figures/scan_%s%s%s/" % (args.name, "_asimov" if args.asimov else "", args.tag)
+figdir = "./figures/scan_%s%s%s%s/" % (args.name, "_asimov" if args.asimov else "", args.tag, args.extra_tag)
 carddir = "./datacards/%s/" % (args.name)
 os.system("[ ! -d %s ] && mkdir -p %s" % (figdir , figdir ))
 os.system("[ ! -d %s ] && mkdir -p %s" % (carddir, carddir))
@@ -302,6 +304,7 @@ r_exps_hi = array('d')
 r_exps_lo_2 = array('d') #2 sigma band
 r_exps_hi_2 = array('d')
 r_sigs = array('d')
+global_pvals = array('d')
 
 
 prev_mass = -1.
@@ -366,6 +369,7 @@ for f in list_of_files:
       print "mass = %.1f, r = %4.1f, sigma = %5.2f, local p = %.4f, global p = %.4f +- %.4f%s" % (mass, r_fit[0], r_sig, local_p,
                                                                                                   global_p, global_unc,
                                                                                                   " <--" if r_sig > 2. else "")
+      global_pvals.append(global_p)
 
 if len(masses) > 1: masses_errs[0] = (masses[1] - masses[0])/2.
 
@@ -433,8 +437,10 @@ if draw_obs:
 
 xmin = min(100., masses[0])
 xmax = max(500., masses[-1])
+ymin = 1.e-4
+ymax = 1.1*max_lim if args.first_step > 0 else 1.03*max_lim
 g_exp_2.GetXaxis().SetRangeUser(xmin, xmax)
-g_exp_2.GetYaxis().SetRangeUser(1.e-4, 1.03*max_lim)
+g_exp_2.GetYaxis().SetRangeUser(ymin, ymax)
 g_exp_2.GetXaxis().SetLabelSize(0.045)
 g_exp_2.GetYaxis().SetLabelSize(0.045)
 g_exp_2.GetXaxis().SetTitleSize(0.05)
@@ -634,12 +640,11 @@ n_ref_u = 0
 for index in range(1,len(r_sigs)):
    if r_sigs[index-1] < ref_u and r_sigs[index] > ref_u: n_ref_u += 1
 
-global_pvals = array('d')
-for pval in pvals:
-   sig = rt.RooStats.PValueToSignificance(pval)
-   global_pval = min(1., pval + n_ref_u*exp(-(sig**2-ref_u**2)/2.))
-   global_pvals.append(global_pval)
-   # print "p = %.4f, sig = %.2f, n_ref = %i, p_global = %.4f" % (pval, sig, n_ref_u, global_pvals[-1])
+if len(global_pvals) == 0:
+   for pval in pvals:
+      sig = rt.RooStats.PValueToSignificance(pval)
+      global_pval = min(1., pval + n_ref_u*exp(-(sig**2-ref_u**2)/2.))
+      global_pvals.append(global_pval)
 
 g_pval   = rt.TGraph(len(masses), masses, pvals)
 g_global = rt.TGraph(len(masses), masses, global_pvals)
