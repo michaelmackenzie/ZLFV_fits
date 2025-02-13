@@ -7,6 +7,7 @@ int  err_mode_     =  1   ; //errors in the pulls: 0: sqrt(data^2 + fit^2); 1: s
 bool debug_        = false; //print debug info
 bool do_single_    = false; //test printing a single histogram
 bool do_sig_wt_    = false; //make a plot with S/(S+B) weighting
+bool only_s_fit_   = true ; //only make the S+B fit plots
 bool is_prelim_    = true ; //is preliminary or not
 TString file_type_ = "pdf";
 
@@ -51,20 +52,20 @@ double gmin(TGraph* g, double cutoff = 0.01) {
 
 //------------------------------------------------------------------------------------------
 // Draw the CMS label
-void draw_cms_label() {
+void draw_cms_label(float left_margin = 0.10) {
     //CMS prelim drawing
     TText cmslabel;
     cmslabel.SetNDC();
     cmslabel.SetTextColor(1);
-    cmslabel.SetTextSize(0.07);
+    cmslabel.SetTextSize(0.09);
     cmslabel.SetTextAlign(11);
     cmslabel.SetTextAngle(0);
     cmslabel.SetTextFont(61);
-    cmslabel.DrawText(0.14, 0.81, "CMS");
+    cmslabel.DrawText(left_margin + 0.04, 0.81, "CMS");
     if(is_prelim_) {
       cmslabel.SetTextFont(52);
       cmslabel.SetTextSize(0.76*cmslabel.GetTextSize());
-      cmslabel.DrawText(0.14, 0.75, "Preliminary");
+      cmslabel.DrawText(left_margin + 0.04, 0.75, "Preliminary");
     }
 }
 
@@ -73,7 +74,7 @@ void draw_luminosity(int year = -1) {
   label.SetNDC();
   label.SetTextFont(42);
   // label.SetTextColor(1);
-  label.SetTextSize(0.05);
+  label.SetTextSize(0.055);
   label.SetTextAlign(31);
   label.SetTextAngle(0);
   TString period = (year > 2000) ? Form("%i, ", year) : "";
@@ -232,21 +233,23 @@ int print_hist(vector<TDirectoryFile*> dirs, TString tag, TString outdir, bool s
   gStyle->SetOptStat(0);
   gStyle->SetPadTickX(1);
   gStyle->SetPadTickY(1);
-  TCanvas* c = new TCanvas("c", "c", 900, 900);
-  TPad* pad1 = new TPad("pad1", "pad1", 0., 0.40, 1., 1.00);
-  TPad* pad2 = new TPad("pad2", "pad2", 0., 0.23, 1., 0.40);
-  TPad* pad3 = new TPad("pad3", "pad3", 0., 0.00, 1., 0.23);
-  pad1->SetRightMargin(0.03); pad2->SetRightMargin(0.03); pad3->SetRightMargin(0.03);
-  pad1->SetBottomMargin(0.02); pad2->SetBottomMargin(0.05); pad3->SetBottomMargin(0.30);
-  pad2->SetTopMargin(0.03); pad3->SetTopMargin(0.04);
-  pad1->Draw(); pad2->Draw(); pad3->Draw();
+  TCanvas* c = new TCanvas("c", "c", 1000, 900);
+  const float x1(0.23), x2(0.43);
+  TPad* pad1 = new TPad("pad1", "pad1", 0., x2, 1., 1.);
+  TPad* pad2 = new TPad("pad2", "pad2", 0., x1, 1., x2);
+  TPad* pad3 = new TPad("pad3", "pad3", 0., 0., 1., x1);
+  pad1->SetRightMargin (0.03); pad2->SetRightMargin(pad1->GetRightMargin()); pad3->SetRightMargin(pad1->GetRightMargin());
+  pad1->SetLeftMargin  (0.14); pad2->SetLeftMargin (pad1->GetLeftMargin ()); pad3->SetLeftMargin (pad1->GetLeftMargin ());
+  pad1->SetBottomMargin(0.03); pad2->SetBottomMargin(0.11); pad3->SetBottomMargin(0.40);
+  pad1->SetTopMargin   (0.10); pad2->SetTopMargin   (0.07); pad3->SetTopMargin   (0.03);
+  pad1->Draw(); pad2->Draw(); pad3->Draw(); pad2->Draw(); //re-draw pad 2 to put label on white space in pad 2
 
   // Draw the data and fit components
   pad1->cd();
 
   //Configure the data style
   gdata->SetMarkerStyle(20);
-  gdata->SetMarkerSize(1.2);
+  gdata->SetMarkerSize(1.3);
   gdata->SetLineWidth(2);
 
   //Configure the total fit (S+B) style
@@ -262,9 +265,9 @@ int print_hist(vector<TDirectoryFile*> dirs, TString tag, TString outdir, bool s
   htotal->SetXTitle("");
   if(s_over_sb) htotal->SetYTitle(Form("S/(S+B) weighted Events / %.1f GeV", htotal->GetBinWidth(1)));
   else          htotal->SetYTitle(Form("Events / %.1f GeV", htotal->GetBinWidth(1)));
-  htotal->GetYaxis()->SetTitleSize(0.052);
+  htotal->GetYaxis()->SetTitleSize(0.08);
   htotal->GetYaxis()->SetTitleOffset(0.85);
-  htotal->GetYaxis()->SetLabelSize(0.04);
+  htotal->GetYaxis()->SetLabelSize(0.065);
   htotal->GetXaxis()->SetLabelSize(0.);
 
   //Configure the background component style
@@ -309,7 +312,7 @@ int print_hist(vector<TDirectoryFile*> dirs, TString tag, TString outdir, bool s
     if(zprime) leg.AddEntry(hsignal, "Z'#rightarrowe#mu", "L");
     else       leg.AddEntry(hsignal, "Z#rightarrowe#mu", "L");
   }
-  leg.SetTextSize(0.055);
+  leg.SetTextSize(0.065);
   leg.SetFillStyle(0);
   leg.SetFillColor(0);
   leg.SetLineColor(0);
@@ -424,21 +427,23 @@ int print_hist(vector<TDirectoryFile*> dirs, TString tag, TString outdir, bool s
   line->Draw("same");
 
   //Configure the titles and axes
+  float txt_scale = (1.-x2)/(x2-x1);
   hBkg_unc->GetYaxis()->SetRangeUser(rmin, rmax);
   hBkg_unc->GetYaxis()->SetNdivisions(505);
   hBkg_unc->SetTitle("");
   hBkg_unc->SetXTitle("");
   hBkg_unc->GetXaxis()->SetLabelSize(0.);
-  hBkg_unc->GetYaxis()->SetLabelSize(0.13);
-  hBkg_unc->GetYaxis()->SetTitleSize(0.19);
+  hBkg_unc->GetYaxis()->SetLabelSize(txt_scale*htotal->GetYaxis()->GetLabelSize());
+  hBkg_unc->GetYaxis()->SetTitleSize(txt_scale*htotal->GetYaxis()->GetTitleSize());
   hBkg_unc->GetYaxis()->SetTitleOffset(0.22);
-  if(unblind_) hBkg_unc->SetYTitle("Data - Bkg");
-  else         hBkg_unc->SetYTitle("Data - Fit");
+  if(unblind_) hBkg_unc->SetYTitle("Data-Bkg");
+  else         hBkg_unc->SetYTitle("Data-Fit");
 
 
   //Make a pull plot
   pad3->cd();
 
+  txt_scale = (1.-x2)/x1;
   auto hPull = hPull_s; //FIXME: Decide whether pulls should use background or total model
   hPull->SetLineColor(kAtlantic);
   hPull->SetFillColor(kAtlantic);
@@ -449,13 +454,13 @@ int print_hist(vector<TDirectoryFile*> dirs, TString tag, TString outdir, bool s
   hPull->SetTitle("");
   hPull->SetXTitle("m_{e#mu} [GeV]");
   hPull->SetYTitle("#frac{Data-Fit}{#sigma_{Fit}}");
-  hPull->GetXaxis()->SetLabelSize(0.10);
-  hPull->GetYaxis()->SetLabelSize(0.10);
+  hPull->GetYaxis()->SetLabelSize(txt_scale*htotal->GetYaxis()->GetLabelSize());
+  hPull->GetYaxis()->SetTitleSize(txt_scale*htotal->GetYaxis()->GetTitleSize());
+  hPull->GetXaxis()->SetLabelSize(hPull->GetYaxis()->GetLabelSize());
+  hPull->GetXaxis()->SetTitleSize(hPull->GetYaxis()->GetTitleSize());
   hPull->GetXaxis()->SetLabelOffset(0.01);
   hPull->GetYaxis()->SetLabelOffset(0.015);
-  hPull->GetXaxis()->SetTitleSize(0.15);
-  hPull->GetYaxis()->SetTitleSize(0.15);
-  hPull->GetXaxis()->SetTitleOffset(0.75);
+  hPull->GetXaxis()->SetTitleOffset(0.81);
   hPull->GetYaxis()->SetTitleOffset(0.27);
 
   //Add a reference line for perfect agreement
@@ -467,7 +472,7 @@ int print_hist(vector<TDirectoryFile*> dirs, TString tag, TString outdir, bool s
 
   //Add the CMS label
   pad1->cd();
-  draw_cms_label();
+  draw_cms_label(pad1->GetLeftMargin());
   draw_luminosity();
 
   //Print a linear and a log version of the distribution
@@ -524,8 +529,9 @@ int print_dir(TDirectoryFile* dir, TString tag, TString outdir) {
 
   //If this directory doesn't contain a sub-directory, print the histograms within the category
   if(!subdir) { //histogram directory
-    status += print_hist({dir}, tag, outdir);
-  } else { //print the S/(S+B) weighted histogram
+    if(!only_s_fit_ || tag.Contains("fit_s"))
+      status += print_hist({dir}, tag, outdir);
+  } else if(do_sig_wt_) { //print the S/(S+B) weighted histogram
     status += print_hist(subdirs, tag +"_s_sb_wt", outdir, true);
   }
   return status;

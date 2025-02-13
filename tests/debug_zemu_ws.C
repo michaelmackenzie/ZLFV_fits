@@ -10,13 +10,13 @@ void draw_cms_label(bool inside = false) {
   cmslabel.SetTextAngle(0);
   cmslabel.SetTextFont(61);
   const float label_y(0.915f);
-  if(inside) cmslabel.DrawText(0.14, 0.82   , "CMS");
+  if(inside) cmslabel.DrawText(0.16, 0.82   , "CMS");
   else       cmslabel.DrawText(0.10, label_y, "CMS");
   const bool is_prelim = true;
   if(is_prelim) {
     cmslabel.SetTextFont(52);
     cmslabel.SetTextSize(0.76*cmslabel.GetTextSize());
-    if(inside) cmslabel.DrawText(0.14, 0.77   , "Preliminary");
+    if(inside) cmslabel.DrawText(0.16, 0.77   , "Preliminary");
     else       cmslabel.DrawText(0.20, label_y, "Preliminary");
   }
 }
@@ -67,20 +67,20 @@ void set_axis_styles(TAxis* upper_x, TAxis* upper_y,
   lower_x->SetTitle("m_{e#mu} [GeV]");
 
   upper_x->SetLabelSize(0.);
-  upper_y->SetLabelSize(0.04);
-  upper_y->SetTitleSize(0.05);
+  upper_y->SetLabelSize(0.05);
+  upper_y->SetTitleSize(0.06);
   upper_y->SetTitleOffset(1.07);
 
-  lower_y->SetRangeUser(-4., 4.);
+  lower_y->SetRangeUser(-3.99, 3.99);
   lower_y->SetNdivisions(205);
-  lower_y->SetLabelSize(0.09);
+  lower_y->SetLabelSize(0.11);
   lower_y->SetLabelOffset(0.01);
-  lower_y->SetTitleSize(0.1);
+  lower_y->SetTitleSize(0.13);
   lower_y->SetTitleOffset(0.41);
-  lower_x->SetLabelSize(0.085);
+  lower_x->SetLabelSize(0.11);
   lower_x->SetLabelOffset(0.008);
-  lower_x->SetTitleSize(0.11);
-  lower_x->SetTitleOffset(0.84);
+  lower_x->SetTitleSize(0.13);
+  lower_x->SetTitleOffset(0.90);
 
   upper_x->SetRangeUser(70., 110.);
   lower_x->SetRangeUser(70., 110.);
@@ -250,10 +250,12 @@ int debug_zemu_ws(const char* bin = "bin3") {
   TPad pad2("pad2","pad2",0.,0.0,1.,0.3); pad2.Draw();
   pad1.SetTopMargin(0.1);
   pad1.SetRightMargin(0.03);
-  pad1.SetBottomMargin(0.01);
+  pad1.SetLeftMargin(0.132);
+  pad1.SetBottomMargin(0.02);
   pad2.SetTopMargin(0.03);
-  pad2.SetRightMargin(0.03);
-  pad2.SetBottomMargin(0.20);
+  pad2.SetRightMargin(pad1.GetRightMargin());
+  pad2.SetLeftMargin(pad1.GetLeftMargin());
+  pad2.SetBottomMargin(0.26);
 
   pad1.cd();
   frame = obs->frame();
@@ -349,7 +351,6 @@ int debug_zemu_ws(const char* bin = "bin3") {
   h_data->GetXaxis()->SetLabelSize(0.);
   h_data->SetYTitle(Form("Events / %.1f GeV", h_data->GetBinWidth(1)));
   h_data->GetYaxis()->SetRangeUser(0., 1.3*h_data->GetMaximum());
-  pad1.SetBottomMargin(0.02);
 
   // Ratio plot
   pad2.cd();
