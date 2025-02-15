@@ -87,7 +87,8 @@ void set_axis_styles(TAxis* upper_x, TAxis* upper_y,
 }
 
 TGraphAsymmErrors* envelope_band(RooMultiPdf* multipdf, TH1* hdata, TH1* hzmm, RooRealVar* obs,
-                                 TGraphAsymmErrors *& data_errors, TGraphAsymmErrors *& band_errors) {
+                                 TGraphAsymmErrors *& data_errors, TGraphAsymmErrors *& data_sig_errors,
+                                 TGraphAsymmErrors *& band_errors) {
   vector<TH1*> hpdfs;
   const int npdfs = multipdf->getNumPdfs();
   const float blind_min(86.f), blind_max(96.f);
@@ -99,7 +100,7 @@ TGraphAsymmErrors* envelope_band(RooMultiPdf* multipdf, TH1* hdata, TH1* hzmm, R
   const double scale = (hdata->Integral() - hzmm->Integral()) / hpdfs[0]->Integral();
   const int nbins = hpdfs[0]->GetNbinsX();
   double xvals[nbins], yvals[nbins], xerrs[nbins], yerr_ups[nbins], yerr_downs[nbins]; //band
-  double pulls[nbins], pull_yerrs[nbins]; //data pulls
+  double pulls[nbins], pulls_sig[nbins], pull_yerrs[nbins]; //data pulls
   double rvals[nbins], ryerr_ups[nbins], ryerr_downs[nbins]; //band ratio
   for(int index = 0; index < nbins; ++index) {
     double ymin(1.e10), ymax(-1.e10), x(hpdfs[0]->GetBinCenter(index+1)), ndata(hdata->GetBinContent(index+1));
@@ -115,14 +116,21 @@ TGraphAsymmErrors* envelope_band(RooMultiPdf* multipdf, TH1* hdata, TH1* hzmm, R
     yerr_ups[index] = (ymax - ymin)/2.;
     yerr_downs[index] = (ymax - ymin)/2.;
     xerrs[index] = 0.; //no bin widths
-    pulls[index] = (ndata > 0. && !blind) ? (ndata - y) / sqrt(ndata) : -999.;
+    if(blind) {
+      pulls_sig[index] = (ndata - y) / sqrt(ndata);
+      pulls    [index] = -999.;
+    } else {
+      pulls    [index] = (ndata - y) / sqrt(ndata);
+      pulls_sig[index] = -999.;
+    }
     pull_yerrs[index] = 1.;
     rvals[index] = 0.;
     ryerr_ups  [index] = (y > 0.) ? (yerr_ups  [index]) / sqrt(y) : 0.;
     ryerr_downs[index] = (y > 0.) ? (yerr_downs[index]) / sqrt(y) : 0.;
   }
-  data_errors = new TGraphAsymmErrors(nbins, xvals, pulls, xerrs, xerrs, pull_yerrs, pull_yerrs);
-  band_errors = new TGraphAsymmErrors(nbins, xvals, rvals, xerrs, xerrs, ryerr_ups, ryerr_downs);
+  data_errors     = new TGraphAsymmErrors(nbins, xvals, pulls    , xerrs, xerrs, pull_yerrs, pull_yerrs);
+  data_sig_errors = new TGraphAsymmErrors(nbins, xvals, pulls_sig, xerrs, xerrs, pull_yerrs, pull_yerrs);
+  band_errors     = new TGraphAsymmErrors(nbins, xvals, rvals    , xerrs, xerrs, ryerr_ups, ryerr_downs);
   return new TGraphAsymmErrors(nbins, xvals, yvals, xerrs, xerrs, yerr_ups, yerr_downs);
 }
 
@@ -236,14 +244,23 @@ int debug_zemu_ws(const char* bin = "bin3") {
   ////////////////////////////////////////
 
   // Blind the data for this plot
-  TH1* h_data = data->createHistogram("hdata", *obs);
+  TH1* h_data     = data->createHistogram("hdata"    , *obs);
+  TH1* h_sig_data = data->createHistogram("hdata_sig", *obs); //data in the signal region
   if(blind_data_) {
-    for(int ibin = h_data->FindBin(blind_min+0.01); ibin <= h_data->FindBin(blind_max-0.1); ++ibin) {
-      h_data->SetBinContent(ibin, 0.);
-      h_data->SetBinError(ibin, 0.);
+    const int blind_low_bin  = h_data->FindBin(blind_min+0.01);
+    const int blind_high_bin = h_data->FindBin(blind_max-0.01);
+    for(int ibin = 1; ibin <= h_data->GetNbinsX(); ++ibin) {
+      if(ibin >= blind_low_bin && ibin <= blind_high_bin) {
+        h_data->SetBinContent(ibin, 0.);
+        h_data->SetBinError(ibin, 0.);
+      } else {
+        h_sig_data->SetBinContent(ibin, 0.);
+        h_sig_data->SetBinError(ibin, 0.);
+      }
     }
   }
-  auto blind_data = new RooDataHist("blind_data", "Blinded data", *obs, h_data);
+  auto blind_data  = new RooDataHist("blind_data", "Blinded data", *obs, h_data);
+  auto signal_data = new RooDataHist("signal_data", "Signal region data", *obs, h_sig_data);
 
   TCanvas c2("c2","c2", 700, 800);
   TPad pad1("pad1","pad1",0.,0.3,1.,1.0); pad1.Draw();
@@ -261,6 +278,7 @@ int debug_zemu_ws(const char* bin = "bin3") {
   frame = obs->frame();
   auto frame2 = obs->frame();
   blind_data->plotOn(frame, RooFit::Name("data"));
+  signal_data->plotOn(frame, RooFit::Name("signal_data"), RooFit::MarkerColor(kBlue), RooFit::LineColor(kBlue));
   const double frac_zmm = zmm_norm->getVal() / data->sumEntries();
   RooRealVar* pdf_frac = new RooRealVar("pdf_frac", "PDF fraction", 1. - frac_zmm);
   RooRealVar* zmm_val = new RooRealVar("zmm_val", "Z->mumu events", zmm_norm->getVal());
@@ -323,8 +341,8 @@ int debug_zemu_ws(const char* bin = "bin3") {
   // Create a envelope band from the input functions
   auto h_zmm = zmm->createHistogram("h_zmm", *obs);
   h_zmm->Scale(zmm_norm->getVal() / h_zmm->Integral());
-  TGraphAsymmErrors *data_errors(nullptr), *band_errors(nullptr);
-  auto band = envelope_band(multipdf, data->createHistogram("hdata_2", *obs), h_zmm, obs, data_errors, band_errors);
+  TGraphAsymmErrors *data_errors(nullptr), *data_sig_errors(nullptr), *band_errors(nullptr);
+  auto band = envelope_band(multipdf, data->createHistogram("hdata_2", *obs), h_zmm, obs, data_errors, data_sig_errors, band_errors);
   band->SetLineWidth(1);
   band->SetLineColor(kRed);
   band->SetMarkerSize(0.);
@@ -339,6 +357,7 @@ int debug_zemu_ws(const char* bin = "bin3") {
 
   pad1.cd();
   h_data->Draw("EX0");
+  h_sig_data->Draw("EX0 SAME");
   band->Draw("E3");
   band->Draw("LX");
   h_zmm->Draw("L0 same");
@@ -352,20 +371,36 @@ int debug_zemu_ws(const char* bin = "bin3") {
   h_data->SetYTitle(Form("Events / %.1f GeV", h_data->GetBinWidth(1)));
   h_data->GetYaxis()->SetRangeUser(0., 1.3*h_data->GetMaximum());
 
+  h_sig_data->SetLineWidth  (h_data->GetLineWidth  ());
+  h_sig_data->SetMarkerStyle(h_data->GetMarkerStyle());
+  h_sig_data->SetMarkerSize (h_data->GetMarkerSize ());
+  h_sig_data->SetLineColor  (kBlue);
+  h_sig_data->SetMarkerColor(kBlue);
+
   // Ratio plot
   pad2.cd();
 
   if(!data_errors || !band_errors) return 10;
   data_errors->SetTitle("");
-  data_errors->SetMarkerSize(0.8);
-  data_errors->SetMarkerStyle(20);
-  data_errors->SetLineWidth(2);
+  data_errors->SetLineWidth  (h_data->GetLineWidth  ());
+  data_errors->SetLineColor  (h_data->GetLineColor  ());
+  data_errors->SetMarkerStyle(h_data->GetMarkerStyle());
+  data_errors->SetMarkerSize (h_data->GetMarkerSize ());
+  data_errors->SetMarkerColor(h_data->GetMarkerColor());
   data_errors->Draw("APEZ");
+
+  data_sig_errors->SetTitle("");
+  data_sig_errors->SetLineWidth  (h_sig_data->GetLineWidth  ());
+  data_sig_errors->SetLineColor  (h_sig_data->GetLineColor  ());
+  data_sig_errors->SetMarkerStyle(h_sig_data->GetMarkerStyle());
+  data_sig_errors->SetMarkerSize (h_sig_data->GetMarkerSize ());
+  data_sig_errors->SetMarkerColor(h_sig_data->GetMarkerColor());
 
   band_errors->SetMarkerSize(0.);
   band_errors->SetFillColor(kGray);
   band_errors->Draw("E3");
   data_errors->Draw("PEZ");
+  data_sig_errors->Draw("PEZ");
 
   TGaxis::SetExponentOffset(-0.05, 0.01, "Y");
   set_axis_styles(h_data->GetXaxis(), h_data->GetYaxis(),
