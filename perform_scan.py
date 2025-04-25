@@ -467,7 +467,8 @@ label.SetTextAlign(11)
 label.SetTextAngle(0)
 label.DrawLatex(0.6, 0.81, "95% CL upper limit")
 
-draw_cms_label(True)
+is_prelim = False
+draw_cms_label(is_prelim)
 draw_luminosity()
 
 c.SaveAs(figdir+'limits.pdf')

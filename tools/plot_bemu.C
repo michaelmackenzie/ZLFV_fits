@@ -8,7 +8,7 @@ bool debug_        = false; //print debug info
 bool do_single_    = false; //test printing a single histogram
 bool do_sig_wt_    = false; //make a plot with S/(S+B) weighting
 bool only_s_fit_   = true ; //only make the S+B fit plots
-bool is_prelim_    = true ; //is preliminary or not
+bool is_prelim_    = false; //is preliminary or not
 TString file_type_ = "pdf";
 
 //------------------------------------------------------------------------------------------
@@ -80,6 +80,26 @@ void draw_luminosity(int year = -1) {
   TString period = (year > 2000) ? Form("%i, ", year) : "";
   const double lum = (year == 2016) ? 36.33 : (year == 2017) ? 41.48 : (year == 2018) ? 59.83 : 137.64;
   label.DrawLatex(0.97, 0.915, Form("%s%.0f fb^{-1} (13 TeV)",period.Data(),lum));
+}
+
+void draw_category(TString tag, bool zprime, float left_margin = 0.10) {
+  TString cat = "";
+  if(zprime) {
+    if(tag.Contains("bin_1")) cat = "0.3 < BDT < 0.7";
+    else                      cat = "0.7 < BDT < 1.0";
+  } else {
+    if     (tag.Contains("bin_1")) cat = "0.3 < BDT < 0.7";
+    else if(tag.Contains("bin_2")) cat = "0.7 < BDT < 0.9";
+    else                           cat = "0.9 < BDT < 1.0";
+  }
+  TText label;
+  label.SetNDC();
+  label.SetTextFont(42);
+  label.SetTextSize(0.055);
+  label.SetTextAlign(11);
+  label.SetTextAngle(0);
+  if(is_prelim_) label.DrawText(left_margin + 0.04, 0.69, cat.Data());
+  else           label.DrawText(left_margin + 0.04, 0.75, cat.Data());
 }
 
 //------------------------------------------------------------------------------------------
@@ -474,15 +494,18 @@ int print_hist(vector<TDirectoryFile*> dirs, TString tag, TString outdir, bool s
   pad1->cd();
   draw_cms_label(pad1->GetLeftMargin());
   draw_luminosity();
+  draw_category(tag, zprime, pad1->GetLeftMargin());
 
   //Print a linear and a log version of the distribution
-  double min_val = std::max(0.1, std::min(gmin(gdata), hmin(htotal)));
-  double max_val = std::max(gmax(gdata), hmax(htotal));
-  htotal->GetYaxis()->SetRangeUser(0., 1.3*(max_val + 1.05*sqrt(max_val)));
+  const double min_signal = hmin(hzemu, -1.e10);
+  cout << "min signal = " << min_signal << endl;
+  const double min_val = std::max(0.1, std::min(gmin(gdata), hmin(htotal)));
+  const double max_val = std::max(gmax(gdata), hmax(htotal));
+  htotal->GetYaxis()->SetRangeUser((min_signal < 0.) ? 1.1*min_signal : 0., 1.3*(max_val + 1.05*sqrt(max_val)));
   c->SaveAs(Form("%s%s.%s", outdir.Data(), tag.Data(), file_type_.Data()));
   c->SaveAs(Form("%s%s.root", outdir.Data(), tag.Data()));
-  double plot_min = std::min(std::max(0.2, 0.2*hmax(hsignal)), 0.2*min_val);
-  double plot_max = plot_min*pow(10, 1.7*log10(max_val/plot_min));
+  const double plot_min = std::min(std::max(0.2, 0.2*hmax(hsignal)), 0.2*min_val);
+  const double plot_max = plot_min*pow(10, 1.7*log10(max_val/plot_min));
   htotal->GetYaxis()->SetRangeUser(plot_min, plot_max);
   pad1->SetLogy();
   c->SaveAs(Form("%s%s_logy.%s", outdir.Data(), tag.Data(), file_type_.Data()));
@@ -532,7 +555,9 @@ int print_dir(TDirectoryFile* dir, TString tag, TString outdir) {
     if(!only_s_fit_ || tag.Contains("fit_s"))
       status += print_hist({dir}, tag, outdir);
   } else if(do_sig_wt_) { //print the S/(S+B) weighted histogram
-    status += print_hist(subdirs, tag +"_s_sb_wt", outdir, true);
+    tag += "_s_sb_wt";
+    if(is_prelim_) tag += "_prelim";
+    status += print_hist(subdirs, tag, outdir, true);
   }
   return status;
 }

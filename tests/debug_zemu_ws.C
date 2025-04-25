@@ -1,7 +1,7 @@
 //Draw workspace PDFs
 const bool blind_data_ = true;
 
-void draw_cms_label(bool inside = false) {
+void draw_cms_label(const bool inside = false, const bool is_prelim = true) {
   TText cmslabel;
   cmslabel.SetNDC();
   cmslabel.SetTextColor(1);
@@ -12,7 +12,6 @@ void draw_cms_label(bool inside = false) {
   const float label_y(0.915f);
   if(inside) cmslabel.DrawText(0.16, 0.82   , "CMS");
   else       cmslabel.DrawText(0.10, label_y, "CMS");
-  const bool is_prelim = true;
   if(is_prelim) {
     cmslabel.SetTextFont(52);
     cmslabel.SetTextSize(0.76*cmslabel.GetTextSize());
@@ -33,6 +32,20 @@ void draw_lumi_label() {
   TString period = (year > 2000) ? Form("%i, ", year) : "";
   const double lum = (year == 2016) ? 36.33 : (year == 2017) ? 41.48 : (year == 2018) ? 59.83 : 137.64;
   lumilabel.DrawLatex(0.97, label_y, Form("%s%.0f fb^{-1} (13 TeV)",period.Data(),lum));
+}
+
+void draw_bdt_region(TString bin) {
+  TLatex label;
+  label.SetNDC();
+  label.SetTextFont(42);
+  label.SetTextSize(0.045);
+  label.SetTextAlign(11);
+  label.SetTextAngle(0);
+  float bdt_low(0.f), bdt_high(1.f);
+  if     (bin == "bin1") {bdt_low = 0.3f; bdt_high = 0.7f;}
+  else if(bin == "bin2") {bdt_low = 0.7f; bdt_high = 0.9f;}
+  else if(bin == "bin3") {bdt_low = 0.9f; bdt_high = 1.0f;}
+  label.DrawLatex(0.16, 0.77, Form("%.1f < BDT < %.1f", bdt_low, bdt_high));
 }
 
 TString get_pdf_title(TString pdf_name) {
@@ -332,7 +345,7 @@ int debug_zemu_ws(const char* bin = "bin3") {
 
   //CMS prelim drawing
   pad1.cd();
-  draw_cms_label();
+  draw_cms_label(true, false);
   draw_lumi_label();
 
   c2.SaveAs(Form("inputs_refit_%s.pdf", bin));
@@ -408,8 +421,9 @@ int debug_zemu_ws(const char* bin = "bin3") {
 
   //CMS prelim drawing
   pad1.cd();
-  draw_cms_label(true);
+  draw_cms_label(true, false);
   draw_lumi_label();
+  draw_bdt_region(bin);
 
   leg = new TLegend(0.60, 0.55, 0.94, 0.89);
   leg->SetNColumns(1);
