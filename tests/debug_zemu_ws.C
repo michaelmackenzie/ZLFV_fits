@@ -363,7 +363,7 @@ int debug_zemu_ws(const char* bin = "bin3") {
 
   for(int ibin = 1; ibin <= h_zmm->GetNbinsX(); ++ibin) h_zmm->SetBinError(ibin, 0.);
   h_zmm->SetLineColor(kGreen+2);
-  h_zmm->SetLineStyle(kDashed);
+  // h_zmm->SetLineStyle(kDashed);
   h_zmm->SetLineWidth(2);
   h_zmm->SetFillColor(0);
   h_zmm->SetFillStyle(0);

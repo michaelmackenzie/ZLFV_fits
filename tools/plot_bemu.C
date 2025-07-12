@@ -322,7 +322,7 @@ int print_hist(vector<TDirectoryFile*> dirs, TString tag, TString outdir, bool s
 
 
   //Add a legend
-  TLegend leg(0.6, 0.5, 0.85, 0.85);
+  TLegend leg(0.55, 0.5, 0.85, 0.85);
   leg.AddEntry(gdata, "Data", "PE");
   leg.AddEntry(htotal, "Background+signal", "LF");
   if(unblind_) {
@@ -332,7 +332,7 @@ int print_hist(vector<TDirectoryFile*> dirs, TString tag, TString outdir, bool s
     if(zprime) leg.AddEntry(hsignal, "Z'#rightarrowe#mu", "L");
     else       leg.AddEntry(hsignal, "Z#rightarrowe#mu", "L");
   }
-  leg.SetTextSize(0.065);
+  leg.SetTextSize(0.075);
   leg.SetFillStyle(0);
   leg.SetFillColor(0);
   leg.SetLineColor(0);
