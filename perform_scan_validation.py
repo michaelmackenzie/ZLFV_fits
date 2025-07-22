@@ -254,8 +254,8 @@ rt.gROOT.SetBatch(True)
 
 list_of_files = [f for f in os.listdir(carddir) if '.txt' in f]
 # If not using a BDT score region tag, only take the merged files
-if args.card_tag == "":  list_of_files = [f for f in list_of_files if '0d7' not in f and '.root' not in f]
-else:                    list_of_files = [f for f in list_of_files if args.card_tag in f and '.root' not in f]
+if args.card_tag == "":  list_of_files = [f for f in list_of_files if '0d7' not in f and '.root' not in f and '~' not in f]
+else:                    list_of_files = [f for f in list_of_files if args.card_tag in f and '.root' not in f and '~' not in f]
 
 if len(list_of_files) == 0:
    print "No card files found!"

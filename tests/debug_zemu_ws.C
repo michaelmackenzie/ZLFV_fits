@@ -435,7 +435,7 @@ int debug_zemu_ws(const char* bin = "bin3") {
   leg->AddEntry(h_data, "Data", "PE");
   leg->AddEntry(band, "Background", "LF");
   // leg->AddEntry(band_errors, "Envelope", "F");
-  leg->AddEntry(h_zmm, "Z#rightarrow#mu#mu", "L");
+  leg->AddEntry(h_zmm, "Z #rightarrow #mu#mu", "L");
   leg->Draw();
 
   c2.SaveAs(Form("inputs_refit_band_%s.pdf", bin));

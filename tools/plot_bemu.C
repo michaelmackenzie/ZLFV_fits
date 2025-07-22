@@ -328,9 +328,9 @@ int print_hist(vector<TDirectoryFile*> dirs, TString tag, TString outdir, bool s
   if(unblind_) {
     if(zprime) leg.AddEntry(hbkg, "Background", "L");
     else       leg.AddEntry(hbkg, "Parametric background", "L");
-    if(hzmumu) leg.AddEntry(hzmumu, "Z#rightarrow#mu#mu", "L");
-    if(zprime) leg.AddEntry(hsignal, "Z'#rightarrowe#mu", "L");
-    else       leg.AddEntry(hsignal, "Z#rightarrowe#mu", "L");
+    if(hzmumu) leg.AddEntry(hzmumu, "Z #rightarrow #mu#mu", "L");
+    if(zprime) leg.AddEntry(hsignal, "Z' #rightarrow e#mu", "L");
+    else       leg.AddEntry(hsignal, "Z #rightarrow e#mu", "L");
   }
   leg.SetTextSize(0.075);
   leg.SetFillStyle(0);

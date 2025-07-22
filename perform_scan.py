@@ -273,7 +273,7 @@ n_lee_tree = lee_tree.GetEntries() if lee_tree else 0
 # Perform the scan
 #----------------------------------------------
 
-list_of_files = [f for f in os.listdir(carddir) if '.txt' in f]
+list_of_files = [f for f in os.listdir(carddir) if '.txt' in f and '~' not in f]
 # If not using a BDT score region tag, only take the merged files
 if args.card_tag == "":  list_of_files = [f for f in list_of_files if '0d7' not in f]
 else:                    list_of_files = [f for f in list_of_files if args.card_tag in f]
@@ -424,7 +424,7 @@ g_exp.SetLineWidth(2)
 g_exp.SetLineColor(rt.kBlack)
 g_exp.Draw("XL")
 g_exp_2.GetXaxis().SetTitle("m_{Z\'} [GeV]");
-g_exp_2.GetYaxis().SetTitle("#sigma(pp#rightarrowZ\'+X)#it{B}(Z\'#rightarrowe#mu) [fb]");
+g_exp_2.GetYaxis().SetTitle("#sigma(pp #rightarrow Z\'+X)#it{B}(Z\' #rightarrow e#mu) [fb]");
 
 if draw_obs:
    g_obs = rt.TGraph(len(masses), masses, r_lims)
@@ -534,7 +534,7 @@ pad2.SetBottomMargin(0.25)
 
 # Add the fit distribution
 pad1.cd()
-g_r.SetTitle("Z' fit rate vs. Z' mass;; #sigma(Z')#it{B}(Z'#rightarrowe#mu) (fb)")
+g_r.SetTitle("Z' fit rate vs. Z' mass;; #sigma(Z')#it{B}(Z' #rightarrow e#mu) (fb)")
 g_r.SetMarkerStyle(20)
 g_r.SetMarkerSize(0.8)
 g_r.SetLineWidth(2)
@@ -597,7 +597,7 @@ g_sig   = rt.TGraph(len(masses), masses, r_sigs)
 c = rt.TCanvas('c_sig', 'c_sig', 800, 600)
 c.SetRightMargin(0.03)
 c.SetLeftMargin(0.08)
-g_sig.SetTitle("Measurement significance vs. Z' mass; Z' mass (GeV); #sigma(#it{B}(Z'#rightarrowe#mu))")
+g_sig.SetTitle("Measurement significance vs. Z' mass; Z' mass (GeV); #sigma(#it{B}(Z' #rightarrow e#mu))")
 g_sig.SetMarkerStyle(20)
 g_sig.SetMarkerSize(0.75)
 g_sig.SetLineWidth(2)
